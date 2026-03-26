@@ -52,15 +52,15 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
   return (
     <>
       {existing ? (
-        <div style={{ display:'flex', gap:'5px' }}>
+        <div style={{ display:'flex', gap:'5px', flexShrink:0, whiteSpace:'nowrap' }}>
           <div
-            style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.violetLight, fontWeight:'600' }}
+            style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.violetLight, fontWeight:'600', whiteSpace:'nowrap' }}
             onClick={() => setShowEmbed(true)}
           >
             <IcoPlay col={C.violet} /> Video
           </div>
           <div
-            style={{ padding:'3px 6px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:'6px', cursor:'pointer' }}
+            style={{ padding:'3px 6px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:'6px', cursor:'pointer', flexShrink:0 }}
             onClick={() => { setEditMode(true); setShowModal(true) }}
           >
             <IcoEdit />
@@ -68,7 +68,7 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
         </div>
       ) : (
         <div
-          style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:'transparent', border:`1px dashed ${C.hint}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.hint }}
+          style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:'transparent', border:`1px dashed ${C.hint}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.hint, whiteSpace:'nowrap', flexShrink:0 }}
           onClick={() => { setEditMode(true); setShowModal(true) }}
         >
           + video
