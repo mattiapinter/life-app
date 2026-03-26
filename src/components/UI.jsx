@@ -23,15 +23,19 @@ export function Modal({ onClose, title, subtitle, accentColor, children }) {
 
 // ── VIDEO BUTTON ──────────────────────────────────────────────────
 export function VideoButton({ exerciseName, videos, onVideosChange }) {
-  const [showModal, setShowModal] = React.useState(false)
-  const [showEmbed, setShowEmbed] = React.useState(false)
-  const [editMode, setEditMode] = React.useState(false)
-  const [urlInput, setUrlInput] = React.useState('')
-  const [saving, setSaving] = React.useState(false)
+  const [showModal,  setShowModal]  = React.useState(false)
+  const [showEmbed,  setShowEmbed]  = React.useState(false)
+  const [urlInput,   setUrlInput]   = React.useState('')
+  const [saving,     setSaving]     = React.useState(false)
 
   const existing = videos?.[exerciseName]
-  const ytId = extractYoutubeId(existing)
-  const loomId = extractLoomId(existing)
+  const ytId     = extractYoutubeId(existing)
+  const loomId   = extractLoomId(existing)
+  const embedUrl = ytId
+    ? `https://www.youtube.com/embed/${ytId}?playsinline=1`
+    : loomId
+    ? `https://www.loom.com/embed/${loomId}`
+    : null
 
   const handleSave = async () => {
     if (!urlInput.trim()) return
@@ -39,15 +43,9 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
     const ok = await saveExerciseVideo(exerciseName, urlInput.trim())
     if (ok && onVideosChange) onVideosChange(exerciseName, urlInput.trim())
     setSaving(false)
-    setEditMode(false)
+    setShowModal(false)
     setUrlInput('')
   }
-
-  const embedUrl = ytId
-    ? `https://www.youtube.com/embed/${ytId}`
-    : loomId
-    ? `https://www.loom.com/embed/${loomId}`
-    : null
 
   return (
     <>
@@ -55,13 +53,13 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
         <div style={{ display:'flex', gap:'5px', flexShrink:0, whiteSpace:'nowrap' }}>
           <div
             style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.violetLight, fontWeight:'600', whiteSpace:'nowrap' }}
-            onClick={() => setShowEmbed(true)}
+            onClick={() => setShowEmbed(v => !v)}
           >
-            <IcoPlay col={C.violet} /> Video
+            <IcoPlay col={C.violet} /> {showEmbed ? 'Chiudi' : 'Video'}
           </div>
           <div
             style={{ padding:'3px 6px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:'6px', cursor:'pointer', flexShrink:0 }}
-            onClick={() => { setEditMode(true); setShowModal(true) }}
+            onClick={() => setShowModal(true)}
           >
             <IcoEdit />
           </div>
@@ -69,17 +67,38 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
       ) : (
         <div
           style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:'transparent', border:`1px dashed ${C.hint}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.hint, whiteSpace:'nowrap', flexShrink:0 }}
-          onClick={() => { setEditMode(true); setShowModal(true) }}
+          onClick={() => setShowModal(true)}
         >
           + video
         </div>
       )}
 
+      {/* Embed inline — si apre sotto il pulsante, non in un modal */}
+      {showEmbed && embedUrl && (
+        <div style={{ marginTop:'10px', borderRadius:'12px', overflow:'hidden', background:'#000', position:'relative', paddingBottom:'56.25%', height:0 }}>
+          <iframe
+            src={embedUrl}
+            style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            playsInline
+          />
+        </div>
+      )}
+
+      {/* Modal per inserire/modificare URL */}
       {showModal && (
-        <Modal title={exerciseName} subtitle="Aggiungi Video" onClose={() => { setShowModal(false); setEditMode(false) }}>
-          <div style={{ fontSize:'11px', color:C.muted, marginBottom:'10px' }}>Incolla un URL YouTube o Loom</div>
+        <Modal title={exerciseName} subtitle="Video esercizio" onClose={() => { setShowModal(false); setUrlInput('') }}>
+          <div style={{ fontSize:'11px', color:C.muted, marginBottom:'10px' }}>
+            Incolla un URL YouTube o Loom
+          </div>
+          {existing && (
+            <div style={{ fontSize:'11px', color:C.hint, marginBottom:'10px', padding:'8px', background:C.bg, borderRadius:'8px', border:`1px solid ${C.border}`, wordBreak:'break-all' }}>
+              Attuale: {existing}
+            </div>
+          )}
           <input
-            style={{ ...ss.inp, marginBottom:'10px' }}
+            style={{ ...ss.inp, marginBottom:'10px', fontSize:'14px' }}
             placeholder="https://youtube.com/watch?v=..."
             value={urlInput}
             onChange={e => setUrlInput(e.target.value)}
@@ -87,19 +106,6 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
           />
           <div style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1 }} onClick={!saving ? handleSave : undefined}>
             {saving ? 'Salvataggio...' : 'Salva'}
-          </div>
-        </Modal>
-      )}
-
-      {showEmbed && embedUrl && (
-        <Modal title={exerciseName} subtitle="Video" onClose={() => setShowEmbed(false)}>
-          <div style={{ position:'relative', paddingBottom:'56.25%', height:0, borderRadius:'10px', overflow:'hidden' }}>
-            <iframe
-              src={embedUrl}
-              style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
           </div>
         </Modal>
       )}
