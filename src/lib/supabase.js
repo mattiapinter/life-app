@@ -116,3 +116,51 @@ export const loadExerciseVideos = async () => {
   try { const { data, error } = await db.from('exercise_videos').select('*'); if (error) throw error; return data || [] }
   catch(e) { return [] }
 }
+
+// ── DELETE ─────────────────────────────────────────────────────────
+// Elimina tutti i log di una sessione (stessa data + session_type)
+export const deleteSessionLogs = async (date, sessionType) => {
+  try {
+    const { error } = await db.from('training_logs')
+      .delete()
+      .eq('log_date', date)
+      .eq('session_type', sessionType)
+    if (error) throw error; return true
+  } catch(e) { return false }
+}
+
+// Elimina tutti i log di un singolo esercizio
+export const deleteExerciseLogs = async (exerciseName) => {
+  try {
+    const { error } = await db.from('training_logs').delete().eq('exercise_name', exerciseName)
+    if (error) throw error; return true
+  } catch(e) { return false }
+}
+
+// Elimina un singolo log per id
+export const deleteTrainingLog = async (id) => {
+  try {
+    const { error } = await db.from('training_logs').delete().eq('id', id)
+    if (error) throw error; return true
+  } catch(e) { return false }
+}
+
+// Elimina nota di una sessione
+export const deleteSessionNote = async (date, sessionType) => {
+  try {
+    const { error } = await db.from('session_notes')
+      .delete()
+      .eq('note_date', date)
+      .eq('session_type', sessionType)
+    if (error) throw error; return true
+  } catch(e) { return false }
+}
+
+// Elimina tutto (training_logs + session_notes)
+export const deleteAllTrainingData = async () => {
+  try {
+    await db.from('training_logs').delete().neq('id', 0)
+    await db.from('session_notes').delete().neq('id', 0)
+    return true
+  } catch(e) { return false }
+}
