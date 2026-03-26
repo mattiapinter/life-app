@@ -37,6 +37,9 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
     ? `https://www.loom.com/embed/${loomId}`
     : null
 
+  // true quando l'app è installata come PWA sulla home (Safari standalone)
+  const isPWA = typeof window !== 'undefined' && window.navigator.standalone === true
+
   const handleSave = async () => {
     if (!urlInput.trim()) return
     setSaving(true)
@@ -47,13 +50,34 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
     setUrlInput('')
   }
 
+  const handlePlay = () => {
+    if (isPWA) {
+      // In PWA: apri YouTube/Loom nell'app nativa o Safari
+      if (ytId) {
+        // Prova prima lo schema youtube:// (apre app nativa), fallback su https
+        const nativeUrl = `youtube://watch?v=${ytId}`
+        const webUrl    = `https://www.youtube.com/watch?v=${ytId}`
+        window.location.href = nativeUrl
+        // Fallback a Safari dopo 500ms se l'app non si apre
+        setTimeout(() => { window.open(webUrl, '_blank') }, 500)
+      } else if (loomId) {
+        window.open(`https://www.loom.com/share/${loomId}`, '_blank')
+      } else if (existing) {
+        window.open(existing, '_blank')
+      }
+    } else {
+      // In browser: embed dentro l'app
+      setShowEmbed(true)
+    }
+  }
+
   return (
     <>
       {existing ? (
         <div style={{ display:'flex', gap:'5px', flexShrink:0, whiteSpace:'nowrap' }}>
           <div
             style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.violetLight, fontWeight:'600', whiteSpace:'nowrap' }}
-            onClick={() => setShowEmbed(true)}
+            onClick={handlePlay}
           >
             <IcoPlay col={C.violet} /> Video
           </div>
@@ -73,7 +97,7 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
         </div>
       )}
 
-      {/* Modal video player — si sovrappone a tutto, funziona ovunque */}
+      {/* Embed a schermo intero — solo in browser, non in PWA */}
       {showEmbed && embedUrl && (
         <div style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column' }}
           onClick={() => setShowEmbed(false)}>
