@@ -141,6 +141,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
     setSaving(true)
     const promises = []
 
+    // Salva i log degli esercizi (solo per sessioni con pesi)
     Object.entries(exData).forEach(([name, d]) => {
       if (d.sets && Array.isArray(d.sets)) {
         d.sets.forEach((s, i) => {
@@ -159,6 +160,23 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       }
     })
 
+    // Per sessioni senza esercizi pesati (CORSA, PALESTRA, ROCCIA ecc.)
+    // salva comunque un log "sessione completata" così appare nello storico
+    const hasPesiData = Object.keys(exData).length > 0
+    if (!hasPesiData) {
+      promises.push(saveTrainingLog({
+        log_date:      entry.day_date,
+        session_type:  sessionType,
+        exercise_name: null,
+        sets_done:     null,
+        reps_done:     null,
+        weight_kg:     null,
+        rpe_actual:    sessionRpe ? parseInt(sessionRpe) : null,
+        created_at:    new Date().toISOString(),
+      }))
+    }
+
+    // Salva nota se presente
     if (sessionNote.trim()) {
       promises.push(saveSessionNote({
         note_date:    entry.day_date,
@@ -167,6 +185,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
         created_at:   new Date().toISOString(),
       }))
     }
+
     await Promise.all(promises)
     onLogsChanged()
     setSaving(false)
@@ -828,9 +847,18 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
                 {(() => {
                   const byExercise = {}
                   sess.logs.forEach(log => {
+                    if (!log.exercise_name) return // salta log di completamento senza esercizi
                     if (!byExercise[log.exercise_name]) byExercise[log.exercise_name] = []
                     byExercise[log.exercise_name].push(log)
                   })
+                  const hasExercises = Object.keys(byExercise).length > 0
+                  if (!hasExercises) {
+                    return (
+                      <div style={{ fontSize:'12px', color:C.hint, padding:'8px 0' }}>
+                        Sessione completata ✓
+                      </div>
+                    )
+                  }
                   return Object.entries(byExercise).map(([exName, exLogs]) => (
                     <div key={exName} style={{ padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
                       <div style={{ fontSize:'12px', fontWeight:'600', color:C.textSoft, marginBottom:'5px' }}>{exName}</div>
