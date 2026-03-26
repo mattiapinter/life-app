@@ -117,7 +117,7 @@ export const PHOTO_TESTS = [
   { id:'intra_sx',          label:'Intrarotazione femore SX', unit:'°', desc:'Da foto/video' },
   { id:'intra_dx',          label:'Intrarotazione femore DX', unit:'°', desc:'Da foto/video' },
 ]
-export const ALL_TESTS = [...MOB_TESTS, ...STR_TESTS, ...PHOTO_TESTS]
+export const ALL_TESTS = [...MOB_TESTS, ...STR_TESTS]
 
 export const USER_HEIGHT = 185
 export const USER_LEG    = 104.5
