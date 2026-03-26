@@ -6,45 +6,54 @@ import {
   USER_HEIGHT, USER_LEG, todayStr, fmtDate, fmtDateShort, fmtDayName,
 } from '../constants'
 import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
-import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessions, saveSessionNote, loadSessionNotes } from '../lib/supabase'
+import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessions, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData } from '../lib/supabase'
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 
-// ── PESI ROW — una riga per ogni serie, auto-fill dal giro precedente ──
+// ── PESI ROW — tab per giro, auto-fill su blur ──────────────────────
 function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange }) {
   const wd      = ex.weeks.find(w => w.week === week) || ex.weeks[0]
   const numSets = wd.sets || 2
   const lastLog = trainingLogs.find(l => l.exercise_name === ex.name && l.session_type === 'PESI')
 
-  // State: array di { kg, reps } per ogni serie
+  const [activeSet, setActiveSet] = React.useState(0)
+  // sets: array di { kg, reps } — uno per giro
   const [sets, setSets] = React.useState(
     Array.from({ length: numSets }, () => ({ kg: '', reps: '' }))
   )
 
-  const updateSet = (i, field, val) => {
+  // Aggiorna il campo del giro attivo senza auto-fill immediato (evita il bug del troncamento)
+  const handleChange = (field, val) => {
     setSets(prev => {
-      const next = prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s)
-      // Auto-fill le serie successive vuote
-      if (field === 'kg' || field === 'reps') {
-        for (let j = i + 1; j < next.length; j++) {
-          if (!next[j][field]) next[j] = { ...next[j], [field]: val }
-        }
-      }
-      // Riporta su tutti i set
+      const next = prev.map((s, i) => i === activeSet ? { ...s, [field]: val } : s)
       onChange(ex.name, { sets: next, bodyweight: ex.bodyweight, rpe: wd.rpe })
       return next
     })
   }
 
+  // Auto-fill su blur: copia il valore ai giri successivi ancora vuoti
+  const handleBlur = (field) => {
+    setSets(prev => {
+      const val = prev[activeSet][field]
+      if (!val) return prev
+      const next = prev.map((s, i) => i > activeSet && !s[field] ? { ...s, [field]: val } : s)
+      onChange(ex.name, { sets: next, bodyweight: ex.bodyweight, rpe: wd.rpe })
+      return next
+    })
+  }
+
+  const current = sets[activeSet]
+
   const inputStyle = {
     width: '100%', background: C.bg, border: `1px solid ${C.border}`,
-    borderRadius: '8px', padding: '9px 10px',
-    fontSize: '16px', color: C.text, outline: 'none', textAlign: 'center',
+    borderRadius: '10px', padding: '12px',
+    fontSize: '20px', fontWeight: '600', color: C.text,
+    outline: 'none', textAlign: 'center',
   }
 
   return (
-    <div style={{ marginBottom:'16px', paddingBottom:'16px', borderBottom:`1px solid ${C.border}` }}>
-      {/* Header esercizio */}
+    <div style={{ marginBottom:'18px', paddingBottom:'18px', borderBottom:`1px solid ${C.border}` }}>
+      {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px' }}>
         <div style={{ flex:1 }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
@@ -62,29 +71,55 @@ function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange }) {
         )}
       </div>
 
-      {/* Header colonne */}
-      <div style={{ display:'grid', gridTemplateColumns: ex.bodyweight ? '48px 1fr' : '48px 1fr 1fr', gap:'6px', marginBottom:'5px' }}>
-        <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', textTransform:'uppercase', letterSpacing:'.06em', textAlign:'center' }}></div>
-        {!ex.bodyweight && <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', textTransform:'uppercase', letterSpacing:'.06em', textAlign:'center' }}>Peso kg</div>}
-        <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', textTransform:'uppercase', letterSpacing:'.06em', textAlign:'center' }}>Reps</div>
+      {/* Tab giri */}
+      <div style={{ display:'flex', gap:'5px', marginBottom:'12px' }}>
+        {sets.map((s, i) => {
+          const done = ex.bodyweight ? !!s.reps : (!!s.kg && !!s.reps)
+          const active = activeSet === i
+          return (
+            <div key={i} onClick={() => setActiveSet(i)}
+              style={{ flex:1, padding:'7px 0', textAlign:'center', borderRadius:'8px', cursor:'pointer',
+                background: active ? C.violet : done ? C.greenBg : C.surface,
+                border: `1px solid ${active ? C.violetBorder : done ? C.greenBorder : C.border}`,
+                fontSize:'11px', fontWeight:'700',
+                color: active ? '#fff' : done ? C.greenLight : C.hint,
+              }}>
+              G{i + 1}
+              {done && !active && <span style={{ marginLeft:'3px', fontSize:'8px' }}>✓</span>}
+            </div>
+          )
+        })}
       </div>
 
-      {/* Una riga per ogni serie */}
-      {sets.map((s, i) => (
-        <div key={i} style={{ display:'grid', gridTemplateColumns: ex.bodyweight ? '48px 1fr' : '48px 1fr 1fr', gap:'6px', marginBottom:'5px' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', color:C.hint, background:C.surface, borderRadius:'8px', border:`1px solid ${C.border}` }}>
-            G{i + 1}
-          </div>
-          {!ex.bodyweight && (
-            <input type="number" inputMode="decimal" pattern="[0-9]*" style={inputStyle}
-              placeholder="—" value={s.kg}
-              onChange={e => updateSet(i, 'kg', e.target.value)} />
-          )}
+      {/* Inputs del giro attivo */}
+      {ex.bodyweight ? (
+        <div>
+          <div style={{ fontSize:'10px', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'6px', textAlign:'center' }}>Reps</div>
           <input type="number" inputMode="numeric" pattern="[0-9]*" style={inputStyle}
-            placeholder="—" value={s.reps}
-            onChange={e => updateSet(i, 'reps', e.target.value)} />
+            placeholder="—" value={current.reps}
+            onChange={e => handleChange('reps', e.target.value)}
+            onBlur={() => handleBlur('reps')} />
         </div>
-      ))}
+      ) : (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
+          <div>
+            <div style={{ fontSize:'10px', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'6px', textAlign:'center' }}>Peso kg</div>
+            <input type="number" inputMode="decimal" pattern="[0-9]*" style={inputStyle}
+              placeholder="—" value={current.kg}
+              onChange={e => handleChange('kg', e.target.value)}
+              onBlur={() => handleBlur('kg')} />
+          </div>
+          <div>
+            <div style={{ fontSize:'10px', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'6px', textAlign:'center' }}>Reps</div>
+            <input type="number" inputMode="numeric" pattern="[0-9]*" style={inputStyle}
+              placeholder="—" value={current.reps}
+              onChange={e => handleChange('reps', e.target.value)}
+              onBlur={() => handleBlur('reps')} />
+          </div>
+        </div>
+      )}
+
+      {/* Avanzamento automatico al giro successivo dopo blur se c'è un prossimo giro vuoto */}
     </div>
   )
 }
@@ -639,11 +674,14 @@ function BenchmarkWidget({ fitSessions, onOpenMetrics }) {
 }
 
 // ── STORICO ALLENAMENTI ────────────────────────────────────────────
-function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
-  const [expanded, setExpanded] = React.useState(null)
+function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
+  const [expanded,     setExpanded]     = React.useState(null)
   const [noteExpanded, setNoteExpanded] = React.useState(null)
+  const [confirmDel,   setConfirmDel]   = React.useState(null)
+  const [deleting,     setDeleting]     = React.useState(false)
+  const [showNuke,     setShowNuke]     = React.useState(false)
+  const [nukeConfirm,  setNukeConfirm]  = React.useState('')
 
-  // Raggruppa i log per data+session_type
   const sessions = {}
   trainingLogs.forEach(log => {
     const key = `${log.log_date}__${log.session_type}`
@@ -651,6 +689,22 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
     sessions[key].logs.push(log)
   })
   const sorted = Object.values(sessions).sort((a, b) => b.date.localeCompare(a.date))
+
+  const handleDelete = async (date, type) => {
+    setDeleting(true)
+    await deleteSessionLogs(date, type)
+    await deleteSessionNote(date, type)
+    await onDataChanged()
+    setDeleting(false); setConfirmDel(null); setExpanded(null)
+  }
+
+  const handleNuke = async () => {
+    if (nukeConfirm !== 'ELIMINA') return
+    setDeleting(true)
+    await deleteAllTrainingData()
+    await onDataChanged()
+    setDeleting(false); setShowNuke(false); setNukeConfirm('')
+  }
 
   if (sorted.length === 0) {
     return (
@@ -663,17 +717,67 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
 
   return (
     <div style={ss.body}>
+      {/* Modale conferma delete sessione */}
+      {confirmDel && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
+          onClick={() => setConfirmDel(null)}>
+          <div style={{ background:C.surface, borderRadius:'16px', padding:'24px', width:'100%', maxWidth:'340px', border:`1px solid ${C.redBorder}` }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize:'16px', fontWeight:'700', color:C.text, marginBottom:'8px' }}>Elimina sessione</div>
+            <div style={{ fontSize:'13px', color:C.muted, marginBottom:'20px', lineHeight:'1.5' }}>
+              Vuoi eliminare tutti i log di <strong style={{ color:C.text }}>{SESSION_COLORS[confirmDel.type]?.label}</strong> del {confirmDel.date}? Azione irreversibile.
+            </div>
+            <div style={{ display:'flex', gap:'8px' }}>
+              <div style={{ flex:1, padding:'12px', textAlign:'center', borderRadius:'10px', cursor:'pointer', background:C.bg, border:`1px solid ${C.border}`, fontSize:'13px', color:C.muted }}
+                onClick={() => setConfirmDel(null)}>Annulla</div>
+              <div style={{ flex:1, padding:'12px', textAlign:'center', borderRadius:'10px', cursor:'pointer', background:C.redBg, border:`1px solid ${C.redBorder}`, fontSize:'13px', fontWeight:'600', color:C.red, opacity: deleting ? 0.6 : 1 }}
+                onClick={() => !deleting && handleDelete(confirmDel.date, confirmDel.type)}>
+                {deleting ? '...' : 'Elimina'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modale elimina tutto */}
+      {showNuke && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.9)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
+          onClick={() => setShowNuke(false)}>
+          <div style={{ background:C.surface, borderRadius:'16px', padding:'24px', width:'100%', maxWidth:'340px', border:`1px solid ${C.redBorder}` }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize:'16px', fontWeight:'700', color:C.red, marginBottom:'8px' }}>⚠️ Elimina tutto</div>
+            <div style={{ fontSize:'13px', color:C.muted, marginBottom:'16px', lineHeight:'1.5' }}>
+              Stai per eliminare <strong style={{ color:C.text }}>tutti</strong> i log e le note. Scrivi <strong style={{ color:C.text }}>ELIMINA</strong> per confermare.
+            </div>
+            <input style={{ ...ss.inp, marginBottom:'12px', fontSize:'14px' }} placeholder="Scrivi ELIMINA"
+              value={nukeConfirm} onChange={e => setNukeConfirm(e.target.value)} />
+            <div style={{ display:'flex', gap:'8px' }}>
+              <div style={{ flex:1, padding:'12px', textAlign:'center', borderRadius:'10px', cursor:'pointer', background:C.bg, border:`1px solid ${C.border}`, fontSize:'13px', color:C.muted }}
+                onClick={() => { setShowNuke(false); setNukeConfirm('') }}>Annulla</div>
+              <div style={{ flex:1, padding:'12px', textAlign:'center', borderRadius:'10px', cursor:'pointer',
+                background: nukeConfirm === 'ELIMINA' ? C.redBg : C.surface,
+                border: `1px solid ${nukeConfirm === 'ELIMINA' ? C.redBorder : C.border}`,
+                fontSize:'13px', fontWeight:'600',
+                color: nukeConfirm === 'ELIMINA' ? C.red : C.hint,
+                opacity: deleting ? 0.6 : 1 }}
+                onClick={() => !deleting && nukeConfirm === 'ELIMINA' && handleNuke()}>
+                {deleting ? '...' : 'Conferma'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {sorted.map(sess => {
-        const key     = `${sess.date}__${sess.type}`
-        const sc      = SESSION_COLORS[sess.type] || SESSION_COLORS.REST
-        const isOpen  = expanded === key
+        const key      = `${sess.date}__${sess.type}`
+        const sc       = SESSION_COLORS[sess.type] || SESSION_COLORS.REST
+        const isOpen   = expanded === key
         const noteOpen = noteExpanded === key
-        const note    = sessionNotes.find(n => n.note_date === sess.date && n.session_type === sess.type)
-        const rpeLog  = sess.logs.find(l => l.rpe_actual)
+        const note     = sessionNotes.find(n => n.note_date === sess.date && n.session_type === sess.type)
+        const rpeLog   = sess.logs.find(l => l.rpe_actual)
 
         return (
-          <div key={key} style={{ ...ss.card, padding:0, overflow:'hidden' }}>
-            {/* Header compatto */}
+          <div key={key} style={{ ...ss.card, padding:0, overflow:'hidden', marginBottom:'8px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px 16px', cursor:'pointer' }}
               onClick={() => setExpanded(isOpen ? null : key)}>
               <div style={{ width:'8px', height:'8px', borderRadius:'50%', background: sc.text, flexShrink:0 }} />
@@ -692,10 +796,8 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
               </div>
             </div>
 
-            {/* Esercizi espansi */}
             {isOpen && (
               <div style={{ borderTop:`1px solid ${C.border}`, padding:'12px 16px' }}>
-                {/* Raggruppa i log per esercizio per mostrare tutti i giri insieme */}
                 {(() => {
                   const byExercise = {}
                   sess.logs.forEach(log => {
@@ -705,15 +807,12 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
                   return Object.entries(byExercise).map(([exName, exLogs]) => (
                     <div key={exName} style={{ padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
                       <div style={{ fontSize:'12px', fontWeight:'600', color:C.textSoft, marginBottom:'5px' }}>{exName}</div>
-                      <div style={{ display:'flex', flexDirection:'column', gap:'3px' }}>
+                      <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
                         {exLogs.map((log, i) => (
-                          <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                            <div style={{ fontSize:'10px', color:C.hint, minWidth:'28px' }}>G{log.sets_done || i+1}</div>
-                            <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
-                              {log.weight_kg && <div style={{ fontSize:'12px', fontWeight:'700', color:C.violetLight }}>{log.weight_kg}kg</div>}
-                              {log.reps_done && <div style={{ fontSize:'11px', color:C.muted }}>× {log.reps_done} reps</div>}
-                              {!log.weight_kg && !log.reps_done && <div style={{ fontSize:'11px', color:C.hint }}>—</div>}
-                            </div>
+                          <div key={i} style={{ display:'flex', alignItems:'center', gap:'4px', background:C.bg, padding:'4px 8px', borderRadius:'6px', border:`1px solid ${C.border}` }}>
+                            <span style={{ fontSize:'9px', color:C.hint }}>G{log.sets_done || i+1}</span>
+                            {log.weight_kg && <span style={{ fontSize:'12px', fontWeight:'700', color:C.violetLight }}>{log.weight_kg}kg</span>}
+                            {log.reps_done && <span style={{ fontSize:'11px', color:C.muted }}>×{log.reps_done}</span>}
                           </div>
                         ))}
                       </div>
@@ -721,7 +820,6 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
                   ))
                 })()}
 
-                {/* Nota espandibile */}
                 {note && (
                   <div style={{ marginTop:'10px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', padding:'6px 0' }}
@@ -736,18 +834,33 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
                     )}
                   </div>
                 )}
+
+                <div style={{ marginTop:'12px', textAlign:'right' }}>
+                  <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', opacity:0.7 }}
+                    onClick={() => setConfirmDel({ date: sess.date, type: sess.type })}>
+                    Elimina sessione
+                  </div>
+                </div>
               </div>
             )}
           </div>
         )
       })}
+
+      <div style={{ textAlign:'center', marginTop:'16px', paddingTop:'16px', borderTop:`1px solid ${C.border}` }}>
+        <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={() => setShowNuke(true)}>
+          ⚠️ Elimina tutti i dati
+        </div>
+      </div>
     </div>
   )
 }
 
 // ── EXERCISES TABLE ────────────────────────────────────────────────
-function ExercisesTable({ trainingLogs }) {
+function ExercisesTable({ trainingLogs, onDataChanged }) {
   const [selectedEx, setSelectedEx] = React.useState(null)
+  const [confirmDel, setConfirmDel] = React.useState(null)
+  const [deleting,   setDeleting]   = React.useState(false)
   const canvasRef = React.useRef(null)
   const chartRef  = React.useRef(null)
 
@@ -805,13 +918,45 @@ function ExercisesTable({ trainingLogs }) {
 
   return (
     <div style={ss.body}>
+      {/* Modale conferma delete esercizio */}
+      {confirmDel && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
+          onClick={() => setConfirmDel(null)}>
+          <div style={{ background:C.surface, borderRadius:'16px', padding:'24px', width:'100%', maxWidth:'340px', border:`1px solid ${C.redBorder}` }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize:'16px', fontWeight:'700', color:C.text, marginBottom:'8px' }}>Elimina esercizio</div>
+            <div style={{ fontSize:'13px', color:C.muted, marginBottom:'20px', lineHeight:'1.5' }}>
+              Vuoi eliminare tutti i log di <strong style={{ color:C.text }}>{confirmDel}</strong>? Azione irreversibile.
+            </div>
+            <div style={{ display:'flex', gap:'8px' }}>
+              <div style={{ flex:1, padding:'12px', textAlign:'center', borderRadius:'10px', cursor:'pointer', background:C.bg, border:`1px solid ${C.border}`, fontSize:'13px', color:C.muted }}
+                onClick={() => setConfirmDel(null)}>Annulla</div>
+              <div style={{ flex:1, padding:'12px', textAlign:'center', borderRadius:'10px', cursor:'pointer', background:C.redBg, border:`1px solid ${C.redBorder}`, fontSize:'13px', fontWeight:'600', color:C.red, opacity: deleting ? 0.6 : 1 }}
+                onClick={async () => {
+                  if (deleting) return
+                  setDeleting(true)
+                  await deleteExerciseLogs(confirmDel)
+                  await onDataChanged()
+                  setDeleting(false); setConfirmDel(null); setSelectedEx(null)
+                }}>
+                {deleting ? '...' : 'Elimina'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedEx && (
         <div style={{ ...ss.card, marginBottom:'16px' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
             <div style={{ fontSize:'13px', fontWeight:'600', color:C.text }}>{selectedEx}</div>
-            <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'4px 8px' }} onClick={() => setSelectedEx(null)}>✕</div>
+            <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
+              <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', opacity:0.7 }}
+                onClick={() => setConfirmDel(selectedEx)}>Elimina</div>
+              <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'4px 8px' }}
+                onClick={() => setSelectedEx(null)}>✕</div>
+            </div>
           </div>
-          {/* Storico sessioni — raggruppa per data, mostra tutti i giri */}
           {(() => {
             const byDate = {}
             ;(byEx[selectedEx] || []).forEach(log => {
@@ -852,7 +997,7 @@ function ExercisesTable({ trainingLogs }) {
             onClick={() => setSelectedEx(selectedEx === ex ? null : ex)}>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:'12px', fontWeight:'600', color:C.text }}>{ex}</div>
-              <div style={{ fontSize:'10px', color:C.hint, marginTop:'2px' }}>{logs.length} sessioni</div>
+              <div style={{ fontSize:'10px', color:C.hint, marginTop:'2px' }}>{logs.length} log</div>
             </div>
             <div style={{ textAlign:'right' }}>
               {last.weight_kg
@@ -1113,8 +1258,8 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
       </div>
       {sub === 'oggi'     && renderOggi()}
       {sub === 'piano'    && renderPiano()}
-      {sub === 'storico'  && <StoricoAllenamenti trainingLogs={trainingLogs} sessionNotes={sessionNotes} />}
-      {sub === 'esercizi' && <ExercisesTable trainingLogs={trainingLogs} />}
+      {sub === 'storico'  && <StoricoAllenamenti trainingLogs={trainingLogs} sessionNotes={sessionNotes} onDataChanged={onLogsChanged} />}
+      {sub === 'esercizi' && <ExercisesTable trainingLogs={trainingLogs} onDataChanged={onLogsChanged} />}
       {sub === 'test'     && <TestForm fitSessions={fitSessions} onSaved={onFitSaved} />}
     </div>
   )
