@@ -32,7 +32,7 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
   const ytId     = extractYoutubeId(existing)
   const loomId   = extractLoomId(existing)
   const embedUrl = ytId
-    ? `https://www.youtube.com/embed/${ytId}?playsinline=1`
+    ? `https://www.youtube.com/embed/${ytId}?playsinline=1&rel=0`
     : loomId
     ? `https://www.loom.com/embed/${loomId}`
     : null
@@ -53,9 +53,9 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
         <div style={{ display:'flex', gap:'5px', flexShrink:0, whiteSpace:'nowrap' }}>
           <div
             style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.violetLight, fontWeight:'600', whiteSpace:'nowrap' }}
-            onClick={() => setShowEmbed(v => !v)}
+            onClick={() => setShowEmbed(true)}
           >
-            <IcoPlay col={C.violet} /> {showEmbed ? 'Chiudi' : 'Video'}
+            <IcoPlay col={C.violet} /> Video
           </div>
           <div
             style={{ padding:'3px 6px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:'6px', cursor:'pointer', flexShrink:0 }}
@@ -73,16 +73,25 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
         </div>
       )}
 
-      {/* Embed inline — si apre sotto il pulsante, non in un modal */}
+      {/* Modal video player — si sovrappone a tutto, funziona ovunque */}
       {showEmbed && embedUrl && (
-        <div style={{ marginTop:'10px', borderRadius:'12px', overflow:'hidden', background:'#000', position:'relative', paddingBottom:'56.25%', height:0 }}>
-          <iframe
-            src={embedUrl}
-            style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            playsInline
-          />
+        <div style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column' }}
+          onClick={() => setShowEmbed(false)}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', flexShrink:0 }}>
+            <div style={{ fontSize:'13px', fontWeight:'600', color:C.text }}>{exerciseName}</div>
+            <div style={{ fontSize:'24px', color:C.muted, cursor:'pointer', padding:'4px 8px' }} onClick={() => setShowEmbed(false)}>✕</div>
+          </div>
+          <div style={{ flex:1, display:'flex', alignItems:'center', padding:'0 16px 40px' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ width:'100%', position:'relative', paddingBottom:'56.25%', height:0 }}>
+              <iframe
+                src={embedUrl}
+                style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none', borderRadius:'12px' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
         </div>
       )}
 
