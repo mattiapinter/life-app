@@ -107,22 +107,37 @@ function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, act
 }
 
 // ── SESSION DETAIL ─────────────────────────────────────────────────
-function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onVideosChange }) {
+function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onVideosChange, sessionNotes }) {
   const [showCoach,    setShowCoach]    = React.useState(false)
   const [showWarmup,   setShowWarmup]   = React.useState(false)
   const [showCooldown, setShowCooldown] = React.useState(false)
   const [showChange,   setShowChange]   = React.useState(false)
   const [sessionNote,  setSessionNote]  = React.useState('')
   const [sessionRpe,   setSessionRpe]   = React.useState('')
-  const [exData,       setExData]       = React.useState({}) // { exerciseName: { kg, reps, sets, rpe, bodyweight } }
+  const [exData,       setExData]       = React.useState({})
   const [saving,       setSaving]       = React.useState(false)
   const [savedMsg,     setSavedMsg]     = React.useState(false)
-  const [overrideType, setOverrideType] = React.useState(null)
+
+  // Inizializza overrideType dalla nota salvata se la sessione è stata già cambiata
+  const savedChange = sessionNotes?.find(n =>
+    n.note_date === entry.day_date &&
+    n.original_session &&
+    n.original_session !== n.session_type
+  )
+  const [overrideType, setOverrideType] = React.useState(savedChange?.session_type || null)
 
   const handleExChange = (name, data) => setExData(p => ({ ...p, [name]: data }))
 
+  // Definito qui sopra saveSession così è disponibile dentro la funzione
+  const sessionType  = overrideType || entry.session_type
+  const sc           = SESSION_COLORS[sessionType] || SESSION_COLORS.REST
+  const coachNote    = TRAINING_PLAN.coach_notes.sessions[sessionType]
+  const week         = entry.week
+  const needsWarmup2 = ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(sessionType)
+  const warmupData   = needsWarmup2 ? TRAINING_PLAN.warmup_2 : TRAINING_PLAN.warmup_1
+
   const saveSession = async () => {
-    if (saving || savedMsg) return  // blocca doppio click
+    if (saving || savedMsg) return
     setSaving(true)
     const promises = []
 
@@ -156,15 +171,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
     onLogsChanged()
     setSaving(false)
     setSavedMsg(true)
-    // non resettare savedMsg — il pulsante rimane verde e bloccato
   }
-
-  const sessionType = overrideType || entry.session_type
-  const sc          = SESSION_COLORS[sessionType] || SESSION_COLORS.REST
-  const coachNote   = TRAINING_PLAN.coach_notes.sessions[sessionType]
-  const week        = entry.week
-  const needsWarmup2 = ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(sessionType)
-  const warmupData   = needsWarmup2 ? TRAINING_PLAN.warmup_2 : TRAINING_PLAN.warmup_1
 
   // ── Warmup exercises row
   const WarmupRow = ({ ex }) => (
@@ -1164,6 +1171,7 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
       onLogsChanged={onLogsChanged}
       videos={videos}
       onVideosChange={onVideosChange}
+      sessionNotes={sessionNotes}
     />
   }
 
