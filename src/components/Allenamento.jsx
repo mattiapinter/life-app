@@ -10,34 +10,49 @@ import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessi
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 
-// ── PESI ROW — raccoglie valori localmente, li riporta su tramite onChange ──
+// ── PESI ROW — una riga per ogni serie, auto-fill dal giro precedente ──
 function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange }) {
-  const [kg,   setKg]   = React.useState('')
-  const [reps, setReps] = React.useState('')
-
   const wd      = ex.weeks.find(w => w.week === week) || ex.weeks[0]
+  const numSets = wd.sets || 2
   const lastLog = trainingLogs.find(l => l.exercise_name === ex.name && l.session_type === 'PESI')
 
-  // Riporta su i valori ad ogni modifica
-  const handleKg = (v) => { setKg(v); onChange(ex.name, { kg: v, reps, bodyweight: ex.bodyweight, sets: wd.sets, rpe: wd.rpe }) }
-  const handleReps = (v) => { setReps(v); onChange(ex.name, { kg, reps: v, bodyweight: ex.bodyweight, sets: wd.sets, rpe: wd.rpe }) }
+  // State: array di { kg, reps } per ogni serie
+  const [sets, setSets] = React.useState(
+    Array.from({ length: numSets }, () => ({ kg: '', reps: '' }))
+  )
+
+  const updateSet = (i, field, val) => {
+    setSets(prev => {
+      const next = prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s)
+      // Auto-fill le serie successive vuote
+      if (field === 'kg' || field === 'reps') {
+        for (let j = i + 1; j < next.length; j++) {
+          if (!next[j][field]) next[j] = { ...next[j], [field]: val }
+        }
+      }
+      // Riporta su tutti i set
+      onChange(ex.name, { sets: next, bodyweight: ex.bodyweight, rpe: wd.rpe })
+      return next
+    })
+  }
 
   const inputStyle = {
     width: '100%', background: C.bg, border: `1px solid ${C.border}`,
-    borderRadius: '8px', padding: '10px 12px',
-    fontSize: '16px', color: C.text, outline: 'none',
+    borderRadius: '8px', padding: '9px 10px',
+    fontSize: '16px', color: C.text, outline: 'none', textAlign: 'center',
   }
 
   return (
-    <div style={{ marginBottom:'14px', paddingBottom:'14px', borderBottom:`1px solid ${C.border}` }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'8px' }}>
+    <div style={{ marginBottom:'16px', paddingBottom:'16px', borderBottom:`1px solid ${C.border}` }}>
+      {/* Header esercizio */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'10px' }}>
         <div style={{ flex:1 }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
             <div style={{ fontSize:'13px', fontWeight:'600', color:C.text }}>{ex.name}</div>
             <VideoButton exerciseName={ex.name} videos={videos} onVideosChange={onVideosChange} />
           </div>
           <div style={{ fontSize:'10px', color:C.hint, marginTop:'3px' }}>
-            Tempo {ex.tempo} · {wd.sets} × {wd.reps} reps{wd.rpe ? ` · RPE ${wd.rpe}` : ''}
+            Tempo {ex.tempo} · {numSets} × {wd.reps} reps{wd.rpe ? ` · RPE ${wd.rpe}` : ''}
           </div>
         </div>
         {lastLog && !ex.bodyweight && (
@@ -47,17 +62,29 @@ function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange }) {
         )}
       </div>
 
-      {ex.bodyweight ? (
-        <input type="number" inputMode="numeric" pattern="[0-9]*" style={inputStyle}
-          placeholder="Reps fatte" value={reps} onChange={e => handleReps(e.target.value)} />
-      ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
-          <input type="number" inputMode="decimal" pattern="[0-9]*" style={inputStyle}
-            placeholder="Peso kg" value={kg} onChange={e => handleKg(e.target.value)} />
+      {/* Header colonne */}
+      <div style={{ display:'grid', gridTemplateColumns: ex.bodyweight ? '48px 1fr' : '48px 1fr 1fr', gap:'6px', marginBottom:'5px' }}>
+        <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', textTransform:'uppercase', letterSpacing:'.06em', textAlign:'center' }}></div>
+        {!ex.bodyweight && <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', textTransform:'uppercase', letterSpacing:'.06em', textAlign:'center' }}>Peso kg</div>}
+        <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', textTransform:'uppercase', letterSpacing:'.06em', textAlign:'center' }}>Reps</div>
+      </div>
+
+      {/* Una riga per ogni serie */}
+      {sets.map((s, i) => (
+        <div key={i} style={{ display:'grid', gridTemplateColumns: ex.bodyweight ? '48px 1fr' : '48px 1fr 1fr', gap:'6px', marginBottom:'5px' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'600', color:C.hint, background:C.surface, borderRadius:'8px', border:`1px solid ${C.border}` }}>
+            G{i + 1}
+          </div>
+          {!ex.bodyweight && (
+            <input type="number" inputMode="decimal" pattern="[0-9]*" style={inputStyle}
+              placeholder="—" value={s.kg}
+              onChange={e => updateSet(i, 'kg', e.target.value)} />
+          )}
           <input type="number" inputMode="numeric" pattern="[0-9]*" style={inputStyle}
-            placeholder="Reps" value={reps} onChange={e => handleReps(e.target.value)} />
+            placeholder="—" value={s.reps}
+            onChange={e => updateSet(i, 'reps', e.target.value)} />
         </div>
-      )}
+      ))}
     </div>
   )
 }
@@ -79,18 +106,27 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
 
   const saveSession = async () => {
     setSaving(true)
-    const promises = Object.entries(exData)
-      .filter(([, d]) => d.reps || d.kg)
-      .map(([name, d]) => saveTrainingLog({
-        log_date:      entry.day_date,
-        session_type:  sessionType,
-        exercise_name: name,
-        sets_done:     d.sets ? parseInt(d.sets) : null,
-        reps_done:     d.reps ? parseInt(d.reps) : null,
-        weight_kg:     d.bodyweight ? null : (d.kg ? parseFloat(d.kg) : null),
-        rpe_actual:    sessionRpe ? parseInt(sessionRpe) : (d.rpe ? parseInt(d.rpe) : null),
-        created_at:    new Date().toISOString(),
-      }))
+    const promises = []
+
+    Object.entries(exData).forEach(([name, d]) => {
+      if (d.sets && Array.isArray(d.sets)) {
+        // Nuova struttura: array di serie
+        d.sets.forEach((s, i) => {
+          if (!s.reps && !s.kg) return // salta serie vuote
+          promises.push(saveTrainingLog({
+            log_date:      entry.day_date,
+            session_type:  sessionType,
+            exercise_name: name,
+            sets_done:     i + 1,
+            reps_done:     s.reps ? parseInt(s.reps) : null,
+            weight_kg:     d.bodyweight ? null : (s.kg ? parseFloat(s.kg) : null),
+            rpe_actual:    sessionRpe ? parseInt(sessionRpe) : (d.rpe ? parseInt(d.rpe) : null),
+            created_at:    new Date().toISOString(),
+          }))
+        })
+      }
+    })
+
     if (sessionNote.trim()) {
       promises.push(saveSessionNote({
         note_date:    entry.day_date,
@@ -659,17 +695,31 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
             {/* Esercizi espansi */}
             {isOpen && (
               <div style={{ borderTop:`1px solid ${C.border}`, padding:'12px 16px' }}>
-                {sess.logs.map((log, i) => (
-                  <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
-                    <div style={{ fontSize:'12px', color:C.textSoft }}>{log.exercise_name}</div>
-                    <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
-                      {log.weight_kg && <div style={{ fontSize:'12px', fontWeight:'700', color:C.violetLight }}>{log.weight_kg}kg</div>}
-                      {log.reps_done && <div style={{ fontSize:'11px', color:C.muted }}>× {log.reps_done}</div>}
-                      {log.sets_done && <div style={{ fontSize:'10px', color:C.hint }}>{log.sets_done} serie</div>}
-                      {!log.weight_kg && !log.reps_done && <div style={{ fontSize:'11px', color:C.hint }}>—</div>}
+                {/* Raggruppa i log per esercizio per mostrare tutti i giri insieme */}
+                {(() => {
+                  const byExercise = {}
+                  sess.logs.forEach(log => {
+                    if (!byExercise[log.exercise_name]) byExercise[log.exercise_name] = []
+                    byExercise[log.exercise_name].push(log)
+                  })
+                  return Object.entries(byExercise).map(([exName, exLogs]) => (
+                    <div key={exName} style={{ padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
+                      <div style={{ fontSize:'12px', fontWeight:'600', color:C.textSoft, marginBottom:'5px' }}>{exName}</div>
+                      <div style={{ display:'flex', flexDirection:'column', gap:'3px' }}>
+                        {exLogs.map((log, i) => (
+                          <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                            <div style={{ fontSize:'10px', color:C.hint, minWidth:'28px' }}>G{log.sets_done || i+1}</div>
+                            <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                              {log.weight_kg && <div style={{ fontSize:'12px', fontWeight:'700', color:C.violetLight }}>{log.weight_kg}kg</div>}
+                              {log.reps_done && <div style={{ fontSize:'11px', color:C.muted }}>× {log.reps_done} reps</div>}
+                              {!log.weight_kg && !log.reps_done && <div style={{ fontSize:'11px', color:C.hint }}>—</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                })()}
 
                 {/* Nota espandibile */}
                 {note && (
@@ -761,18 +811,28 @@ function ExercisesTable({ trainingLogs }) {
             <div style={{ fontSize:'13px', fontWeight:'600', color:C.text }}>{selectedEx}</div>
             <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'4px 8px' }} onClick={() => setSelectedEx(null)}>✕</div>
           </div>
-          {/* Storico sessioni per questo esercizio */}
-          {(byEx[selectedEx] || []).map((log, i) => (
-            <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
-              <div style={{ fontSize:'11px', color:C.muted }}>{log.log_date}</div>
-              <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
-                {log.weight_kg && <div style={{ fontSize:'12px', fontWeight:'700', color:C.violetLight }}>{log.weight_kg}kg</div>}
-                {log.reps_done && <div style={{ fontSize:'11px', color:C.muted }}>× {log.reps_done} reps</div>}
-                {log.sets_done && <div style={{ fontSize:'10px', color:C.hint }}>{log.sets_done} serie</div>}
-                <div style={{ fontSize:'10px', color:C.hint }}>vol: {calcVolume(log)}</div>
+          {/* Storico sessioni — raggruppa per data, mostra tutti i giri */}
+          {(() => {
+            const byDate = {}
+            ;(byEx[selectedEx] || []).forEach(log => {
+              if (!byDate[log.log_date]) byDate[log.log_date] = []
+              byDate[log.log_date].push(log)
+            })
+            return Object.entries(byDate).map(([date, logs]) => (
+              <div key={date} style={{ padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
+                <div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>{date}</div>
+                <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                  {logs.map((log, i) => (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:'4px', background:C.bg, padding:'4px 8px', borderRadius:'6px', border:`1px solid ${C.border}` }}>
+                      <span style={{ fontSize:'9px', color:C.hint }}>G{log.sets_done || i+1}</span>
+                      {log.weight_kg && <span style={{ fontSize:'12px', fontWeight:'700', color:C.violetLight }}>{log.weight_kg}kg</span>}
+                      {log.reps_done && <span style={{ fontSize:'11px', color:C.muted }}>×{log.reps_done}</span>}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          })()}
           {(byEx[selectedEx] || []).length >= 2 && (
             <div style={{ position:'relative', height:'120px', marginTop:'12px' }}><canvas ref={canvasRef} /></div>
           )}
