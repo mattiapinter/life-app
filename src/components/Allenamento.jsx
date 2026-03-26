@@ -2,42 +2,30 @@ import React from 'react'
 import { Chart, LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import {
-  C, ss, SESSION_COLORS, ALL_TESTS, MOB_TESTS, STR_TESTS, PHOTO_TESTS,
+  C, ss, SESSION_COLORS, ALL_TESTS, MOB_TESTS, STR_TESTS,
   USER_HEIGHT, USER_LEG, todayStr, fmtDate, fmtDateShort, fmtDayName,
 } from '../constants'
 import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
-import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessions, saveSessionNote } from '../lib/supabase'
+import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessions, saveSessionNote, loadSessionNotes } from '../lib/supabase'
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 
-// ── PESI ROW — standalone per evitare re-render che chiudono la tastiera su mobile ──
-function PesiRow({ ex, week, trainingLogs, saveLog, videos, onVideosChange }) {
-  const [kg,      setKg]      = React.useState('')
-  const [reps,    setReps]    = React.useState('')
-  const [saving,  setSaving]  = React.useState(false)
-  const [saved,   setSaved]   = React.useState(false)
+// ── PESI ROW — raccoglie valori localmente, li riporta su tramite onChange ──
+function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange }) {
+  const [kg,   setKg]   = React.useState('')
+  const [reps, setReps] = React.useState('')
 
   const wd      = ex.weeks.find(w => w.week === week) || ex.weeks[0]
   const lastLog = trainingLogs.find(l => l.exercise_name === ex.name && l.session_type === 'PESI')
 
-  const handleSave = async () => {
-    setSaving(true)
-    await saveLog(ex.name, wd.sets, reps || null, ex.bodyweight ? null : (kg || null), wd.rpe)
-    setSaved(true)
-    setSaving(false)
-    setTimeout(() => setSaved(false), 2000)
-  }
+  // Riporta su i valori ad ogni modifica
+  const handleKg = (v) => { setKg(v); onChange(ex.name, { kg: v, reps, bodyweight: ex.bodyweight, sets: wd.sets, rpe: wd.rpe }) }
+  const handleReps = (v) => { setReps(v); onChange(ex.name, { kg, reps: v, bodyweight: ex.bodyweight, sets: wd.sets, rpe: wd.rpe }) }
 
   const inputStyle = {
-    width: '100%',
-    background: C.bg,
-    border: `1px solid ${C.border}`,
-    borderRadius: '8px',
-    padding: '10px 12px',
-    fontSize: '16px', // 16px evita lo zoom automatico su iOS
-    color: C.text,
-    outline: 'none',
-    inputMode: 'numeric',
+    width: '100%', background: C.bg, border: `1px solid ${C.border}`,
+    borderRadius: '8px', padding: '10px 12px',
+    fontSize: '16px', color: C.text, outline: 'none',
   }
 
   return (
@@ -60,45 +48,14 @@ function PesiRow({ ex, week, trainingLogs, saveLog, videos, onVideosChange }) {
       </div>
 
       {ex.bodyweight ? (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 80px', gap:'6px' }}>
-          <input
-            type="number"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            style={inputStyle}
-            placeholder="Reps fatte"
-            value={reps}
-            onChange={e => setReps(e.target.value)}
-          />
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', background: saved ? C.greenBg : C.surface, border:`1px solid ${saved ? C.greenBorder : C.border}`, borderRadius:'8px', fontSize:'13px', color: saved ? C.greenLight : C.muted, cursor:'pointer', fontWeight:'600' }}
-            onClick={handleSave}>
-            {saving ? '…' : saved ? '✓' : 'Salva'}
-          </div>
-        </div>
+        <input type="number" inputMode="numeric" pattern="[0-9]*" style={inputStyle}
+          placeholder="Reps fatte" value={reps} onChange={e => handleReps(e.target.value)} />
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 80px', gap:'6px' }}>
-          <input
-            type="number"
-            inputMode="decimal"
-            pattern="[0-9]*"
-            style={inputStyle}
-            placeholder="Peso kg"
-            value={kg}
-            onChange={e => setKg(e.target.value)}
-          />
-          <input
-            type="number"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            style={inputStyle}
-            placeholder="Reps"
-            value={reps}
-            onChange={e => setReps(e.target.value)}
-          />
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', background: saved ? C.greenBg : C.surface, border:`1px solid ${saved ? C.greenBorder : C.border}`, borderRadius:'8px', fontSize:'13px', color: saved ? C.greenLight : C.muted, cursor:'pointer', fontWeight:'600' }}
-            onClick={handleSave}>
-            {saving ? '…' : saved ? '✓' : 'Ok'}
-          </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
+          <input type="number" inputMode="decimal" pattern="[0-9]*" style={inputStyle}
+            placeholder="Peso kg" value={kg} onChange={e => handleKg(e.target.value)} />
+          <input type="number" inputMode="numeric" pattern="[0-9]*" style={inputStyle}
+            placeholder="Reps" value={reps} onChange={e => handleReps(e.target.value)} />
         </div>
       )}
     </div>
@@ -112,41 +69,49 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const [showCooldown, setShowCooldown] = React.useState(false)
   const [showChange,   setShowChange]   = React.useState(false)
   const [sessionNote,  setSessionNote]  = React.useState('')
+  const [sessionRpe,   setSessionRpe]   = React.useState('')
+  const [exData,       setExData]       = React.useState({}) // { exerciseName: { kg, reps, sets, rpe, bodyweight } }
   const [saving,       setSaving]       = React.useState(false)
   const [savedMsg,     setSavedMsg]     = React.useState(false)
   const [overrideType, setOverrideType] = React.useState(null)
 
-  const sessionType = overrideType || entry.session_type
-  const sc    = SESSION_COLORS[sessionType] || SESSION_COLORS.REST
-  const coachNote = TRAINING_PLAN.coach_notes.sessions[sessionType]
-  const week  = entry.week
-  const needsWarmup2 = ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(sessionType)
-  const warmupData   = needsWarmup2 ? TRAINING_PLAN.warmup_2 : TRAINING_PLAN.warmup_1
+  const handleExChange = (name, data) => setExData(p => ({ ...p, [name]: data }))
 
-  const saveLog = async (exerciseName, sets, reps, weight, rpe) => {
+  const saveSession = async () => {
     setSaving(true)
-    const log = {
-      log_date: entry.day_date,
-      session_type: sessionType,
-      exercise_name: exerciseName,
-      sets_done: sets ? parseInt(sets) : null,
-      reps_done: reps ? parseInt(reps) : null,
-      weight_kg: weight ? parseFloat(weight) : null,
-      rpe_actual: rpe ? parseInt(rpe) : null,
-      created_at: new Date().toISOString(),
+    const promises = Object.entries(exData)
+      .filter(([, d]) => d.reps || d.kg)
+      .map(([name, d]) => saveTrainingLog({
+        log_date:      entry.day_date,
+        session_type:  sessionType,
+        exercise_name: name,
+        sets_done:     d.sets ? parseInt(d.sets) : null,
+        reps_done:     d.reps ? parseInt(d.reps) : null,
+        weight_kg:     d.bodyweight ? null : (d.kg ? parseFloat(d.kg) : null),
+        rpe_actual:    sessionRpe ? parseInt(sessionRpe) : (d.rpe ? parseInt(d.rpe) : null),
+        created_at:    new Date().toISOString(),
+      }))
+    if (sessionNote.trim()) {
+      promises.push(saveSessionNote({
+        note_date:    entry.day_date,
+        session_type: sessionType,
+        note_text:    sessionNote,
+        created_at:   new Date().toISOString(),
+      }))
     }
-    await saveTrainingLog(log)
+    await Promise.all(promises)
     onLogsChanged()
     setSavedMsg(true)
-    setTimeout(() => setSavedMsg(false), 2000)
     setSaving(false)
+    setTimeout(() => setSavedMsg(false), 3000)
   }
 
-  const saveNote = async () => {
-    if (!sessionNote.trim()) return
-    await saveSessionNote({ note_date: entry.day_date, session_type: sessionType, note_text: sessionNote, created_at: new Date().toISOString() })
-    setSavedMsg(true); setTimeout(() => setSavedMsg(false), 2000)
-  }
+  const sessionType = overrideType || entry.session_type
+  const sc          = SESSION_COLORS[sessionType] || SESSION_COLORS.REST
+  const coachNote   = TRAINING_PLAN.coach_notes.sessions[sessionType]
+  const week        = entry.week
+  const needsWarmup2 = ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(sessionType)
+  const warmupData   = needsWarmup2 ? TRAINING_PLAN.warmup_2 : TRAINING_PLAN.warmup_1
 
   // ── Warmup exercises row
   const WarmupRow = ({ ex }) => (
@@ -176,9 +141,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
         <div style={{ fontSize:'10px', color:C.hint, marginBottom:'10px' }}>Uguale per tutte le settimane</div>
         {TRAINING_PLAN.sessions.PESI.circuit_1.map((ex, i) => (
           <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
-            <div>
-              <div style={{ fontSize:'12px', color:C.text, fontWeight:'500' }}>{ex.name}</div>
-            </div>
+            <div><div style={{ fontSize:'12px', color:C.text, fontWeight:'500' }}>{ex.name}</div></div>
             <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
               <div style={{ fontSize:'11px', color:C.muted }}>{ex.sets && `${ex.sets}×`}{ex.duration || (ex.reps && `${ex.reps} reps`)}</div>
               <VideoButton exerciseName={ex.name} videos={videos} onVideosChange={onVideosChange} />
@@ -189,8 +152,8 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       <div style={ss.card}>
         <div style={ss.secLbl}>Circuito 2 · Settimana {week}</div>
         <div style={{ fontSize:'10px', color:C.hint, marginBottom:'12px' }}>Recupero 20s tra esercizi · 3 min a fine giro</div>
-        {TRAINING_PLAN.sessions.PESI.circuit_2.map((ex, i) => (
-          <PesiRow key={ex.name} ex={ex} week={week} trainingLogs={trainingLogs} saveLog={saveLog} videos={videos} onVideosChange={onVideosChange} />
+        {TRAINING_PLAN.sessions.PESI.circuit_2.map((ex) => (
+          <PesiRow key={ex.name} ex={ex} week={week} trainingLogs={trainingLogs} onChange={handleExChange} videos={videos} onVideosChange={onVideosChange} />
         ))}
       </div>
     </div>
@@ -395,17 +358,43 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
           </div>
         )}
 
-        {/* Note sessione */}
+        {/* Salva allenamento — RPE + Note + pulsante unico */}
         {sessionType !== 'REST' && (
           <div style={ss.card}>
-            <div style={ss.secLbl}>Note sessione</div>
-            <textarea style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom:'10px' }}
-              rows={3} placeholder="Come è andata? Carichi usati, sensazioni, imprevisti..."
-              value={sessionNote} onChange={e => setSessionNote(e.target.value)} />
-            <div style={{ ...ss.savBtn, background:C.surface, color:C.muted, border:`1px solid ${C.border}` }} onClick={saveNote}>
-              Salva nota
+            <div style={ss.secLbl}>Chiudi sessione</div>
+
+            {/* RPE generale */}
+            <div style={{ marginBottom:'12px' }}>
+              <div style={{ fontSize:'11px', color:C.muted, marginBottom:'8px' }}>Com'è andata? RPE generale</div>
+              <div style={{ display:'flex', gap:'6px' }}>
+                {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                  <div key={n}
+                    style={{ flex:1, padding:'8px 0', textAlign:'center', borderRadius:'8px', cursor:'pointer', fontSize:'12px', fontWeight:'600',
+                      background: parseInt(sessionRpe) === n ? C.violet : C.bg,
+                      color: parseInt(sessionRpe) === n ? '#fff' : C.hint,
+                      border: `1px solid ${parseInt(sessionRpe) === n ? C.violetBorder : C.border}`,
+                    }}
+                    onClick={() => setSessionRpe(String(n))}>
+                    {n}
+                  </div>
+                ))}
+              </div>
             </div>
-            {savedMsg && <div style={{ fontSize:'12px', color:C.greenLight, textAlign:'center', marginTop:'8px' }}>✓ Salvato!</div>}
+
+            {/* Note */}
+            <textarea
+              style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom:'12px', fontSize:'14px' }}
+              rows={3}
+              placeholder="Note libere — sensazioni, imprevisti, cosa hai saltato..."
+              value={sessionNote}
+              onChange={e => setSessionNote(e.target.value)}
+            />
+
+            <div
+              style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1, background: savedMsg ? C.green : C.violet }}
+              onClick={!saving && !savedMsg ? saveSession : undefined}>
+              {saving ? 'Salvataggio...' : savedMsg ? '✓ Allenamento salvato!' : 'Salva allenamento'}
+            </div>
           </div>
         )}
 
@@ -613,22 +602,115 @@ function BenchmarkWidget({ fitSessions, onOpenMetrics }) {
   )
 }
 
+// ── STORICO ALLENAMENTI ────────────────────────────────────────────
+function StoricoAllenamenti({ trainingLogs, sessionNotes }) {
+  const [expanded, setExpanded] = React.useState(null)
+  const [noteExpanded, setNoteExpanded] = React.useState(null)
+
+  // Raggruppa i log per data+session_type
+  const sessions = {}
+  trainingLogs.forEach(log => {
+    const key = `${log.log_date}__${log.session_type}`
+    if (!sessions[key]) sessions[key] = { date: log.log_date, type: log.session_type, logs: [] }
+    sessions[key].logs.push(log)
+  })
+  const sorted = Object.values(sessions).sort((a, b) => b.date.localeCompare(a.date))
+
+  if (sorted.length === 0) {
+    return (
+      <div style={{ ...ss.body, textAlign:'center', paddingTop:'48px' }}>
+        <div style={{ fontSize:'14px', color:C.muted }}>Nessun allenamento salvato.</div>
+        <div style={{ fontSize:'12px', color:C.hint, marginTop:'8px' }}>Apri una sessione, inserisci i carichi e clicca "Salva allenamento".</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={ss.body}>
+      {sorted.map(sess => {
+        const key     = `${sess.date}__${sess.type}`
+        const sc      = SESSION_COLORS[sess.type] || SESSION_COLORS.REST
+        const isOpen  = expanded === key
+        const noteOpen = noteExpanded === key
+        const note    = sessionNotes.find(n => n.note_date === sess.date && n.session_type === sess.type)
+        const rpeLog  = sess.logs.find(l => l.rpe_actual)
+
+        return (
+          <div key={key} style={{ ...ss.card, padding:0, overflow:'hidden' }}>
+            {/* Header compatto */}
+            <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px 16px', cursor:'pointer' }}
+              onClick={() => setExpanded(isOpen ? null : key)}>
+              <div style={{ width:'8px', height:'8px', borderRadius:'50%', background: sc.text, flexShrink:0 }} />
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:'13px', fontWeight:'600', color:C.text }}>{sc.label}</div>
+                <div style={{ fontSize:'10px', color:C.muted, marginTop:'2px' }}>{sess.date}</div>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                {rpeLog && (
+                  <div style={{ fontSize:'10px', fontWeight:'600', padding:'2px 8px', borderRadius:'999px',
+                    background: rpeLog.rpe_actual <= 6 ? C.greenBg : rpeLog.rpe_actual <= 8 ? C.amberBg : C.redBg,
+                    color:      rpeLog.rpe_actual <= 6 ? C.greenLight : rpeLog.rpe_actual <= 8 ? C.amberLight : C.redLight,
+                  }}>RPE {rpeLog.rpe_actual}</div>
+                )}
+                <div style={{ fontSize:'16px', color:C.hint }}>{isOpen ? '▲' : '▼'}</div>
+              </div>
+            </div>
+
+            {/* Esercizi espansi */}
+            {isOpen && (
+              <div style={{ borderTop:`1px solid ${C.border}`, padding:'12px 16px' }}>
+                {sess.logs.map((log, i) => (
+                  <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
+                    <div style={{ fontSize:'12px', color:C.textSoft }}>{log.exercise_name}</div>
+                    <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
+                      {log.weight_kg && <div style={{ fontSize:'12px', fontWeight:'700', color:C.violetLight }}>{log.weight_kg}kg</div>}
+                      {log.reps_done && <div style={{ fontSize:'11px', color:C.muted }}>× {log.reps_done}</div>}
+                      {log.sets_done && <div style={{ fontSize:'10px', color:C.hint }}>{log.sets_done} serie</div>}
+                      {!log.weight_kg && !log.reps_done && <div style={{ fontSize:'11px', color:C.hint }}>—</div>}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Nota espandibile */}
+                {note && (
+                  <div style={{ marginTop:'10px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', padding:'6px 0' }}
+                      onClick={() => setNoteExpanded(noteOpen ? null : key)}>
+                      <div style={{ fontSize:'10px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em' }}>📝 Nota</div>
+                      <div style={{ fontSize:'12px', color:C.hint }}>{noteOpen ? '▲' : '▼'}</div>
+                    </div>
+                    {noteOpen && (
+                      <div style={{ fontSize:'12px', color:C.muted, lineHeight:'1.6', padding:'8px', background:C.bg, borderRadius:'8px', border:`1px solid ${C.border}` }}>
+                        {note.note_text}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── EXERCISES TABLE ────────────────────────────────────────────────
-function ExercisesTable({ trainingLogs, fitSessions }) {
+function ExercisesTable({ trainingLogs }) {
   const [selectedEx, setSelectedEx] = React.useState(null)
   const canvasRef = React.useRef(null)
   const chartRef  = React.useRef(null)
 
-  // Group logs by exercise
+  // Raggruppa log per esercizio, ordine cronologico
   const byEx = {}
-  trainingLogs.forEach(log => {
+  ;[...trainingLogs].reverse().forEach(log => {
     if (!log.exercise_name) return
     if (!byEx[log.exercise_name]) byEx[log.exercise_name] = []
     byEx[log.exercise_name].push(log)
   })
   const exercises = Object.keys(byEx).sort()
 
-  // Volume = sets * reps * weight (or reps if bodyweight)
+  // Volume = sets * reps * weight (o solo reps se bodyweight)
   const calcVolume = (log) => {
     const s = log.sets_done || 1
     const r = log.reps_done || 0
@@ -639,19 +721,16 @@ function ExercisesTable({ trainingLogs, fitSessions }) {
   React.useEffect(() => {
     if (!selectedEx || !canvasRef.current) return
     if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
-    const logs = (byEx[selectedEx] || []).slice().reverse()
+    const logs = [...(byEx[selectedEx] || [])].reverse()
     if (logs.length < 2) return
     chartRef.current = new Chart(canvasRef.current, {
       type:'bar',
       data:{
         labels: logs.map(l => l.log_date),
         datasets:[{
-          label:'Volume',
           data: logs.map(l => calcVolume(l)),
           backgroundColor:'rgba(123,111,232,0.6)',
-          borderColor:'#7B6FE8',
-          borderWidth:1,
-          borderRadius:4,
+          borderColor:'#7B6FE8', borderWidth:1, borderRadius:4,
         }]
       },
       options:{
@@ -669,7 +748,7 @@ function ExercisesTable({ trainingLogs, fitSessions }) {
     return (
       <div style={{ ...ss.body, textAlign:'center', paddingTop:'48px' }}>
         <div style={{ fontSize:'14px', color:C.muted }}>Nessun log ancora.</div>
-        <div style={{ fontSize:'12px', color:C.hint, marginTop:'8px' }}>Apri una sessione e registra i tuoi pesi.</div>
+        <div style={{ fontSize:'12px', color:C.hint, marginTop:'8px' }}>Salva il primo allenamento per vedere i dati qui.</div>
       </div>
     )
   }
@@ -678,17 +757,19 @@ function ExercisesTable({ trainingLogs, fitSessions }) {
     <div style={ss.body}>
       {selectedEx && (
         <div style={{ ...ss.card, marginBottom:'16px' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'10px' }}>
             <div style={{ fontSize:'13px', fontWeight:'600', color:C.text }}>{selectedEx}</div>
-            <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer' }} onClick={() => setSelectedEx(null)}>✕</div>
+            <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'4px 8px' }} onClick={() => setSelectedEx(null)}>✕</div>
           </div>
-          {(byEx[selectedEx] || []).slice(0, 3).map((log, i) => (
-            <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:`1px solid ${C.border}` }}>
+          {/* Storico sessioni per questo esercizio */}
+          {(byEx[selectedEx] || []).map((log, i) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
               <div style={{ fontSize:'11px', color:C.muted }}>{log.log_date}</div>
-              <div style={{ display:'flex', gap:'8px' }}>
-                {log.weight_kg && <div style={{ fontSize:'11px', color:C.violetLight, fontWeight:'600' }}>{log.weight_kg}kg</div>}
-                {log.reps_done && <div style={{ fontSize:'11px', color:C.muted }}>{log.reps_done} reps</div>}
-                {log.rpe_actual && <div style={{ fontSize:'11px', color:C.amberLight }}>RPE {log.rpe_actual}</div>}
+              <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                {log.weight_kg && <div style={{ fontSize:'12px', fontWeight:'700', color:C.violetLight }}>{log.weight_kg}kg</div>}
+                {log.reps_done && <div style={{ fontSize:'11px', color:C.muted }}>× {log.reps_done} reps</div>}
+                {log.sets_done && <div style={{ fontSize:'10px', color:C.hint }}>{log.sets_done} serie</div>}
+                <div style={{ fontSize:'10px', color:C.hint }}>vol: {calcVolume(log)}</div>
               </div>
             </div>
           ))}
@@ -701,18 +782,26 @@ function ExercisesTable({ trainingLogs, fitSessions }) {
       {exercises.map(ex => {
         const logs = byEx[ex]
         const last = logs[0]
-        const vol  = calcVolume(last)
         return (
-          <div key={ex} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 14px', background: selectedEx === ex ? C.violetBg : C.surface, borderRadius:'12px', marginBottom:'6px', border:`1px solid ${selectedEx === ex ? C.violetBorder : C.border}`, cursor:'pointer' }}
+          <div key={ex}
+            style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 14px',
+              background: selectedEx === ex ? C.violetBg : C.surface,
+              borderRadius:'12px', marginBottom:'6px',
+              border:`1px solid ${selectedEx === ex ? C.violetBorder : C.border}`,
+              cursor:'pointer' }}
             onClick={() => setSelectedEx(selectedEx === ex ? null : ex)}>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:'12px', fontWeight:'600', color:C.text }}>{ex}</div>
               <div style={{ fontSize:'10px', color:C.hint, marginTop:'2px' }}>{logs.length} sessioni</div>
             </div>
             <div style={{ textAlign:'right' }}>
-              {last.weight_kg && <div style={{ fontSize:'13px', fontWeight:'700', color:C.violetLight }}>{last.weight_kg}kg</div>}
-              {!last.weight_kg && last.reps_done && <div style={{ fontSize:'13px', fontWeight:'700', color:C.muted }}>{last.reps_done} reps</div>}
-              <div style={{ fontSize:'9px', color:C.hint }}>vol: {vol}</div>
+              {last.weight_kg
+                ? <div style={{ fontSize:'13px', fontWeight:'700', color:C.violetLight }}>{last.weight_kg}kg</div>
+                : last.reps_done
+                ? <div style={{ fontSize:'13px', fontWeight:'700', color:C.muted }}>{last.reps_done} reps</div>
+                : null
+              }
+              <div style={{ fontSize:'9px', color:C.hint }}>vol {calcVolume(last)}</div>
             </div>
           </div>
         )
@@ -817,11 +906,21 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
   const [sub, setSub]                     = React.useState('oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
   const [showMetrics,   setShowMetrics]   = React.useState(false)
+  const [sessionNotes,  setSessionNotes]  = React.useState([])
   const today      = todayStr()
   const todayEntry = getTodayCalEntry()
 
-  const onLogsChanged = async () => { const logs = await loadTrainingLogs(); setTrainingLogs(logs) }
-  const onFitSaved    = async () => { const sessions = await loadFitnessSessions(); setFitSessions(sessions) }
+  const onLogsChanged = async () => {
+    const logs  = await loadTrainingLogs()
+    const notes = await loadSessionNotes()
+    setTrainingLogs(logs)
+    setSessionNotes(notes)
+  }
+  const onFitSaved = async () => { const sessions = await loadFitnessSessions(); setFitSessions(sessions) }
+
+  React.useEffect(() => {
+    loadSessionNotes().then(setSessionNotes)
+  }, [])
 
   // Metrics screen
   if (showMetrics) {
@@ -948,13 +1047,14 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
         <div style={ss.subtitle}>{todayEntry ? `oggi: ${SESSION_COLORS[todayEntry.session_type]?.label}` : 'nessun allenamento oggi'}</div>
       </div>
       <div style={ss.subBar}>
-        {[{ id:'oggi', l:'Oggi' }, { id:'piano', l:'Piano' }, { id:'esercizi', l:'Esercizi' }, { id:'test', l:'Test' }].map(t => (
+        {[{ id:'oggi', l:'Oggi' }, { id:'piano', l:'Piano' }, { id:'storico', l:'Storico' }, { id:'esercizi', l:'Esercizi' }, { id:'test', l:'Test' }].map(t => (
           <div key={t.id} style={ss.subTab(sub === t.id)} onClick={() => setSub(t.id)}>{t.l}</div>
         ))}
       </div>
       {sub === 'oggi'     && renderOggi()}
       {sub === 'piano'    && renderPiano()}
-      {sub === 'esercizi' && <ExercisesTable trainingLogs={trainingLogs} fitSessions={fitSessions} />}
+      {sub === 'storico'  && <StoricoAllenamenti trainingLogs={trainingLogs} sessionNotes={sessionNotes} />}
+      {sub === 'esercizi' && <ExercisesTable trainingLogs={trainingLogs} />}
       {sub === 'test'     && <TestForm fitSessions={fitSessions} onSaved={onFitSaved} />}
     </div>
   )
