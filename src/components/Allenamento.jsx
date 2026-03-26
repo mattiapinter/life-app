@@ -1,4 +1,6 @@
 import React from 'react'
+import { Chart, LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
+Chart.register(LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import {
   C, ss, SESSION_COLORS, ALL_TESTS, MOB_TESTS, STR_TESTS, PHOTO_TESTS,
   USER_HEIGHT, USER_LEG, todayStr, fmtDate, fmtDateShort, fmtDayName,
@@ -373,8 +375,140 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   )
 }
 
+// ── METRICS DETAIL SCREEN ─────────────────────────────────────────
+function MetricsDetail({ fitSessions, onBack, onGoToTest }) {
+  const [selIdx, setSelIdx] = React.useState(0)
+  const canvasRef = React.useRef(null)
+  const chartRef  = React.useRef(null)
+
+  const displayTests = [...MOB_TESTS, ...STR_TESTS]
+  const test  = displayTests[selIdx]
+  const first = fitSessions[0]
+  const last  = fitSessions[fitSessions.length - 1]
+  const pts   = fitSessions.map(s => ({ x: s.session_date, y: s[test.id] })).filter(p => p.y != null)
+
+  const improvement = (first && last && first[test.id] != null && last[test.id] != null && first !== last)
+    ? ((last[test.id] - first[test.id]) / Math.abs(first[test.id]) * 100).toFixed(1) : null
+
+  React.useEffect(() => {
+    if (!canvasRef.current) return
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
+    if (pts.length < 2) return
+    chartRef.current = new Chart(canvasRef.current, {
+      type:'line',
+      data:{ labels: pts.map(p => p.x), datasets:[{ data: pts.map(p => p.y), borderColor:'#7B6FE8', backgroundColor:'rgba(123,111,232,0.12)', pointBackgroundColor:'#7B6FE8', tension:0.35, fill:true, pointRadius:5 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } }, y:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } } } },
+    })
+  }, [selIdx, fitSessions])
+
+  if (!fitSessions.length) {
+    return (
+      <div>
+        <div style={ss.hdr}>
+          <div style={{ fontSize:'12px', color:C.muted, cursor:'pointer', marginBottom:'12px' }} onClick={onBack}>← Oggi</div>
+          <div style={ss.title}>Metriche</div>
+        </div>
+        <div style={{ textAlign:'center', padding:'48px 20px', color:C.hint, fontSize:'13px' }}>
+          Nessun test registrato ancora.
+          <div style={{ marginTop:'16px' }}>
+            <div style={{ ...ss.savBtn, maxWidth:'200px', margin:'0 auto' }} onClick={onGoToTest}>Registra primo test</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div style={ss.hdr}>
+        <div style={{ fontSize:'12px', color:C.muted, cursor:'pointer', marginBottom:'12px' }} onClick={onBack}>← Oggi</div>
+        <div style={ss.eyebrow}>Performance · {fitSessions.length} test registrati</div>
+        <div style={ss.title}>Metriche</div>
+        <div style={ss.subtitle}>dal {first?.session_date} · ultimo {last?.session_date}</div>
+      </div>
+      <div style={ss.body}>
+
+        {/* Spaccata */}
+        {(last?.spaccata_piedi || last?.spaccata_seduti) && (
+          <div style={ss.card}>
+            <div style={ss.secLbl}>Spaccata vs altezza ({USER_HEIGHT} cm)</div>
+            <div style={{ display:'flex', gap:'8px', marginBottom:'8px' }}>
+              <div style={{ flex:1, background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:'12px', padding:'14px' }}>
+                <div style={{ fontSize:'9px', fontWeight:'600', color:C.green, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'4px' }}>In piedi</div>
+                <div style={{ fontSize:'28px', fontWeight:'700', color:C.greenLight }}>{last.spaccata_piedi ? Math.round((last.spaccata_piedi / USER_HEIGHT) * 100) + '%' : '—'}</div>
+                <div style={{ fontSize:'10px', color:C.green, opacity:.8, marginTop:'2px' }}>{last.spaccata_piedi ? last.spaccata_piedi + ' cm' : ''}</div>
+              </div>
+              <div style={{ flex:1, background:C.amberBg, border:`1px solid ${C.amberBorder}`, borderRadius:'12px', padding:'14px' }}>
+                <div style={{ fontSize:'9px', fontWeight:'600', color:C.amber, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'4px' }}>Da seduti</div>
+                <div style={{ fontSize:'28px', fontWeight:'700', color:C.amberLight }}>{last.spaccata_seduti ? Math.round((last.spaccata_seduti / USER_HEIGHT) * 100) + '%' : '—'}</div>
+                <div style={{ fontSize:'10px', color:C.amber, opacity:.8, marginTop:'2px' }}>{last.spaccata_seduti ? last.spaccata_seduti + ' cm' : ''}</div>
+              </div>
+            </div>
+            <div style={{ fontSize:'10px', color:C.hint }}>100% = apertura uguale all'altezza · sopra 100% ottima mobilità</div>
+          </div>
+        )}
+
+        {/* Grafico metrica selezionata */}
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Andamento nel tempo</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'5px', marginBottom:'14px' }}>
+            {displayTests.map((t, i) => (
+              <div key={t.id} onClick={() => setSelIdx(i)}
+                style={{ padding:'4px 9px', fontSize:'10px', fontWeight:'500', borderRadius:'999px', cursor:'pointer', userSelect:'none', background: selIdx === i ? C.violet : C.surface, color: selIdx === i ? '#fff' : C.muted, border:`1px solid ${selIdx === i ? C.violetBorder : C.border}` }}>
+                {t.label.replace('Forza ','').replace(' frontale','').replace('massimale trazione','traz. max').replace('Resistenza tacca 20mm','Resist.').trim()}
+              </div>
+            ))}
+          </div>
+          {last?.[test.id] != null && (
+            <div style={{ display:'flex', alignItems:'baseline', gap:'10px', marginBottom:'12px' }}>
+              <div style={{ fontSize:'32px', fontWeight:'700', color:C.text }}>{last[test.id]}</div>
+              <div style={{ fontSize:'13px', color:C.muted }}>{test.unit}</div>
+              {improvement !== null && (
+                <div style={{ fontSize:'11px', fontWeight:'600', padding:'3px 10px', borderRadius:'999px', background: parseFloat(improvement) >= 0 ? C.greenBg : C.redBg, color: parseFloat(improvement) >= 0 ? C.greenLight : C.redLight }}>
+                  {parseFloat(improvement) >= 0 ? '+' : ''}{improvement}% dall'inizio
+                </div>
+              )}
+            </div>
+          )}
+          {pts.length >= 2
+            ? <div style={{ position:'relative', height:'160px' }}><canvas ref={canvasRef} /></div>
+            : <div style={{ textAlign:'center', padding:'20px', fontSize:'11px', color:C.hint }}>{pts.length === 1 ? 'Serve un secondo test per il grafico' : 'Nessun dato per questa metrica'}</div>
+          }
+        </div>
+
+        {/* Tutti i valori ultimo test */}
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Ultimo test · {last?.session_date}{last?.body_weight_kg ? ` · ${last.body_weight_kg} kg` : ''}</div>
+          {[...MOB_TESTS, ...STR_TESTS].map(t => {
+            const val  = last?.[t.id]
+            const fval = first?.[t.id]
+            const d    = (val != null && fval != null && first !== last) ? (val - fval).toFixed(1) : null
+            return (
+              <div key={t.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 0', borderBottom:`1px solid ${C.border}` }}>
+                <div style={{ fontSize:'12px', color:C.textSoft, flex:1 }}>{t.label}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  {d !== null && <div style={{ fontSize:'10px', fontWeight:'600', padding:'2px 7px', borderRadius:'999px', background: parseFloat(d) >= 0 ? C.greenBg : C.redBg, color: parseFloat(d) >= 0 ? C.greenLight : C.redLight }}>{parseFloat(d) >= 0 ? '+' : ''}{d}</div>}
+                  <div style={{ fontSize:'14px', fontWeight:'700', color: val != null ? C.text : C.hint }}>
+                    {val != null ? val : '—'}{val != null && <span style={{ fontSize:'10px', color:C.muted, marginLeft:'2px' }}>{t.unit}</span>}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* CTA nuovo test */}
+        <div style={{ textAlign:'center', paddingTop:'4px' }}>
+          <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={onGoToTest}>+ Registra nuovo test</div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
 // ── BENCHMARK CHART WIDGET ─────────────────────────────────────────
-function BenchmarkWidget({ fitSessions, onGoToTests }) {
+function BenchmarkWidget({ fitSessions, onOpenMetrics }) {
   const [idx, setIdx] = React.useState(0)
   const canvasRef = React.useRef(null)
   const chartRef  = React.useRef(null)
@@ -390,44 +524,31 @@ function BenchmarkWidget({ fitSessions, onGoToTests }) {
     if (!canvasRef.current) return
     if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
     if (!pts.length) return
-    const { Chart } = window
-    if (!Chart) return
     chartRef.current = new Chart(canvasRef.current, {
       type:'line',
-      data:{
-        labels: pts.map(p => p.x),
-        datasets:[{ data: pts.map(p => p.y), borderColor:'#7B6FE8', backgroundColor:'rgba(123,111,232,0.1)', pointBackgroundColor:'#7B6FE8', tension:0.35, fill:true, pointRadius:4 }]
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ display:false } },
-        scales:{
-          x:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } },
-          y:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } },
-        },
-      },
+      data:{ labels: pts.map(p => p.x), datasets:[{ data: pts.map(p => p.y), borderColor:'#7B6FE8', backgroundColor:'rgba(123,111,232,0.1)', pointBackgroundColor:'#7B6FE8', tension:0.35, fill:true, pointRadius:4 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } }, y:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } } } },
     })
   }, [idx, fitSessions])
 
-  const last = fitSessions.length ? fitSessions[fitSessions.length - 1] : null
-  const prev = fitSessions.length > 1 ? fitSessions[fitSessions.length - 2] : null
+  const last  = fitSessions.length ? fitSessions[fitSessions.length - 1] : null
+  const prev  = fitSessions.length > 1 ? fitSessions[fitSessions.length - 2] : null
   const delta = last && prev && last[test.id] != null && prev[test.id] != null
     ? (last[test.id] - prev[test.id]).toFixed(1) : null
 
   return (
-    <div style={ss.card}>
-      <div style={ss.secLbl}>Benchmark</div>
-      {/* Metric switcher */}
+    <div style={{ ...ss.card, cursor:'pointer' }} onClick={onOpenMetrics}>
+      <div style={ss.secLbl}>Benchmark · tocca per il dettaglio</div>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
-        <div style={{ padding:'6px 8px', cursor:'pointer', color:C.muted }} onClick={() => setIdx((idx - 1 + displayTests.length) % displayTests.length)}>‹</div>
-        <div style={{ textAlign:'center', cursor:'pointer' }} onClick={onGoToTests}>
+        <div style={{ padding:'6px 12px', color:C.muted, fontSize:'20px' }}
+          onClick={e => { e.stopPropagation(); setIdx((idx - 1 + displayTests.length) % displayTests.length) }}>‹</div>
+        <div style={{ textAlign:'center' }}>
           <div style={{ fontSize:'12px', fontWeight:'600', color:C.text }}>{test.label}</div>
           <div style={{ fontSize:'10px', color:C.hint, marginTop:'2px' }}>{test.unit}</div>
         </div>
-        <div style={{ padding:'6px 8px', cursor:'pointer', color:C.muted }} onClick={() => setIdx((idx + 1) % displayTests.length)}>›</div>
+        <div style={{ padding:'6px 12px', color:C.muted, fontSize:'20px' }}
+          onClick={e => { e.stopPropagation(); setIdx((idx + 1) % displayTests.length) }}>›</div>
       </div>
-
-      {/* Value + delta */}
       {last && last[test.id] != null && (
         <div style={{ display:'flex', alignItems:'baseline', gap:'8px', marginBottom:'10px', justifyContent:'center' }}>
           <div style={{ fontSize:'28px', fontWeight:'700', color:C.text }}>{last[test.id]}</div>
@@ -439,15 +560,10 @@ function BenchmarkWidget({ fitSessions, onGoToTests }) {
           )}
         </div>
       )}
-
-      {/* Chart */}
-      {pts.length > 1 ? (
-        <div style={{ position:'relative', height:'100px' }}><canvas ref={canvasRef} /></div>
-      ) : (
-        <div style={{ textAlign:'center', padding:'16px', fontSize:'11px', color:C.hint }}>
-          {pts.length === 1 ? 'Serve almeno un altro test per vedere il grafico' : 'Nessun dato — registra il primo test'}
-        </div>
-      )}
+      {pts.length > 1
+        ? <div style={{ position:'relative', height:'100px' }}><canvas ref={canvasRef} /></div>
+        : <div style={{ textAlign:'center', padding:'16px', fontSize:'11px', color:C.hint }}>{pts.length === 1 ? 'Serve un secondo test per il grafico' : 'Nessun dato — registra il primo test'}</div>
+      }
     </div>
   )
 }
@@ -480,8 +596,6 @@ function ExercisesTable({ trainingLogs, fitSessions }) {
     if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
     const logs = (byEx[selectedEx] || []).slice().reverse()
     if (logs.length < 2) return
-    const { Chart } = window
-    if (!Chart) return
     chartRef.current = new Chart(canvasRef.current, {
       type:'bar',
       data:{
@@ -637,11 +751,11 @@ function TestForm({ fitSessions, onSaved }) {
       <div style={ss.card}>
         <div style={ss.secLbl}>Test Fotografici</div>
         <div style={{ fontSize:'11px', color:C.muted, lineHeight:'1.6', marginBottom:'14px' }}>
-          Flessione braccia a muro · Grant foot raise (DX/SX) · Grant adattato · Extrarotazione/Intrarotazione femore — misura dagli angoli in foto/video.
+          Flessione braccia · Extrarotazione/Intrarotazione femore — misura dagli angoli in foto/video e inserisci i valori qui sotto.
         </div>
         <a href="https://drive.google.com/drive/folders/1Sghs3pDiQkl2wMUqiGVb0auGAZzru21s?usp=sharing" target="_blank" rel="noopener noreferrer"
           style={{ display:'block', textAlign:'center', padding:'10px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'10px', fontSize:'12px', fontWeight:'600', color:C.violetLight, textDecoration:'none', marginBottom:'14px' }}>
-          📁 Apri cartella video test →
+          📁 Cartella Foto →
         </a>
         {PHOTO_TESTS.map(t => inp(t))}
       </div>
@@ -656,18 +770,22 @@ function TestForm({ fitSessions, onSaved }) {
 
 // ── MAIN ALLENAMENTO ───────────────────────────────────────────────
 export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange }) {
-  const [sub, setSub]                 = React.useState('oggi')
+  const [sub, setSub]                     = React.useState('oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
-  const today = todayStr()
+  const [showMetrics,   setShowMetrics]   = React.useState(false)
+  const today      = todayStr()
   const todayEntry = getTodayCalEntry()
 
-  const onLogsChanged = async () => {
-    const logs = await loadTrainingLogs()
-    setTrainingLogs(logs)
-  }
-  const onFitSaved = async () => {
-    const sessions = await loadFitnessSessions()
-    setFitSessions(sessions)
+  const onLogsChanged = async () => { const logs = await loadTrainingLogs(); setTrainingLogs(logs) }
+  const onFitSaved    = async () => { const sessions = await loadFitnessSessions(); setFitSessions(sessions) }
+
+  // Metrics screen
+  if (showMetrics) {
+    return <MetricsDetail
+      fitSessions={fitSessions}
+      onBack={() => setShowMetrics(false)}
+      onGoToTest={() => { setShowMetrics(false); setSub('test') }}
+    />
   }
 
   if (selectedEntry) {
@@ -728,7 +846,7 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
       </div>
 
       {/* Benchmark widget */}
-      <BenchmarkWidget fitSessions={fitSessions} onGoToTests={() => setSub('test')} />
+      <BenchmarkWidget fitSessions={fitSessions} onOpenMetrics={() => setShowMetrics(true)} />
 
       {/* Nuovo test CTA */}
       <div style={{ textAlign:'center', marginTop:'-4px', marginBottom:'8px' }}>
