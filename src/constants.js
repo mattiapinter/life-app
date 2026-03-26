@@ -96,6 +96,10 @@ export const MOB_TESTS = [
   { id:'sit_reach',       label:'Sit and reach',               unit:'cm',  desc:'Negativo se non raggiungi il pavimento' },
   { id:'dorsi_sx',        label:'Dorsiflessione SX',           unit:'cm',  desc:'Distanza punta piede–muro' },
   { id:'dorsi_dx',        label:'Dorsiflessione DX',           unit:'cm',  desc:'Distanza punta piede–muro' },
+  { id:'grant_sx',        label:'Grant foot raise SX',         unit:'cm',  desc:'Altezza punto di contatto' },
+  { id:'grant_dx',        label:'Grant foot raise DX',         unit:'cm',  desc:'Altezza punto di contatto' },
+  { id:'grant_ad_sx',     label:'Grant adattato SX',           unit:'cm',  desc:'Altezza punto di contatto' },
+  { id:'grant_ad_dx',     label:'Grant adattato DX',           unit:'cm',  desc:'Altezza punto di contatto' },
 ]
 export const STR_TESTS = [
   { id:'tacca_sx',    label:'Forza tacca 20mm SX',       unit:'kg',       desc:'Tindeq — 6 sec massimale' },
@@ -105,16 +109,13 @@ export const STR_TESTS = [
   { id:'trazione_kg', label:'Forza massimale trazione',  unit:'kg extra', desc:'Carico aggiuntivo singola trazione' },
   { id:'resist_reps', label:'Resistenza tacca 20mm',     unit:'reps',     desc:'7"/3" off a cedimento — Beast' },
 ]
+// Solo rotazioni — input da foto/video, nessun campo numerico nell'app
 export const PHOTO_TESTS = [
-  { id:'flessione_braccia', label:'Flessione braccia a muro', unit:'°',  desc:'Angolo da foto/video' },
-  { id:'grant_sx',          label:'Grant foot raise SX',      unit:'cm', desc:'Altezza punto di contatto' },
-  { id:'grant_dx',          label:'Grant foot raise DX',      unit:'cm', desc:'Altezza punto di contatto' },
-  { id:'grant_ad_sx',       label:'Grant adattato SX',        unit:'cm', desc:'Altezza punto di contatto' },
-  { id:'grant_ad_dx',       label:'Grant adattato DX',        unit:'cm', desc:'Altezza punto di contatto' },
-  { id:'extra_sx',          label:'Extrarotazione femore SX', unit:'°',  desc:'Da foto/video' },
-  { id:'extra_dx',          label:'Extrarotazione femore DX', unit:'°',  desc:'Da foto/video' },
-  { id:'intra_sx',          label:'Intrarotazione femore SX', unit:'°',  desc:'Da foto/video' },
-  { id:'intra_dx',          label:'Intrarotazione femore DX', unit:'°',  desc:'Da foto/video' },
+  { id:'flessione_braccia', label:'Flessione braccia a muro', unit:'°', desc:'Angolo da foto/video' },
+  { id:'extra_sx',          label:'Extrarotazione femore SX', unit:'°', desc:'Da foto/video' },
+  { id:'extra_dx',          label:'Extrarotazione femore DX', unit:'°', desc:'Da foto/video' },
+  { id:'intra_sx',          label:'Intrarotazione femore SX', unit:'°', desc:'Da foto/video' },
+  { id:'intra_dx',          label:'Intrarotazione femore DX', unit:'°', desc:'Da foto/video' },
 ]
 export const ALL_TESTS = [...MOB_TESTS, ...STR_TESTS, ...PHOTO_TESTS]
 
