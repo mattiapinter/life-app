@@ -751,13 +751,12 @@ function TestForm({ fitSessions, onSaved }) {
       <div style={ss.card}>
         <div style={ss.secLbl}>Test Fotografici</div>
         <div style={{ fontSize:'11px', color:C.muted, lineHeight:'1.6', marginBottom:'14px' }}>
-          Flessione braccia · Extrarotazione/Intrarotazione femore — misura dagli angoli in foto/video e inserisci i valori qui sotto.
+          Flessione braccia · Extrarotazione/Intrarotazione femore. Tracciamento tramite foto — nessun inserimento numerico necessario.
         </div>
         <a href="https://drive.google.com/drive/folders/1Sghs3pDiQkl2wMUqiGVb0auGAZzru21s?usp=sharing" target="_blank" rel="noopener noreferrer"
-          style={{ display:'block', textAlign:'center', padding:'10px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'10px', fontSize:'12px', fontWeight:'600', color:C.violetLight, textDecoration:'none', marginBottom:'14px' }}>
+          style={{ display:'block', textAlign:'center', padding:'10px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'10px', fontSize:'12px', fontWeight:'600', color:C.violetLight, textDecoration:'none' }}>
           📁 Cartella Foto →
         </a>
-        {PHOTO_TESTS.map(t => inp(t))}
       </div>
 
       <div style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1 }} onClick={!saving ? salva : undefined}>
