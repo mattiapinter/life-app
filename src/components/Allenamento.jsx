@@ -122,14 +122,14 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const handleExChange = (name, data) => setExData(p => ({ ...p, [name]: data }))
 
   const saveSession = async () => {
+    if (saving || savedMsg) return  // blocca doppio click
     setSaving(true)
     const promises = []
 
     Object.entries(exData).forEach(([name, d]) => {
       if (d.sets && Array.isArray(d.sets)) {
-        // Nuova struttura: array di serie
         d.sets.forEach((s, i) => {
-          if (!s.reps && !s.kg) return // salta serie vuote
+          if (!s.reps && !s.kg) return
           promises.push(saveTrainingLog({
             log_date:      entry.day_date,
             session_type:  sessionType,
@@ -154,9 +154,9 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
     }
     await Promise.all(promises)
     onLogsChanged()
-    setSavedMsg(true)
     setSaving(false)
-    setTimeout(() => setSavedMsg(false), 3000)
+    setSavedMsg(true)
+    // non resettare savedMsg — il pulsante rimane verde e bloccato
   }
 
   const sessionType = overrideType || entry.session_type
@@ -397,13 +397,28 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
         {(sessionType === 'PLACCA_VERTICALE' || sessionType === 'STRAPIOMBO' || sessionType === 'STRAPIOMBO_TRAZIONI_SETT4') && renderROCCIA(sessionType)}
         {sessionType === 'REST'             && renderREST()}
 
-        {/* PESI aggiuntivo per doppia sessione */}
+        {/* PESI aggiuntivo per doppia sessione — mostrato UNA VOLTA SOLA qui sotto, non in renderPESI */}
         {entry.also === 'PESI' && sessionType !== 'PESI' && (
           <div style={{ marginTop:'4px' }}>
             <div style={{ fontSize:'11px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'12px', paddingTop:'8px', borderTop:`1px solid ${C.border}` }}>
               + Pesi (sessione abbinata)
             </div>
-            {renderPESI()}
+            <div style={ss.card}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px', paddingBottom:'10px', borderBottom:`1px solid ${C.border}` }}>
+                <div style={{ fontSize:'10px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em' }}>
+                  Circuito 2 · Settimana {week}
+                </div>
+                <div
+                  style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', borderRadius:'999px', cursor:'pointer', background:C.violetBg, border:`1px solid ${C.violetBorder}`, fontSize:'12px', fontWeight:'700', color:C.violetLight, userSelect:'none' }}
+                  onClick={() => setPesiActiveSet(s => (s + 1) % maxSets)}>
+                  🔄 {pesiActiveSet + 1}/{maxSets}
+                </div>
+              </div>
+              <div style={{ fontSize:'10px', color:C.hint, marginBottom:'12px' }}>Recupero 20s tra esercizi · 3 min a fine giro</div>
+              {TRAINING_PLAN.sessions.PESI.circuit_2.map((ex) => (
+                <PesiRow key={`also_${ex.name}`} ex={ex} week={week} trainingLogs={trainingLogs} onChange={handleExChange} videos={videos} onVideosChange={onVideosChange} activeSet={pesiActiveSet} />
+              ))}
+            </div>
           </div>
         )}
 
