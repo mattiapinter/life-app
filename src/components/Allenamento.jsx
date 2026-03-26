@@ -566,6 +566,13 @@ function MetricsDetail({ fitSessions, onBack, onGoToTest }) {
           </div>
         )}
 
+        {/* Cartella Foto test */}
+        <a href="https://drive.google.com/drive/folders/1Sghs3pDiQkl2wMUqiGVb0auGAZzru21s?usp=sharing"
+          target="_blank" rel="noopener noreferrer"
+          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'12px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'12px', fontSize:'12px', fontWeight:'600', color:C.violetLight, textDecoration:'none', marginBottom:'12px' }}>
+          📁 Cartella Foto test →
+        </a>
+
         {/* Grafico metrica selezionata */}
         <div style={ss.card}>
           <div style={ss.secLbl}>Andamento nel tempo</div>
@@ -1232,20 +1239,38 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
               Settimana {w}{w === 4 ? ' — Scarico' : ''}
             </div>
             {entries.map((entry, i) => {
-              const sc = SESSION_COLORS[entry.session_type] || SESSION_COLORS.REST
+              // Controlla se questa sessione è stata cambiata manualmente
+              const changedNote = sessionNotes.find(n =>
+                n.note_date === entry.day_date &&
+                n.original_session &&
+                n.original_session !== n.session_type
+              )
+              const displayType = changedNote ? changedNote.session_type : entry.session_type
+              const sc      = SESSION_COLORS[displayType] || SESSION_COLORS.REST
+              const scOrig  = SESSION_COLORS[entry.session_type] || SESSION_COLORS.REST
               const isToday = entry.day_date === today
               const isPast  = entry.day_date < today
+              const isChanged = !!changedNote
+
               return (
                 <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px', background: isToday ? sc.bg : C.surface, borderRadius:'10px', marginBottom:'5px', border:`1px solid ${isToday ? sc.border : C.border}`, cursor:'pointer', opacity: isPast ? 0.5 : 1 }}
                   onClick={() => setSelectedEntry(entry)}>
-                  {/* Color dot */}
-                  <div style={{ width:'8px', height:'8px', borderRadius:'50%', background: sc.text, flexShrink:0, opacity: entry.session_type === 'REST' ? 0.2 : 1 }} />
+                  {/* Color dot — arancio se cambiato manualmente */}
+                  <div style={{ width:'8px', height:'8px', borderRadius:'50%', background: isChanged ? C.amber : sc.text, flexShrink:0, opacity: displayType === 'REST' ? 0.2 : 1 }} />
                   <div style={{ width:'38px', fontSize:'10px', color: isToday ? sc.text : C.muted, fontWeight: isToday ? '700' : '400', flexShrink:0 }}>
                     {fmtDateShort(entry.day_date)}
                   </div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontSize:'12px', fontWeight:'600', color: entry.session_type === 'REST' ? C.hint : C.text }}>{sc.label}</div>
-                    {entry.also && <div style={{ fontSize:'10px', color:C.muted }}>+ {SESSION_COLORS[entry.also]?.label}</div>}
+                    <div style={{ fontSize:'12px', fontWeight:'600', color: displayType === 'REST' ? C.hint : C.text }}>
+                      {sc.label}
+                      {isChanged && <span style={{ fontSize:'9px', color:C.amber, marginLeft:'6px', fontWeight:'400' }}>modificato</span>}
+                    </div>
+                    {isChanged && (
+                      <div style={{ fontSize:'10px', color:C.hint }}>
+                        pianificato: {scOrig.label}
+                      </div>
+                    )}
+                    {!isChanged && entry.also && <div style={{ fontSize:'10px', color:C.muted }}>+ {SESSION_COLORS[entry.also]?.label}</div>}
                   </div>
                   {isToday && <div style={{ fontSize:'9px', fontWeight:'700', color: sc.text, background:'rgba(0,0,0,0.3)', padding:'2px 7px', borderRadius:'999px' }}>OGGI</div>}
                 </div>
