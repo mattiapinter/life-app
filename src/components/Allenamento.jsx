@@ -1244,16 +1244,25 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
         <div style={ss.secLbl}>Questa settimana</div>
         <div style={{ display:'flex', gap:'5px', overflowX:'auto', paddingBottom:'4px' }}>
           {TRAINING_PLAN.calendar.filter(e => e.day_date >= today).slice(0, 8).map((entry, i) => {
-            const sc = SESSION_COLORS[entry.session_type] || SESSION_COLORS.REST
+            const changed = sessionNotes.find(n =>
+              n.note_date === entry.day_date && n.original_session && n.original_session !== n.session_type
+            )
+            const displayType = changed?.session_type || entry.session_type
+            const sc      = SESSION_COLORS[displayType] || SESSION_COLORS.REST
             const isToday = entry.day_date === today
             return (
               <div key={i} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', cursor:'pointer' }}
                 onClick={() => setSelectedEntry(entry)}>
                 <div style={{ fontSize:'9px', fontWeight:'600', color: isToday ? C.text : C.hint, textTransform:'uppercase' }}>{fmtDayName(entry.day_date)}</div>
-                <div style={{ width:'36px', height:'36px', borderRadius:'9px', background: isToday ? sc.bg : '#161616', border:`1px solid ${isToday ? sc.border : C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <div style={{ fontSize:'7px', fontWeight:'700', color: sc.text, textAlign:'center', lineHeight:'1.3', padding:'2px' }}>
-                    {entry.session_type === 'REST' ? '—' : sc.label.slice(0, 6)}
+                <div style={{ position:'relative', width:'36px', height:'36px' }}>
+                  <div style={{ width:'36px', height:'36px', borderRadius:'9px', background: isToday ? sc.bg : '#161616', border:`1px solid ${isToday ? sc.border : C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <div style={{ fontSize:'7px', fontWeight:'700', color: sc.text, textAlign:'center', lineHeight:'1.3', padding:'2px' }}>
+                      {displayType === 'REST' ? '—' : sc.label.slice(0, 6)}
+                    </div>
                   </div>
+                  {changed && (
+                    <div style={{ position:'absolute', top:'-2px', right:'-2px', width:'8px', height:'8px', borderRadius:'50%', background:C.amber, border:`1px solid ${C.bg}` }} />
+                  )}
                 </div>
                 <div style={{ fontSize:'8px', color: isToday ? C.text : C.hint }}>{fmtDateShort(entry.day_date).split(' ')[0]}</div>
               </div>
