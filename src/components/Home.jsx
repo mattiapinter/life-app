@@ -4,7 +4,7 @@ import { SESSION_COLORS } from '../constants'
 import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
 import { IcoChev } from './Icons'
 
-export default function HomeSection({ weeklyPlan, fitSessions, setTab }) {
+export default function HomeSection({ weeklyPlan, fitSessions, setTab, sessionNotes }) {
   const dayName  = DAYS[todayIdx()]
   const dayData  = weeklyPlan[dayName] || { isSkiDay: false, meals: {} }
   const meals    = dayData.meals || {}
@@ -13,6 +13,12 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab }) {
   const pct      = Math.round((filled.length / mealNames.length) * 100)
   const todayEntry = getTodayCalEntry()
   const today    = new Date().toISOString().split('T')[0]
+
+  // Controlla se l'allenamento di oggi è stato modificato manualmente
+  const todayChange = sessionNotes?.find(n =>
+    n.note_date === today && n.original_session && n.original_session !== n.session_type
+  )
+  const todayDisplayType = todayChange?.session_type || todayEntry?.session_type
 
   // Week strip — 7 days centered around today
   const weekStrip = TRAINING_PLAN.calendar
@@ -30,16 +36,24 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab }) {
       <div style={{ ...ss.body, paddingTop: '20px' }}>
 
         {/* ── ALLENAMENTO OGGI ── */}
-        {todayEntry && todayEntry.session_type !== 'REST' && (() => {
-          const sc = SESSION_COLORS[todayEntry.session_type]
+        {todayEntry && todayDisplayType !== 'REST' && (() => {
+          const sc     = SESSION_COLORS[todayDisplayType] || SESSION_COLORS.REST
+          const scOrig = SESSION_COLORS[todayEntry.session_type] || SESSION_COLORS.REST
+          const isChanged = !!todayChange
           return (
-            <div style={{ background: sc.bg, border: `1px solid ${sc.border}`, borderRadius: '16px', padding: '18px', marginBottom: '12px', cursor: 'pointer' }}
+            <div style={{ background: sc.bg, border: `1px solid ${isChanged ? C.amberBorder : sc.border}`, borderRadius: '16px', padding: '18px', marginBottom: '12px', cursor: 'pointer' }}
               onClick={() => setTab('allenamento')}>
-              <div style={{ fontSize: '9px', fontWeight: '600', letterSpacing: '.08em', textTransform: 'uppercase', color: sc.text, marginBottom: '6px' }}>
+              <div style={{ fontSize: '9px', fontWeight: '600', letterSpacing: '.08em', textTransform: 'uppercase', color: sc.text, marginBottom: '6px', display:'flex', alignItems:'center', gap:'6px' }}>
                 Allenamento di oggi · Settimana {todayEntry.week}{todayEntry.scarico ? ' · Scarico' : ''}
+                {isChanged && <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:C.amber, display:'inline-block' }} />}
               </div>
               <div style={{ fontSize: '22px', fontWeight: '700', color: C.text }}>{sc.label}</div>
-              {todayEntry.also && (
+              {isChanged && (
+                <div style={{ fontSize: '10px', color: C.amber, marginTop: '3px', opacity: 0.8 }}>
+                  modificato · pianificato: {scOrig.label}
+                </div>
+              )}
+              {!isChanged && todayEntry.also && (
                 <div style={{ fontSize: '11px', color: sc.text, opacity: 0.8, marginTop: '3px' }}>
                   + {SESSION_COLORS[todayEntry.also]?.label}
                 </div>
@@ -49,7 +63,7 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab }) {
           )
         })()}
 
-        {todayEntry?.session_type === 'REST' && (
+        {todayEntry && todayDisplayType === 'REST' && (
           <div style={{ background: '#161616', border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px', marginBottom: '12px', textAlign: 'center' }}>
             <div style={{ fontSize: '9px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '.08em', color: C.hint, marginBottom: '6px' }}>Oggi</div>
             <div style={{ fontSize: '18px', fontWeight: '700', color: C.muted }}>Giorno di riposo 🛋️</div>
