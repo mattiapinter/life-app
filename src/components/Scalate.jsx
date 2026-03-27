@@ -8,7 +8,7 @@ import {
   loadProjectAttempts, saveProjectAttempt,
 } from '../lib/supabase'
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN
+const MAPBOX_TOKEN = 'pk.eyJ1IjoibWF0dGlhcGludGVyIiwiYSI6ImNtbjhxbnE4YzAwb3oycnBiajh6MWVxbjcifQ.9speCzHwwbsAaqr2IcukHw'
 
 const GRADES = [
   '4','4+','5','5+','6a','6a+','6b','6b+','6c','6c+',
