@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      - run: echo "VITE_MAPBOX_TOKEN=${{ vars.VITE_MAPBOX_TOKEN }}" >> .env
       - run: npm run build
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3
