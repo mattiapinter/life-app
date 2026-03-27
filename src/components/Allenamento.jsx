@@ -1204,19 +1204,32 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
   }
 
   // ── OGGI ──────────────────────────────────────────────────────────
-  const renderOggi = () => (
+  const renderOggi = () => {
+    const todayChange = sessionNotes.find(n =>
+      n.note_date === today && n.original_session && n.original_session !== n.session_type
+    )
+    const todayDisplayType = todayChange?.session_type || todayEntry?.session_type
+
+    return (
     <div style={ss.body}>
-      {/* Box sessione oggi */}
       {todayEntry ? (() => {
-        const sc = SESSION_COLORS[todayEntry.session_type] || SESSION_COLORS.REST
+        const sc      = SESSION_COLORS[todayDisplayType] || SESSION_COLORS.REST
+        const scOrig  = SESSION_COLORS[todayEntry.session_type] || SESSION_COLORS.REST
+        const isChanged = !!todayChange
         return (
-          <div style={{ background: sc.bg, border:`1px solid ${sc.border}`, borderRadius:'16px', padding:'20px', marginBottom:'16px', cursor:'pointer' }}
+          <div style={{ background: sc.bg, border:`1px solid ${isChanged ? C.amberBorder : sc.border}`, borderRadius:'16px', padding:'20px', marginBottom:'16px', cursor:'pointer' }}
             onClick={() => setSelectedEntry(todayEntry)}>
-            <div style={{ fontSize:'9px', fontWeight:'600', letterSpacing:'.08em', textTransform:'uppercase', color: sc.text, marginBottom:'8px' }}>
+            <div style={{ fontSize:'9px', fontWeight:'600', letterSpacing:'.08em', textTransform:'uppercase', color: sc.text, marginBottom:'8px', display:'flex', alignItems:'center', gap:'6px' }}>
               Oggi · Settimana {todayEntry.week}{todayEntry.scarico ? ' · SCARICO' : ''}
+              {isChanged && <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:C.amber, display:'inline-block' }} />}
             </div>
             <div style={{ fontSize:'24px', fontWeight:'700', color:C.text }}>{sc.label}</div>
-            {todayEntry.also && <div style={{ fontSize:'11px', color: sc.text, opacity:0.8, marginTop:'3px' }}>+ {SESSION_COLORS[todayEntry.also]?.label}</div>}
+            {isChanged && (
+              <div style={{ fontSize:'10px', color:C.amber, marginTop:'3px', opacity:0.8 }}>
+                modificato · pianificato: {scOrig.label}
+              </div>
+            )}
+            {!isChanged && todayEntry.also && <div style={{ fontSize:'11px', color: sc.text, opacity:0.8, marginTop:'3px' }}>+ {SESSION_COLORS[todayEntry.also]?.label}</div>}
             <div style={{ marginTop:'14px', fontSize:'10px', fontWeight:'600', color: sc.text }}>Apri sessione →</div>
           </div>
         )
@@ -1259,7 +1272,8 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
         </div>
       </div>
     </div>
-  )
+    )
+  }
 
   // ── PIANO ─────────────────────────────────────────────────────────
   const renderPiano = () => (
