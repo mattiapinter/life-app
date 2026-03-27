@@ -4,6 +4,7 @@ import {
   syncPlanToSupabase, loadPlanFromSupabase,
   syncFoodOptionsToSupabase, loadFoodOptionsFromSupabase,
   loadFitnessSessions, loadTrainingLogs, loadExerciseVideos, saveExerciseVideo,
+  loadSessionNotes,
 } from './lib/supabase'
 
 import HomeSection       from './components/Home'
@@ -18,6 +19,7 @@ export default function App() {
 
   const [fitSessions,   setFitSessions]   = React.useState([])
   const [trainingLogs,  setTrainingLogs]  = React.useState([])
+  const [sessionNotes,  setSessionNotes]  = React.useState([])
   const [videos,        setVideos]        = React.useState({}) // { exerciseName: url }
 
   const [foodOptions, setFoodOptions] = React.useState(() => {
@@ -44,6 +46,7 @@ export default function App() {
     })
     loadFitnessSessions().then(setFitSessions)
     loadTrainingLogs().then(setTrainingLogs)
+    loadSessionNotes().then(setSessionNotes)
     loadExerciseVideos().then(rows => {
       const map = {}
       rows.forEach(r => { map[r.exercise_name] = r.video_url })
@@ -88,7 +91,7 @@ export default function App() {
       <div style={ss.main}>
 
         {tab === 'home' && (
-          <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setTab} />
+          <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setTab} sessionNotes={sessionNotes} />
         )}
         {tab === 'dieta' && (
           <DietaSection
