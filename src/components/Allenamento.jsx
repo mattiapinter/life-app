@@ -10,11 +10,172 @@ import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessi
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 
+// ── TIMER COMPONENT ────────────────────────────────────────────────
+function SessionTimer() {
+  const PRESETS = [
+    { label: '20s',  secs: 20 },
+    { label: '60s',  secs: 60 },
+    { label: '3min', secs: 180 },
+  ]
+  const [selected,   setSelected]   = React.useState(20)
+  const [remaining,  setRemaining]  = React.useState(null)
+  const [running,    setRunning]    = React.useState(false)
+  const [finished,   setFinished]   = React.useState(false)
+  const [custom,     setCustom]     = React.useState('')
+  const [showCustom, setShowCustom] = React.useState(false)
+  const intervalRef = React.useRef(null)
+  const audioRef    = React.useRef(null)
+
+  // Beep via Web Audio API
+  const beep = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 880
+      gain.gain.setValueAtTime(0.4, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.4)
+    } catch(e) {}
+  }
+
+  const start = (secs) => {
+    clearInterval(intervalRef.current)
+    setRemaining(secs)
+    setRunning(true)
+    setFinished(false)
+    let r = secs
+    intervalRef.current = setInterval(() => {
+      r -= 1
+      setRemaining(r)
+      if (r <= 0) {
+        clearInterval(intervalRef.current)
+        setRunning(false)
+        setFinished(true)
+        beep()
+      }
+    }, 1000)
+  }
+
+  const stop = () => {
+    clearInterval(intervalRef.current)
+    setRunning(false)
+    setRemaining(null)
+    setFinished(false)
+  }
+
+  React.useEffect(() => () => clearInterval(intervalRef.current), [])
+
+  const fmt = (s) => {
+    if (s === null) return '—'
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return m > 0 ? `${m}:${String(sec).padStart(2,'0')}` : `${sec}s`
+  }
+
+  const pct = (remaining !== null && selected > 0)
+    ? Math.max(0, remaining / selected)
+    : 1
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 60, left: 0, right: 0, zIndex: 40,
+      background: C.bg, borderTop: `1px solid ${C.border}`,
+      padding: '10px 16px 10px',
+      maxWidth: '448px', margin: '0 auto',
+      left: '50%', transform: 'translateX(-50%)',
+    }}>
+      {/* Progress bar */}
+      {running && (
+        <div style={{ height: '2px', background: C.border, borderRadius: '999px', marginBottom: '8px', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${pct * 100}%`,
+            background: finished ? C.green : C.violet,
+            borderRadius: '999px',
+            transition: 'width 1s linear',
+          }} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Presets */}
+        <div style={{ display: 'flex', gap: '5px', flex: 1 }}>
+          {PRESETS.map(p => (
+            <div key={p.secs}
+              style={{
+                flex: 1, padding: '7px 0', textAlign: 'center',
+                borderRadius: '8px', cursor: 'pointer',
+                fontSize: '11px', fontWeight: '700',
+                background: selected === p.secs && !showCustom ? C.violetBg : C.surface,
+                color: selected === p.secs && !showCustom ? C.violetLight : C.muted,
+                border: `1px solid ${selected === p.secs && !showCustom ? C.violetBorder : C.border}`,
+              }}
+              onClick={() => { setSelected(p.secs); setShowCustom(false); stop() }}>
+              {p.label}
+            </div>
+          ))}
+          {/* Custom */}
+          {showCustom ? (
+            <input
+              type="number"
+              style={{ ...ss.inp, width: '64px', fontSize: '12px', padding: '7px 8px', textAlign: 'center' }}
+              placeholder="sec"
+              value={custom}
+              onChange={e => { setCustom(e.target.value); setSelected(parseInt(e.target.value) || 0) }}
+              autoFocus
+            />
+          ) : (
+            <div
+              style={{ flex: 1, padding: '7px 0', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', background: C.surface, color: C.muted, border: `1px solid ${C.border}` }}
+              onClick={() => setShowCustom(true)}>
+              ...
+            </div>
+          )}
+        </div>
+
+        {/* Timer display + start/stop */}
+        <div
+          style={{
+            minWidth: '72px', padding: '7px 12px',
+            borderRadius: '10px', cursor: 'pointer',
+            textAlign: 'center', userSelect: 'none',
+            background: finished ? C.greenBg : running ? C.violetBg : C.surface,
+            border: `1px solid ${finished ? C.greenBorder : running ? C.violetBorder : C.border}`,
+          }}
+          onClick={() => {
+            if (running) { stop() }
+            else { const s = selected || 20; setSelected(s); start(s) }
+          }}>
+          <div style={{ fontSize: '16px', fontWeight: '800', color: finished ? C.greenLight : running ? C.violetLight : C.muted, letterSpacing: '-.01em' }}>
+            {running || finished ? fmt(remaining) : fmt(selected)}
+          </div>
+          <div style={{ fontSize: '8px', fontWeight: '600', color: finished ? C.green : running ? C.violet : C.hint, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+            {finished ? '✓ fatto' : running ? 'stop' : 'start'}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── PESI ROW — riceve activeSet come prop dal genitore ──────────────
 function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, activeSet }) {
   const wd      = ex.weeks.find(w => w.week === week) || ex.weeks[0]
   const numSets = wd.sets || 2
-  const lastLog = trainingLogs.find(l => l.exercise_name === ex.name && l.session_type === 'PESI')
+
+  // Trova l'ultimo log con peso per questo esercizio
+  const lastLog = trainingLogs
+    .filter(l => l.exercise_name === ex.name && l.session_type === 'PESI' && l.weight_kg)
+    .sort((a, b) => b.log_date?.localeCompare(a.log_date) || 0)[0]
+
+  // Trova l'ultimo log con reps (per bodyweight)
+  const lastBwLog = trainingLogs
+    .filter(l => l.exercise_name === ex.name && l.session_type === 'PESI' && l.reps_done)
+    .sort((a, b) => b.log_date?.localeCompare(a.log_date) || 0)[0]
 
   const [sets, setSets] = React.useState(
     Array.from({ length: numSets }, () => ({ kg: '', reps: '' }))
@@ -68,13 +229,35 @@ function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, act
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'5px', marginLeft:'8px' }}>
           {dots}
-          {lastLog && !ex.bodyweight && (
-            <div style={{ fontSize:'10px', color:C.violet, background:C.violetBg, padding:'3px 8px', borderRadius:'6px', border:`1px solid ${C.violetBorder}`, whiteSpace:'nowrap', marginLeft:'4px' }}>
-              {lastLog.weight_kg}kg
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Riferimento ultima sessione — prominente */}
+      {!ex.bodyweight && lastLog && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          marginBottom: '10px', padding: '7px 10px',
+          background: C.violetBg, border: `1px solid ${C.violetBorder}`,
+          borderRadius: '8px',
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ultima volta</div>
+          <div style={{ fontSize: '14px', fontWeight: '800', color: C.violetLight }}>{lastLog.weight_kg} kg</div>
+          <div style={{ fontSize: '10px', color: C.muted }}>× {lastLog.reps_done} reps</div>
+          <div style={{ fontSize: '9px', color: C.hint, marginLeft: 'auto' }}>{lastLog.log_date}</div>
+        </div>
+      )}
+      {ex.bodyweight && lastBwLog && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          marginBottom: '10px', padding: '7px 10px',
+          background: C.greenBg, border: `1px solid ${C.greenBorder}`,
+          borderRadius: '8px',
+        }}>
+          <div style={{ fontSize: '9px', fontWeight: '600', color: C.green, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ultima volta</div>
+          <div style={{ fontSize: '14px', fontWeight: '800', color: C.greenLight }}>{lastBwLog.reps_done} reps</div>
+          <div style={{ fontSize: '9px', color: C.hint, marginLeft: 'auto' }}>{lastBwLog.log_date}</div>
+        </div>
+      )}
 
       {ex.bodyweight ? (
         <div>
@@ -89,14 +272,14 @@ function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, act
           <div>
             <div style={{ fontSize:'10px', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'6px', textAlign:'center' }}>Peso kg</div>
             <input type="number" inputMode="decimal" pattern="[0-9]*" style={inputStyle}
-              placeholder="—" value={current.kg}
+              placeholder={lastLog ? `${lastLog.weight_kg}` : '—'} value={current.kg}
               onChange={e => handleChange('kg', e.target.value)}
               onBlur={() => handleBlur('kg')} />
           </div>
           <div>
             <div style={{ fontSize:'10px', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'6px', textAlign:'center' }}>Reps</div>
             <input type="number" inputMode="numeric" pattern="[0-9]*" style={inputStyle}
-              placeholder="—" value={current.reps}
+              placeholder={lastLog ? `${lastLog.reps_done}` : '—'} value={current.reps}
               onChange={e => handleChange('reps', e.target.value)}
               onBlur={() => handleBlur('reps')} />
           </div>
@@ -118,7 +301,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const [saving,       setSaving]       = React.useState(false)
   const [savedMsg,     setSavedMsg]     = React.useState(false)
 
-  // Inizializza overrideType dalla nota salvata se la sessione è stata già cambiata
   const savedChange = sessionNotes?.find(n =>
     n.note_date === entry.day_date &&
     n.original_session &&
@@ -128,7 +310,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
 
   const handleExChange = (name, data) => setExData(p => ({ ...p, [name]: data }))
 
-  // Definito qui sopra saveSession così è disponibile dentro la funzione
   const sessionType  = overrideType || entry.session_type
   const sc           = SESSION_COLORS[sessionType] || SESSION_COLORS.REST
   const coachNote    = TRAINING_PLAN.coach_notes.sessions[sessionType]
@@ -136,12 +317,13 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const needsWarmup2 = ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(sessionType)
   const warmupData   = needsWarmup2 ? TRAINING_PLAN.warmup_2 : TRAINING_PLAN.warmup_1
 
+  const isPesiSession = sessionType === 'PESI' || entry.also === 'PESI'
+
   const saveSession = async () => {
     if (saving || savedMsg) return
     setSaving(true)
     const promises = []
 
-    // Salva i log degli esercizi (solo per sessioni con pesi)
     Object.entries(exData).forEach(([name, d]) => {
       if (d.sets && Array.isArray(d.sets)) {
         d.sets.forEach((s, i) => {
@@ -160,8 +342,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       }
     })
 
-    // Per sessioni senza esercizi pesati (CORSA, PALESTRA, ROCCIA ecc.)
-    // salva comunque un log "sessione completata" così appare nello storico
     const hasPesiData = Object.keys(exData).length > 0
     if (!hasPesiData) {
       promises.push(saveTrainingLog({
@@ -176,7 +356,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       }))
     }
 
-    // Salva nota se presente
     if (sessionNote.trim()) {
       promises.push(saveSessionNote({
         note_date:    entry.day_date,
@@ -192,7 +371,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
     setSavedMsg(true)
   }
 
-  // ── Warmup exercises row
   const WarmupRow = ({ ex }) => (
     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 0', borderBottom:`1px solid ${C.border}` }}>
       <div style={{ flex:1 }}>
@@ -212,7 +390,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
     </div>
   )
 
-  // ── PESI circuit 2 row — activeSet condiviso, pulsante unico in cima
   const [pesiActiveSet, setPesiActiveSet] = React.useState(0)
   const maxSets = Math.max(...TRAINING_PLAN.sessions.PESI.circuit_2.map(ex => {
     const wd = ex.weeks.find(w => w.week === week) || ex.weeks[0]
@@ -235,7 +412,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
         ))}
       </div>
       <div style={ss.card}>
-        {/* Header con pulsante giro unico */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px', paddingBottom:'10px', borderBottom:`1px solid ${C.border}` }}>
           <div style={{ fontSize:'10px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em' }}>
             Circuito 2 · Settimana {week}
@@ -416,105 +592,104 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
         </div>
       )}
 
-      <div style={ss.body}>
-        {sessionType === 'PESI'             && renderPESI()}
-        {sessionType === 'PALESTRA'         && renderPALESTRA()}
-        {sessionType === 'CORSA'            && renderCORSA()}
-        {(sessionType === 'PLACCA_VERTICALE' || sessionType === 'STRAPIOMBO' || sessionType === 'STRAPIOMBO_TRAZIONI_SETT4') && renderROCCIA(sessionType)}
-        {sessionType === 'REST'             && renderREST()}
+      {/* Padding bottom extra quando il timer è visibile */}
+      <div style={{ paddingBottom: isPesiSession ? '80px' : '0' }}>
+        <div style={ss.body}>
+          {sessionType === 'PESI'             && renderPESI()}
+          {sessionType === 'PALESTRA'         && renderPALESTRA()}
+          {sessionType === 'CORSA'            && renderCORSA()}
+          {(sessionType === 'PLACCA_VERTICALE' || sessionType === 'STRAPIOMBO' || sessionType === 'STRAPIOMBO_TRAZIONI_SETT4') && renderROCCIA(sessionType)}
+          {sessionType === 'REST'             && renderREST()}
 
-        {/* PESI aggiuntivo per doppia sessione — mostrato UNA VOLTA SOLA qui sotto, non in renderPESI */}
-        {entry.also === 'PESI' && sessionType !== 'PESI' && (
-          <div style={{ marginTop:'4px' }}>
-            <div style={{ fontSize:'11px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'12px', paddingTop:'8px', borderTop:`1px solid ${C.border}` }}>
-              + Pesi (sessione abbinata)
+          {entry.also === 'PESI' && sessionType !== 'PESI' && (
+            <div style={{ marginTop:'4px' }}>
+              <div style={{ fontSize:'11px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'12px', paddingTop:'8px', borderTop:`1px solid ${C.border}` }}>
+                + Pesi (sessione abbinata)
+              </div>
+              <div style={ss.card}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px', paddingBottom:'10px', borderBottom:`1px solid ${C.border}` }}>
+                  <div style={{ fontSize:'10px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em' }}>
+                    Circuito 2 · Settimana {week}
+                  </div>
+                  <div
+                    style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', borderRadius:'999px', cursor:'pointer', background:C.violetBg, border:`1px solid ${C.violetBorder}`, fontSize:'12px', fontWeight:'700', color:C.violetLight, userSelect:'none' }}
+                    onClick={() => setPesiActiveSet(s => (s + 1) % maxSets)}>
+                    🔄 {pesiActiveSet + 1}/{maxSets}
+                  </div>
+                </div>
+                <div style={{ fontSize:'10px', color:C.hint, marginBottom:'12px' }}>Recupero 20s tra esercizi · 3 min a fine giro</div>
+                {TRAINING_PLAN.sessions.PESI.circuit_2.map((ex) => (
+                  <PesiRow key={`also_${ex.name}`} ex={ex} week={week} trainingLogs={trainingLogs} onChange={handleExChange} videos={videos} onVideosChange={onVideosChange} activeSet={pesiActiveSet} />
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* Cooldown */}
+          {sessionType !== 'REST' && (
+            <div style={{ ...ss.card }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }} onClick={() => setShowCooldown(!showCooldown)}>
+                <div style={{ fontSize:'12px', fontWeight:'600', color:C.muted }}>Defaticamento · 15 min</div>
+                <div style={{ fontSize:'12px', color:C.hint }}>{showCooldown ? '▲' : '▼'}</div>
+              </div>
+              {showCooldown && (
+                <div style={{ marginTop:'12px' }}>
+                  {TRAINING_PLAN.cooldown.exercises.map((ex, i) => (
+                    <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
+                      <div style={{ fontSize:'12px', color:C.text }}>{ex.name}</div>
+                      <div style={{ fontSize:'11px', color:C.muted }}>{ex.duration}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Salva allenamento */}
+          {sessionType !== 'REST' && (
             <div style={ss.card}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px', paddingBottom:'10px', borderBottom:`1px solid ${C.border}` }}>
-                <div style={{ fontSize:'10px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em' }}>
-                  Circuito 2 · Settimana {week}
+              <div style={ss.secLbl}>Chiudi sessione</div>
+              <div style={{ marginBottom:'12px' }}>
+                <div style={{ fontSize:'11px', color:C.muted, marginBottom:'8px' }}>Com'è andata? RPE generale</div>
+                <div style={{ display:'flex', gap:'6px' }}>
+                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                    <div key={n}
+                      style={{ flex:1, padding:'8px 0', textAlign:'center', borderRadius:'8px', cursor:'pointer', fontSize:'12px', fontWeight:'600',
+                        background: parseInt(sessionRpe) === n ? C.violet : C.bg,
+                        color: parseInt(sessionRpe) === n ? '#fff' : C.hint,
+                        border: `1px solid ${parseInt(sessionRpe) === n ? C.violetBorder : C.border}`,
+                      }}
+                      onClick={() => setSessionRpe(String(n))}>
+                      {n}
+                    </div>
+                  ))}
                 </div>
-                <div
-                  style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', borderRadius:'999px', cursor:'pointer', background:C.violetBg, border:`1px solid ${C.violetBorder}`, fontSize:'12px', fontWeight:'700', color:C.violetLight, userSelect:'none' }}
-                  onClick={() => setPesiActiveSet(s => (s + 1) % maxSets)}>
-                  🔄 {pesiActiveSet + 1}/{maxSets}
-                </div>
               </div>
-              <div style={{ fontSize:'10px', color:C.hint, marginBottom:'12px' }}>Recupero 20s tra esercizi · 3 min a fine giro</div>
-              {TRAINING_PLAN.sessions.PESI.circuit_2.map((ex) => (
-                <PesiRow key={`also_${ex.name}`} ex={ex} week={week} trainingLogs={trainingLogs} onChange={handleExChange} videos={videos} onVideosChange={onVideosChange} activeSet={pesiActiveSet} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Cooldown */}
-        {sessionType !== 'REST' && (
-          <div style={{ ...ss.card }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }} onClick={() => setShowCooldown(!showCooldown)}>
-              <div style={{ fontSize:'12px', fontWeight:'600', color:C.muted }}>Defaticamento · 15 min</div>
-              <div style={{ fontSize:'12px', color:C.hint }}>{showCooldown ? '▲' : '▼'}</div>
-            </div>
-            {showCooldown && (
-              <div style={{ marginTop:'12px' }}>
-                {TRAINING_PLAN.cooldown.exercises.map((ex, i) => (
-                  <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
-                    <div style={{ fontSize:'12px', color:C.text }}>{ex.name}</div>
-                    <div style={{ fontSize:'11px', color:C.muted }}>{ex.duration}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Salva allenamento — RPE + Note + pulsante unico */}
-        {sessionType !== 'REST' && (
-          <div style={ss.card}>
-            <div style={ss.secLbl}>Chiudi sessione</div>
-
-            {/* RPE generale */}
-            <div style={{ marginBottom:'12px' }}>
-              <div style={{ fontSize:'11px', color:C.muted, marginBottom:'8px' }}>Com'è andata? RPE generale</div>
-              <div style={{ display:'flex', gap:'6px' }}>
-                {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                  <div key={n}
-                    style={{ flex:1, padding:'8px 0', textAlign:'center', borderRadius:'8px', cursor:'pointer', fontSize:'12px', fontWeight:'600',
-                      background: parseInt(sessionRpe) === n ? C.violet : C.bg,
-                      color: parseInt(sessionRpe) === n ? '#fff' : C.hint,
-                      border: `1px solid ${parseInt(sessionRpe) === n ? C.violetBorder : C.border}`,
-                    }}
-                    onClick={() => setSessionRpe(String(n))}>
-                    {n}
-                  </div>
-                ))}
+              <textarea
+                style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom:'12px', fontSize:'14px' }}
+                rows={3}
+                placeholder="Note libere — sensazioni, imprevisti, cosa hai saltato..."
+                value={sessionNote}
+                onChange={e => setSessionNote(e.target.value)}
+              />
+              <div
+                style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1, background: savedMsg ? C.green : C.violet }}
+                onClick={!saving && !savedMsg ? saveSession : undefined}>
+                {saving ? 'Salvataggio...' : savedMsg ? '✓ Allenamento salvato!' : 'Salva allenamento'}
               </div>
             </div>
+          )}
 
-            {/* Note */}
-            <textarea
-              style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom:'12px', fontSize:'14px' }}
-              rows={3}
-              placeholder="Note libere — sensazioni, imprevisti, cosa hai saltato..."
-              value={sessionNote}
-              onChange={e => setSessionNote(e.target.value)}
-            />
-
-            <div
-              style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1, background: savedMsg ? C.green : C.violet }}
-              onClick={!saving && !savedMsg ? saveSession : undefined}>
-              {saving ? 'Salvataggio...' : savedMsg ? '✓ Allenamento salvato!' : 'Salva allenamento'}
+          <div style={{ textAlign:'center', paddingTop:'8px' }}>
+            <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', padding:'8px', opacity:0.7 }} onClick={() => setShowChange(true)}>
+              Cambia allenamento
             </div>
-          </div>
-        )}
-
-        {/* Cambia allenamento */}
-        <div style={{ textAlign:'center', paddingTop:'8px' }}>
-          <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', padding:'8px', opacity:0.7 }} onClick={() => setShowChange(true)}>
-            Cambia allenamento
           </div>
         </div>
       </div>
+
+      {/* Timer fisso sopra navbar — solo per sessioni con pesi */}
+      {isPesiSession && <SessionTimer />}
     </div>
   )
 }
@@ -572,7 +747,6 @@ function MetricsDetail({ fitSessions, onBack, onGoToTest }) {
       </div>
       <div style={ss.body}>
 
-        {/* Spaccata */}
         {(last?.spaccata_piedi || last?.spaccata_seduti) && (
           <div style={ss.card}>
             <div style={ss.secLbl}>Spaccata vs altezza ({USER_HEIGHT} cm)</div>
@@ -592,14 +766,12 @@ function MetricsDetail({ fitSessions, onBack, onGoToTest }) {
           </div>
         )}
 
-        {/* Cartella Foto test */}
         <a href="https://drive.google.com/drive/folders/1Sghs3pDiQkl2wMUqiGVb0auGAZzru21s?usp=sharing"
           target="_blank" rel="noopener noreferrer"
           style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'12px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'12px', fontSize:'12px', fontWeight:'600', color:C.violetLight, textDecoration:'none', marginBottom:'12px' }}>
           📁 Cartella Foto test →
         </a>
 
-        {/* Grafico metrica selezionata */}
         <div style={ss.card}>
           <div style={ss.secLbl}>Andamento nel tempo</div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:'5px', marginBottom:'14px' }}>
@@ -627,7 +799,6 @@ function MetricsDetail({ fitSessions, onBack, onGoToTest }) {
           }
         </div>
 
-        {/* Tutti i valori ultimo test */}
         <div style={ss.card}>
           <div style={ss.secLbl}>Ultimo test · {last?.session_date}{last?.body_weight_kg ? ` · ${last.body_weight_kg} kg` : ''}</div>
           {[...MOB_TESTS, ...STR_TESTS].map(t => {
@@ -648,11 +819,9 @@ function MetricsDetail({ fitSessions, onBack, onGoToTest }) {
           })}
         </div>
 
-        {/* CTA nuovo test */}
         <div style={{ textAlign:'center', paddingTop:'4px' }}>
           <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={onGoToTest}>+ Registra nuovo test</div>
         </div>
-
       </div>
     </div>
   )
@@ -763,7 +932,6 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
 
   return (
     <div style={ss.body}>
-      {/* Modale conferma delete sessione */}
       {confirmDel && (
         <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
           onClick={() => setConfirmDel(null)}>
@@ -785,7 +953,6 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
         </div>
       )}
 
-      {/* Modale elimina tutto */}
       {showNuke && (
         <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.9)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
           onClick={() => setShowNuke(false)}>
@@ -847,17 +1014,13 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
                 {(() => {
                   const byExercise = {}
                   sess.logs.forEach(log => {
-                    if (!log.exercise_name) return // salta log di completamento senza esercizi
+                    if (!log.exercise_name) return
                     if (!byExercise[log.exercise_name]) byExercise[log.exercise_name] = []
                     byExercise[log.exercise_name].push(log)
                   })
                   const hasExercises = Object.keys(byExercise).length > 0
                   if (!hasExercises) {
-                    return (
-                      <div style={{ fontSize:'12px', color:C.hint, padding:'8px 0' }}>
-                        Sessione completata ✓
-                      </div>
-                    )
+                    return <div style={{ fontSize:'12px', color:C.hint, padding:'8px 0' }}>Sessione completata ✓</div>
                   }
                   return Object.entries(byExercise).map(([exName, exLogs]) => (
                     <div key={exName} style={{ padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
@@ -919,7 +1082,6 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
   const canvasRef = React.useRef(null)
   const chartRef  = React.useRef(null)
 
-  // Raggruppa log per esercizio, ordine cronologico
   const byEx = {}
   ;[...trainingLogs].reverse().forEach(log => {
     if (!log.exercise_name) return
@@ -928,7 +1090,6 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
   })
   const exercises = Object.keys(byEx).sort()
 
-  // Volume = sets * reps * weight (o solo reps se bodyweight)
   const calcVolume = (log) => {
     const s = log.sets_done || 1
     const r = log.reps_done || 0
@@ -973,7 +1134,6 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
 
   return (
     <div style={ss.body}>
-      {/* Modale conferma delete esercizio */}
       {confirmDel && (
         <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
           onClick={() => setConfirmDel(null)}>
@@ -1182,7 +1342,6 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
     loadSessionNotes().then(setSessionNotes)
   }, [])
 
-  // Metrics screen
   if (showMetrics) {
     return <MetricsDetail
       fitSessions={fitSessions}
@@ -1203,7 +1362,6 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
     />
   }
 
-  // ── OGGI ──────────────────────────────────────────────────────────
   const renderOggi = () => {
     const todayChange = sessionNotes.find(n =>
       n.note_date === today && n.original_session && n.original_session !== n.session_type
@@ -1239,7 +1397,6 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
         </div>
       )}
 
-      {/* Mini calendario */}
       <div style={ss.card}>
         <div style={ss.secLbl}>Questa settimana</div>
         <div style={{ display:'flex', gap:'5px', overflowX:'auto', paddingBottom:'4px' }}>
@@ -1271,10 +1428,8 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
         </div>
       </div>
 
-      {/* Benchmark widget */}
       <BenchmarkWidget fitSessions={fitSessions} onOpenMetrics={() => setShowMetrics(true)} />
 
-      {/* Nuovo test CTA */}
       <div style={{ textAlign:'center', marginTop:'-4px', marginBottom:'8px' }}>
         <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={() => setSub('test')}>
           + Registra nuovo test
@@ -1284,7 +1439,6 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
     )
   }
 
-  // ── PIANO ─────────────────────────────────────────────────────────
   const renderPiano = () => (
     <div style={ss.body}>
       <div style={{ fontSize:'11px', color:C.muted, marginBottom:'16px', lineHeight:'1.5' }}>
@@ -1298,7 +1452,6 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
               Settimana {w}{w === 4 ? ' — Scarico' : ''}
             </div>
             {entries.map((entry, i) => {
-              // Controlla se questa sessione è stata cambiata manualmente
               const changedNote = sessionNotes.find(n =>
                 n.note_date === entry.day_date &&
                 n.original_session &&
@@ -1314,7 +1467,6 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
               return (
                 <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px', background: isToday ? sc.bg : C.surface, borderRadius:'10px', marginBottom:'5px', border:`1px solid ${isToday ? sc.border : C.border}`, cursor:'pointer', opacity: isPast ? 0.5 : 1 }}
                   onClick={() => setSelectedEntry(entry)}>
-                  {/* Color dot — arancio se cambiato manualmente */}
                   <div style={{ width:'8px', height:'8px', borderRadius:'50%', background: isChanged ? C.amber : sc.text, flexShrink:0, opacity: displayType === 'REST' ? 0.2 : 1 }} />
                   <div style={{ width:'38px', fontSize:'10px', color: isToday ? sc.text : C.muted, fontWeight: isToday ? '700' : '400', flexShrink:0 }}>
                     {fmtDateShort(entry.day_date)}
@@ -1324,11 +1476,7 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
                       {sc.label}
                       {isChanged && <span style={{ fontSize:'9px', color:C.amber, marginLeft:'6px', fontWeight:'400' }}>modificato</span>}
                     </div>
-                    {isChanged && (
-                      <div style={{ fontSize:'10px', color:C.hint }}>
-                        pianificato: {scOrig.label}
-                      </div>
-                    )}
+                    {isChanged && <div style={{ fontSize:'10px', color:C.hint }}>pianificato: {scOrig.label}</div>}
                     {!isChanged && entry.also && <div style={{ fontSize:'10px', color:C.muted }}>+ {SESSION_COLORS[entry.also]?.label}</div>}
                   </div>
                   {isToday && <div style={{ fontSize:'9px', fontWeight:'700', color: sc.text, background:'rgba(0,0,0,0.3)', padding:'2px 7px', borderRadius:'999px' }}>OGGI</div>}
