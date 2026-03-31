@@ -10,158 +10,6 @@ import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessi
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 
-// ── TIMER COMPONENT ────────────────────────────────────────────────
-function SessionTimer() {
-  const PRESETS = [
-    { label: '20s',  secs: 20 },
-    { label: '60s',  secs: 60 },
-    { label: '3min', secs: 180 },
-  ]
-  const [selected,   setSelected]   = React.useState(20)
-  const [remaining,  setRemaining]  = React.useState(null)
-  const [running,    setRunning]    = React.useState(false)
-  const [finished,   setFinished]   = React.useState(false)
-  const [custom,     setCustom]     = React.useState('')
-  const [showCustom, setShowCustom] = React.useState(false)
-  const intervalRef = React.useRef(null)
-  const audioRef    = React.useRef(null)
-
-  // Beep via Web Audio API
-  const beep = () => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = 880
-      gain.gain.setValueAtTime(0.4, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-      osc.start(ctx.currentTime)
-      osc.stop(ctx.currentTime + 0.4)
-    } catch(e) {}
-  }
-
-  const start = (secs) => {
-    clearInterval(intervalRef.current)
-    setRemaining(secs)
-    setRunning(true)
-    setFinished(false)
-    let r = secs
-    intervalRef.current = setInterval(() => {
-      r -= 1
-      setRemaining(r)
-      if (r <= 0) {
-        clearInterval(intervalRef.current)
-        setRunning(false)
-        setFinished(true)
-        beep()
-      }
-    }, 1000)
-  }
-
-  const stop = () => {
-    clearInterval(intervalRef.current)
-    setRunning(false)
-    setRemaining(null)
-    setFinished(false)
-  }
-
-  React.useEffect(() => () => clearInterval(intervalRef.current), [])
-
-  const fmt = (s) => {
-    if (s === null) return '—'
-    const m = Math.floor(s / 60)
-    const sec = s % 60
-    return m > 0 ? `${m}:${String(sec).padStart(2,'0')}` : `${sec}s`
-  }
-
-  const pct = (remaining !== null && selected > 0)
-    ? Math.max(0, remaining / selected)
-    : 1
-
-  return (
-    <div style={{
-      position: 'fixed', bottom: 60, left: 0, right: 0, zIndex: 40,
-      background: C.bg, borderTop: `1px solid ${C.border}`,
-      padding: '10px 16px 10px',
-      maxWidth: '448px', margin: '0 auto',
-      left: '50%', transform: 'translateX(-50%)',
-    }}>
-      {/* Progress bar */}
-      {running && (
-        <div style={{ height: '2px', background: C.border, borderRadius: '999px', marginBottom: '8px', overflow: 'hidden' }}>
-          <div style={{
-            height: '100%',
-            width: `${pct * 100}%`,
-            background: finished ? C.green : C.violet,
-            borderRadius: '999px',
-            transition: 'width 1s linear',
-          }} />
-        </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {/* Presets */}
-        <div style={{ display: 'flex', gap: '5px', flex: 1 }}>
-          {PRESETS.map(p => (
-            <div key={p.secs}
-              style={{
-                flex: 1, padding: '7px 0', textAlign: 'center',
-                borderRadius: '8px', cursor: 'pointer',
-                fontSize: '11px', fontWeight: '700',
-                background: selected === p.secs && !showCustom ? C.violetBg : C.surface,
-                color: selected === p.secs && !showCustom ? C.violetLight : C.muted,
-                border: `1px solid ${selected === p.secs && !showCustom ? C.violetBorder : C.border}`,
-              }}
-              onClick={() => { setSelected(p.secs); setShowCustom(false); stop() }}>
-              {p.label}
-            </div>
-          ))}
-          {/* Custom */}
-          {showCustom ? (
-            <input
-              type="number"
-              style={{ ...ss.inp, width: '64px', fontSize: '12px', padding: '7px 8px', textAlign: 'center' }}
-              placeholder="sec"
-              value={custom}
-              onChange={e => { setCustom(e.target.value); setSelected(parseInt(e.target.value) || 0) }}
-              autoFocus
-            />
-          ) : (
-            <div
-              style={{ flex: 1, padding: '7px 0', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: '700', background: C.surface, color: C.muted, border: `1px solid ${C.border}` }}
-              onClick={() => setShowCustom(true)}>
-              ...
-            </div>
-          )}
-        </div>
-
-        {/* Timer display + start/stop */}
-        <div
-          style={{
-            minWidth: '72px', padding: '7px 12px',
-            borderRadius: '10px', cursor: 'pointer',
-            textAlign: 'center', userSelect: 'none',
-            background: finished ? C.greenBg : running ? C.violetBg : C.surface,
-            border: `1px solid ${finished ? C.greenBorder : running ? C.violetBorder : C.border}`,
-          }}
-          onClick={() => {
-            if (running) { stop() }
-            else { const s = selected || 20; setSelected(s); start(s) }
-          }}>
-          <div style={{ fontSize: '16px', fontWeight: '800', color: finished ? C.greenLight : running ? C.violetLight : C.muted, letterSpacing: '-.01em' }}>
-            {running || finished ? fmt(remaining) : fmt(selected)}
-          </div>
-          <div style={{ fontSize: '8px', fontWeight: '600', color: finished ? C.green : running ? C.violet : C.hint, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-            {finished ? '✓ fatto' : running ? 'stop' : 'start'}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── PESI ROW — riceve activeSet come prop dal genitore ──────────────
 function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, activeSet }) {
   const wd      = ex.weeks.find(w => w.week === week) || ex.weeks[0]
@@ -227,37 +75,21 @@ function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, act
             Tempo {ex.tempo} · {numSets} × {wd.reps} reps{wd.rpe ? ` · RPE ${wd.rpe}` : ''}
           </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'5px', marginLeft:'8px' }}>
+        {/* Dots + badge piccolo allineati a destra */}
+        <div style={{ display:'flex', alignItems:'center', gap:'6px', marginLeft:'8px', flexShrink:0 }}>
+          {!ex.bodyweight && lastLog && (
+            <div style={{ fontSize:'10px', fontWeight:'700', color:C.violet, background:C.violetBg, padding:'2px 7px', borderRadius:'6px', border:`1px solid ${C.violetBorder}`, whiteSpace:'nowrap' }}>
+              {lastLog.weight_kg}kg
+            </div>
+          )}
+          {ex.bodyweight && lastBwLog && (
+            <div style={{ fontSize:'10px', fontWeight:'700', color:C.green, background:C.greenBg, padding:'2px 7px', borderRadius:'6px', border:`1px solid ${C.greenBorder}`, whiteSpace:'nowrap' }}>
+              {lastBwLog.reps_done}r
+            </div>
+          )}
           {dots}
         </div>
       </div>
-
-      {/* Riferimento ultima sessione — prominente */}
-      {!ex.bodyweight && lastLog && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          marginBottom: '10px', padding: '7px 10px',
-          background: C.violetBg, border: `1px solid ${C.violetBorder}`,
-          borderRadius: '8px',
-        }}>
-          <div style={{ fontSize: '9px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ultima volta</div>
-          <div style={{ fontSize: '14px', fontWeight: '800', color: C.violetLight }}>{lastLog.weight_kg} kg</div>
-          <div style={{ fontSize: '10px', color: C.muted }}>× {lastLog.reps_done} reps</div>
-          <div style={{ fontSize: '9px', color: C.hint, marginLeft: 'auto' }}>{lastLog.log_date}</div>
-        </div>
-      )}
-      {ex.bodyweight && lastBwLog && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          marginBottom: '10px', padding: '7px 10px',
-          background: C.greenBg, border: `1px solid ${C.greenBorder}`,
-          borderRadius: '8px',
-        }}>
-          <div style={{ fontSize: '9px', fontWeight: '600', color: C.green, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ultima volta</div>
-          <div style={{ fontSize: '14px', fontWeight: '800', color: C.greenLight }}>{lastBwLog.reps_done} reps</div>
-          <div style={{ fontSize: '9px', color: C.hint, marginLeft: 'auto' }}>{lastBwLog.log_date}</div>
-        </div>
-      )}
 
       {ex.bodyweight ? (
         <div>
@@ -316,8 +148,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const week         = entry.week
   const needsWarmup2 = ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(sessionType)
   const warmupData   = needsWarmup2 ? TRAINING_PLAN.warmup_2 : TRAINING_PLAN.warmup_1
-
-  const isPesiSession = sessionType === 'PESI' || entry.also === 'PESI'
 
   const saveSession = async () => {
     if (saving || savedMsg) return
@@ -391,6 +221,8 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   )
 
   const [pesiActiveSet, setPesiActiveSet] = React.useState(0)
+  const maxSets
+
   const maxSets = Math.max(...TRAINING_PLAN.sessions.PESI.circuit_2.map(ex => {
     const wd = ex.weeks.find(w => w.week === week) || ex.weeks[0]
     return wd.sets || 2
@@ -593,8 +425,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       )}
 
       {/* Padding bottom extra quando il timer è visibile */}
-      <div style={{ paddingBottom: isPesiSession ? '80px' : '0' }}>
-        <div style={ss.body}>
+      <div style={ss.body}>
           {sessionType === 'PESI'             && renderPESI()}
           {sessionType === 'PALESTRA'         && renderPALESTRA()}
           {sessionType === 'CORSA'            && renderCORSA()}
@@ -686,10 +517,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Timer fisso sopra navbar — solo per sessioni con pesi */}
-      {isPesiSession && <SessionTimer />}
     </div>
   )
 }
