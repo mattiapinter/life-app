@@ -1,9 +1,19 @@
 import React from 'react'
 import { C, ss, DAYS, MEALS_CATS, todayIdx, fmtDate } from '../constants'
 import { IcoCheck, IcoRandom } from './Icons'
+import CorpoSection from './Corpo'
 
-export default function DietaSection({ weeklyPlan, setWeeklyPlan, foodOptions, setFoodOptions, syncing }) {
-  const [sub, setSub]               = React.useState('piano')
+export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setWeeklyPlan, foodOptions, setFoodOptions, syncing }) {
+  const [sub, setSub] = React.useState(initialSub || 'piano')
+
+  // Sync sub con App quando cambia dall'esterno (cambio macro)
+  React.useEffect(() => {
+    if (initialSub && initialSub !== sub) setSub(initialSub)
+  }, [initialSub])
+
+  // Notifica App del cambio sub
+  const changeSub = (s) => { setSub(s); onSubChange?.(s) }
+
   const [dayIdx, setDayIdx]         = React.useState(todayIdx())
   const [settingsMode, setSettingsMode] = React.useState('normal')
   const [cart, setCart]             = React.useState(() => {
@@ -173,13 +183,10 @@ export default function DietaSection({ weeklyPlan, setWeeklyPlan, foodOptions, s
         <div style={ss.title}>Dieta</div>
         <div style={ss.subtitle}>{dayData.isSkiDay ? 'modalità endurance' : 'piano nutrizionista'}</div>
       </div>
-      <div style={ss.subBar}>
-        {[{ id:'piano', l:'Piano' }, { id:'spesa', l:'Spesa' }, { id:'opzioni', l:'Opzioni' }].map(t => (
-          <div key={t.id} style={ss.subTab(sub === t.id)} onClick={() => setSub(t.id)}>{t.l}</div>
-        ))}
-      </div>
+
       {sub === 'piano'   && renderPiano()}
       {sub === 'spesa'   && renderSpesa()}
+      {sub === 'misure'  && <CorpoSection />}
       {sub === 'opzioni' && renderOpzioni()}
     </div>
   )
