@@ -221,8 +221,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   )
 
   const [pesiActiveSet, setPesiActiveSet] = React.useState(0)
-  const maxSets
-
   const maxSets = Math.max(...TRAINING_PLAN.sessions.PESI.circuit_2.map(ex => {
     const wd = ex.weeks.find(w => w.week === week) || ex.weeks[0]
     return wd.sets || 2
