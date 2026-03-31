@@ -3,7 +3,7 @@ import { C, ss, DAYS, INIT_OPTS, todayIdx } from './constants'
 import {
   syncPlanToSupabase, loadPlanFromSupabase,
   syncFoodOptionsToSupabase, loadFoodOptionsFromSupabase,
-  loadFitnessSessions, loadTrainingLogs, loadExerciseVideos, saveExerciseVideo,
+  loadFitnessSessions, loadTrainingLogs, loadExerciseVideos,
   loadSessionNotes,
 } from './lib/supabase'
 
@@ -11,17 +11,9 @@ import HomeSection        from './components/Home'
 import DietaSection       from './components/Dieta'
 import AllenamentoSection from './components/Allenamento'
 import ScalateSection     from './components/Scalate'
-import CorpoSection       from './components/Corpo'
 import { IcoHome, IcoDiet, IcoTrain, IcoClimb } from './components/Icons'
 
-const IcoCorpo = ({ a }) => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="5" r="2" stroke={a ? C.violet : C.hint} strokeWidth="1.4" />
-    <path d="M7 9h6l1 7H6l1-7z" stroke={a ? C.violet : C.hint} strokeWidth="1.4" strokeLinejoin="round" />
-    <path d="M8 9l-2 3M12 9l2 3" stroke={a ? C.violet : C.hint} strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-)
-
+// ── ICONS ──────────────────────────────────────────────────────────
 const IcoMenu = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
     <line x1="3" y1="6"  x2="17" y2="6"  stroke={C.muted} strokeWidth="1.6" strokeLinecap="round" />
@@ -30,15 +22,40 @@ const IcoMenu = () => (
   </svg>
 )
 
-const SECTIONS = [
+// ── MACRO SEZIONI (hamburger) ──────────────────────────────────────
+const MACRO = [
   { id: 'home',        label: 'Home',        emoji: '🏠' },
-  { id: 'corpo',       label: 'Corpo',       emoji: '📏' },
   { id: 'allenamento', label: 'Allenamento', emoji: '💪' },
   { id: 'scalate',     label: 'Scalate',     emoji: '🧗' },
   { id: 'dieta',       label: 'Dieta',       emoji: '🥗' },
 ]
 
-function SidebarDrawer({ open, onClose, tab, setTab }) {
+// ── SOTTO-SEZIONI per macro (bottom nav) ──────────────────────────
+const SUB = {
+  home:        [],
+  allenamento: [
+    { id: 'oggi',      l: 'Oggi' },
+    { id: 'piano',     l: 'Piano' },
+    { id: 'storico',   l: 'Storico' },
+    { id: 'esercizi',  l: 'Esercizi' },
+    { id: 'test',      l: 'Test' },
+  ],
+  scalate: [
+    { id: 'falesie',   l: 'Falesie' },
+    { id: 'tiri',      l: 'Tiri' },
+    { id: 'progetti',  l: 'Progetti' },
+    { id: 'stats',     l: 'Stats' },
+  ],
+  dieta: [
+    { id: 'piano',     l: 'Piano' },
+    { id: 'spesa',     l: 'Spesa' },
+    { id: 'misure',    l: 'Misure' },
+    { id: 'opzioni',   l: 'Opzioni' },
+  ],
+}
+
+// ── SIDEBAR DRAWER ─────────────────────────────────────────────────
+function SidebarDrawer({ open, onClose, macro, setMacro }) {
   const startX = React.useRef(null)
   const handleTouchStart = (e) => { startX.current = e.touches[0].clientX }
   const handleTouchEnd   = (e) => {
@@ -56,11 +73,12 @@ function SidebarDrawer({ open, onClose, tab, setTab }) {
           <div style={{ fontSize:'13px', color:C.muted }}>il tuo spazio personale</div>
         </div>
         <div style={{ flex:1, padding:'8px 0', overflowY:'auto' }}>
-          {SECTIONS.map(sec => {
-            const isActive = tab === sec.id
+          {MACRO.map(sec => {
+            const isActive = macro === sec.id
             return (
-              <div key={sec.id} style={{ display:'flex', alignItems:'center', gap:'14px', padding:'14px 20px', cursor:'pointer', background: isActive ? C.violetBg : 'transparent', borderRight: isActive ? `3px solid ${C.violet}` : '3px solid transparent' }} onClick={() => { setTab(sec.id); onClose() }}>
-                <div style={{ fontSize:'18px', lineHeight:1 }}>{sec.emoji}</div>
+              <div key={sec.id} style={{ display:'flex', alignItems:'center', gap:'14px', padding:'16px 20px', cursor:'pointer', background: isActive ? C.violetBg : 'transparent', borderRight: isActive ? `3px solid ${C.violet}` : '3px solid transparent' }}
+                onClick={() => { setMacro(sec.id); onClose() }}>
+                <div style={{ fontSize:'20px', lineHeight:1 }}>{sec.emoji}</div>
                 <div style={{ fontSize:'14px', fontWeight: isActive ? '700' : '400', color: isActive ? C.violetLight : C.textSoft }}>{sec.label}</div>
                 {isActive && <div style={{ marginLeft:'auto', width:'6px', height:'6px', borderRadius:'50%', background:C.violet }} />}
               </div>
@@ -77,10 +95,39 @@ function SidebarDrawer({ open, onClose, tab, setTab }) {
   )
 }
 
+// ── BOTTOM NAV ─────────────────────────────────────────────────────
+function BottomNav({ macro, sub, setSub }) {
+  const subTabs = SUB[macro] || []
+  if (subTabs.length === 0) return null
+
+  return (
+    <nav style={ss.bnav}>
+      <div style={{ ...ss.bnavInner, justifyContent: subTabs.length <= 3 ? 'center' : 'space-around', gap: subTabs.length <= 3 ? '32px' : '0' }}>
+        {subTabs.map(t => (
+          <div key={t.id} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', padding:'4px 12px', cursor:'pointer' }} onClick={() => setSub(t.id)}>
+            <div style={{ fontSize:'11px', fontWeight: sub === t.id ? '700' : '500', color: sub === t.id ? C.violetLight : C.hint, letterSpacing:'.02em', borderBottom: sub === t.id ? `2px solid ${C.violet}` : '2px solid transparent', paddingBottom:'2px' }}>
+              {t.l}
+            </div>
+          </div>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
+// ── APP ────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab,        setTab]        = React.useState('home')
+  const [macro,      setMacroRaw]  = React.useState('home')
+  const [sub,        setSub]       = React.useState(null)
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [syncing,    setSyncing]    = React.useState(false)
+
+  // Quando cambia la macro, resetta la sotto-sezione alla prima disponibile
+  const setMacro = (m) => {
+    setMacroRaw(m)
+    const firstSub = SUB[m]?.[0]?.id || null
+    setSub(firstSub)
+  }
 
   const [fitSessions,  setFitSessions]  = React.useState([])
   const [trainingLogs, setTrainingLogs] = React.useState([])
@@ -129,39 +176,47 @@ export default function App() {
 
   const handleVideosChange = (exerciseName, url) => setVideos(p => ({ ...p, [exerciseName]: url }))
 
-  const bottomNav = [
-    { id:'home',        Icon:IcoHome,  l:'home' },
-    { id:'allenamento', Icon:IcoTrain, l:'training' },
-    { id:'scalate',     Icon:IcoClimb, l:'scalate' },
-    { id:'dieta',       Icon:IcoDiet,  l:'dieta' },
-  ]
+  const activeSub = sub || SUB[macro]?.[0]?.id || null
 
   return (
     <div style={ss.app}>
-      <SidebarDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} tab={tab} setTab={setTab} />
+      <SidebarDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} macro={macro} setMacro={setMacro} />
       <div style={ss.main}>
 
-        {/* Hamburger fisso in alto a sinistra */}
-        <div style={{ position:'fixed', top:12, left:12, zIndex:50, padding:'7px', cursor:'pointer', background:C.surface, borderRadius:'10px', border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={() => setDrawerOpen(true)}>
+        {/* Hamburger */}
+        <div style={{ position:'fixed', top:12, left:12, zIndex:50, padding:'7px', cursor:'pointer', background:C.surface, borderRadius:'10px', border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setDrawerOpen(true)}>
           <IcoMenu />
         </div>
 
-        {tab === 'home'        && <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setTab} sessionNotes={sessionNotes} />}
-        {tab === 'corpo'       && <CorpoSection />}
-        {tab === 'dieta'       && <DietaSection weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} syncing={syncing} />}
-        {tab === 'allenamento' && <AllenamentoSection trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} />}
-        {tab === 'scalate'     && <ScalateSection />}
+        {/* Contenuto macro */}
+        {macro === 'home' && (
+          <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} sessionNotes={sessionNotes} />
+        )}
+        {macro === 'allenamento' && (
+          <AllenamentoSection
+            initialSub={activeSub}
+            onSubChange={setSub}
+            trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs}
+            fitSessions={fitSessions}   setFitSessions={setFitSessions}
+            videos={videos} onVideosChange={handleVideosChange}
+          />
+        )}
+        {macro === 'scalate' && (
+          <ScalateSection initialSub={activeSub} onSubChange={setSub} />
+        )}
+        {macro === 'dieta' && (
+          <DietaSection
+            initialSub={activeSub}
+            onSubChange={setSub}
+            weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan}
+            foodOptions={foodOptions} setFoodOptions={setFoodOptions}
+            syncing={syncing}
+          />
+        )}
 
-        <nav style={ss.bnav}>
-          <div style={ss.bnavInner}>
-            {bottomNav.map(({ id, l, Icon }) => (
-              <div key={id} style={ss.bnavItem(tab === id)} onClick={() => setTab(id)}>
-                <Icon a={tab === id} />
-                <div style={ss.bnavLabel(tab === id)}>{l}</div>
-              </div>
-            ))}
-          </div>
-        </nav>
+        {/* Bottom nav sotto-sezioni */}
+        <BottomNav macro={macro} sub={activeSub} setSub={setSub} />
 
       </div>
     </div>
