@@ -552,10 +552,7 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
       )}
 
       {showEdit && (
-        <CragForm editCrag={crag} onSaved={async () => {
-          setShowEdit(false)
-          await onCragUpdated()
-        }} onClose={() => setShowEdit(false)} />
+        <CragForm editCrag={crag} onSaved={async () => { setShowEdit(false); await onCragUpdated() }} onClose={() => setShowEdit(false)} />
       )}
 
       <div style={{ ...ss.hdr, background: C.greenBg, borderBottomColor: C.greenBorder }}>
@@ -571,7 +568,6 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
             onClick={() => setShowEdit(true)}>Modifica</div>
         </div>
 
-        {/* Info pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
           {crag.grade_min && crag.grade_max && (
             <div style={{ padding: '3px 10px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.greenBorder}`, borderRadius: '999px', fontSize: '10px', color: C.greenLight, fontWeight: '600' }}>
@@ -600,7 +596,6 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
           />
         </div>
 
-        {/* Stats */}
         <div style={{ display: 'flex', gap: '16px', marginTop: '14px' }}>
           {[
             { v: cragSessions.length, l: 'sessioni' },
@@ -717,9 +712,7 @@ function TiriTab({ ascents, sessions, crags }) {
           <div key={f.id} style={ss.pill(filter === f.id)} onClick={() => setFilter(f.id)}>{f.l}</div>
         ))}
       </div>
-
       <div style={{ fontSize: '11px', color: C.hint, marginBottom: '12px' }}>{sorted.length} tiri</div>
-
       {sorted.map((a, i) => {
         const sess      = sessions.find(s => s.id === a.session_id)
         const crag      = crags.find(c => c.id === sess?.crag_id)
@@ -1014,8 +1007,8 @@ function ProjectsTab({ projects, attempts, crags, onAdded, onRefresh }) {
 }
 
 // ── MAIN SCALATE ───────────────────────────────────────────────────
-export default function ScalateSection() {
-  const [sub,          setSub]          = React.useState('falesie')
+export default function ScalateSection({ initialSub, onSubChange }) {
+  const [sub,          setSub]          = React.useState(initialSub || 'falesie')
   const [crags,        setCrags]        = React.useState([])
   const [sessions,     setSessions]     = React.useState([])
   const [ascents,      setAscents]      = React.useState([])
@@ -1025,6 +1018,13 @@ export default function ScalateSection() {
   const [selectedCrag, setSelectedCrag] = React.useState(null)
   const [showCragForm, setShowCragForm] = React.useState(false)
   const [showSessForm, setShowSessForm] = React.useState(false)
+
+  // Sync con App quando cambia dall'esterno
+  React.useEffect(() => {
+    if (initialSub && initialSub !== sub) setSub(initialSub)
+  }, [initialSub])
+
+  const changeSub = (s) => { setSub(s); onSubChange?.(s) }
 
   const loadAll = async () => {
     setLoading(true)
@@ -1151,22 +1151,12 @@ export default function ScalateSection() {
 
   return (
     <div>
-      {showSessForm && !selectedCrag && (
-        <SessionForm crags={crags} onSaved={() => { setShowSessForm(false); loadAll() }} onClose={() => setShowSessForm(false)} />
-      )}
-
       <div style={ss.hdr}>
         <div style={ss.eyebrow}>arrampicata · performance</div>
         <div style={ss.title}>Scalate</div>
         <div style={ss.subtitle}>
           {sessions.length} sessioni · {ascents.filter(a => IS_FIRST_ASCENT.includes(a.style) && a.completed).length} prime salite
         </div>
-      </div>
-
-      <div style={ss.subBar}>
-        {[{ id: 'falesie', l: 'Falesie' }, { id: 'tiri', l: 'Tiri' }, { id: 'progetti', l: 'Progetti' }, { id: 'stats', l: 'Stats' }].map(t => (
-          <div key={t.id} style={ss.subTab(sub === t.id)} onClick={() => setSub(t.id)}>{t.l}</div>
-        ))}
       </div>
 
       {sub === 'falesie'  && renderFalesie()}
