@@ -39,7 +39,11 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
     setWeeklyPlan(p => ({ ...p, [dayName]: { ...p[dayName], meals: m } }))
   }
 
-  const shoppingList = React.useMemo(() => {
+  const resetWeek = () => {
+    const empty = {}
+    DAYS.forEach(d => { empty[d] = { isSkiDay: weeklyPlan[d]?.isSkiDay || false, meals: {} } })
+    setWeeklyPlan(empty)
+  }
     const list = {}
     const parse = str => {
       str = str.trim()
@@ -118,6 +122,10 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
         })}
         <div style={{ width:'100%', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'12px', padding:'13px', fontSize:'13px', fontWeight:'600', color:C.violetLight, textAlign:'center', cursor:'pointer', userSelect:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }} onClick={randomize}>
           <IcoRandom /> Random
+        </div>
+        <div style={{ marginTop:'8px', padding:'10px', textAlign:'center', borderRadius:'10px', cursor:'pointer', fontSize:'11px', fontWeight:'600', color:C.hint, background:C.surface, border:`1px solid ${C.border}`, userSelect:'none' }}
+          onClick={resetWeek}>
+          Azzera settimana
         </div>
       </div>
     </div>
