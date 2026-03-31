@@ -525,11 +525,219 @@ function AttemptForm({ project, onSaved, onClose }) {
   )
 }
 
+// ── EDIT SESSION DRAWER ────────────────────────────────────────────
+function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
+  const [notes,    setNotes]    = React.useState(session.notes || '')
+  const [rows,     setRows]     = React.useState(
+    ascents.map(a => ({ ...a, _dirty: false, _deleted: false }))
+  )
+  const [newTiri,  setNewTiri]  = React.useState([])
+  const [saving,   setSaving]   = React.useState(false)
+
+  const updateRow = (id, field, val) =>
+    setRows(p => p.map(r => r.id === id ? { ...r, [field]: val, _dirty: true } : r))
+  const deleteRow = (id) =>
+    setRows(p => p.map(r => r.id === id ? { ...r, _deleted: true } : r))
+
+  const addNew = () =>
+    setNewTiri(p => [...p, { _key: Date.now(), route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '' }])
+  const updateNew = (key, field, val) =>
+    setNewTiri(p => p.map(t => t._key === key ? { ...t, [field]: val } : t))
+  const removeNew = (key) =>
+    setNewTiri(p => p.filter(t => t._key !== key))
+
+  const handleSave = async () => {
+    setSaving(true)
+    const promises = []
+
+    // Aggiorna note sessione
+    promises.push(
+      (async () => {
+        const { db } = await import('../lib/supabase')
+        await db.from('climbing_sessions').update({ notes: notes.trim() }).eq('id', session.id)
+      })()
+    )
+
+    // Elimina tiri segnati
+    for (const r of rows.filter(r => r._deleted)) {
+      promises.push(deleteAscent(r.id))
+    }
+
+    // Aggiorna tiri modificati
+    for (const r of rows.filter(r => r._dirty && !r._deleted)) {
+      promises.push(
+        (async () => {
+          const { db } = await import('../lib/supabase')
+          await db.from('ascents').update({
+            route_name: r.route_name,
+            grade: r.grade,
+            style: r.style,
+            completed: r.completed,
+            attempts: parseInt(r.attempts) || 1,
+            rpe: r.rpe ? parseInt(r.rpe) : null,
+          }).eq('id', r.id)
+        })()
+      )
+    }
+
+    // Aggiungi tiri nuovi
+    for (const t of newTiri) {
+      promises.push(saveAscent({
+        session_id: session.id,
+        route_name: t.route_name.trim(),
+        grade: t.grade,
+        style: t.style,
+        completed: t.completed,
+        attempts: parseInt(t.attempts) || 1,
+        rpe: t.rpe ? parseInt(t.rpe) : null,
+      }))
+    }
+
+    await Promise.all(promises)
+    setSaving(false)
+    onSaved()
+  }
+
+  const visibleRows = rows.filter(r => !r._deleted)
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+            Modifica sessione · {fmtDateShort(session.session_date)}
+          </div>
+          <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
+        </div>
+
+        {/* Note sessione */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Note sessione</div>
+          <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.6' }} rows={2}
+            value={notes} onChange={e => setNotes(e.target.value)} placeholder="Note..." />
+        </div>
+
+        {/* Tiri esistenti */}
+        {visibleRows.length > 0 && (
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ fontSize: '10px', fontWeight: '600', color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>
+              Tiri ({visibleRows.length})
+            </div>
+            {visibleRows.map(r => {
+              const styleInfo = STYLE_MAP[r.style] || STYLE_MAP.redpoint
+              return (
+                <div key={r.id} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: styleInfo.color }} />
+                      <span style={{ fontSize: '12px', fontWeight: '700', color: C.text }}>{r.grade}</span>
+                      <span style={{ fontSize: '10px', color: styleInfo.color }}>{styleInfo.short}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: C.red, cursor: 'pointer', padding: '2px 8px', opacity: 0.7 }}
+                      onClick={() => deleteRow(r.id)}>Elimina</div>
+                  </div>
+                  <input style={{ ...ss.inp, marginBottom: '8px', fontSize: '12px' }}
+                    placeholder="Nome via" value={r.route_name || ''}
+                    onChange={e => updateRow(r.id, 'route_name', e.target.value)} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <div>
+                      <div style={{ fontSize: '9px', color: C.hint, marginBottom: '3px' }}>Grado</div>
+                      <select style={{ ...ss.inp, appearance: 'none', fontSize: '13px' }}
+                        value={r.grade} onChange={e => updateRow(r.id, 'grade', e.target.value)}>
+                        {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '9px', color: C.hint, marginBottom: '3px' }}>RPE</div>
+                      <select style={{ ...ss.inp, appearance: 'none', fontSize: '13px' }}
+                        value={r.rpe || ''} onChange={e => updateRow(r.id, 'rpe', e.target.value)}>
+                        <option value="">—</option>
+                        {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                    {CLIMB_STYLES.map(s => (
+                      <div key={s.id}
+                        style={{ padding: '4px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', border: `1px solid ${r.style === s.id ? s.color : C.border}`, background: r.style === s.id ? `${s.color}22` : 'transparent', color: r.style === s.id ? s.color : C.hint }}
+                        onClick={() => updateRow(r.id, 'style', s.id)}>
+                        {s.label}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {[{ v: true, l: 'Completata' }, { v: false, l: 'Tentativo' }].map(o => (
+                      <div key={o.l}
+                        style={{ flex: 1, padding: '5px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', border: `1px solid ${r.completed === o.v ? C.green : C.border}`, background: r.completed === o.v ? C.greenBg : 'transparent', color: r.completed === o.v ? C.greenLight : C.hint }}
+                        onClick={() => updateRow(r.id, 'completed', o.v)}>{o.l}</div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Tiri nuovi */}
+        {newTiri.map(t => (
+          <div key={t._key} style={{ background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '12px', padding: '12px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '600', color: C.violetLight }}>Nuovo tiro</div>
+              <div style={{ fontSize: '16px', color: C.muted, cursor: 'pointer' }} onClick={() => removeNew(t._key)}>×</div>
+            </div>
+            <input style={{ ...ss.inp, marginBottom: '8px', fontSize: '12px' }}
+              placeholder="Nome via (opzionale)" value={t.route_name}
+              onChange={e => updateNew(t._key, 'route_name', e.target.value)} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+              <div>
+                <div style={{ fontSize: '9px', color: C.hint, marginBottom: '3px' }}>Grado</div>
+                <select style={{ ...ss.inp, appearance: 'none' }} value={t.grade} onChange={e => updateNew(t._key, 'grade', e.target.value)}>
+                  {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={{ fontSize: '9px', color: C.hint, marginBottom: '3px' }}>Tentativi</div>
+                <input type="number" style={ss.inp} min="1" value={t.attempts} onChange={e => updateNew(t._key, 'attempts', e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
+              {CLIMB_STYLES.map(s => (
+                <div key={s.id}
+                  style={{ padding: '4px 8px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', border: `1px solid ${t.style === s.id ? s.color : C.border}`, background: t.style === s.id ? `${s.color}22` : 'transparent', color: t.style === s.id ? s.color : C.hint }}
+                  onClick={() => updateNew(t._key, 'style', s.id)}>
+                  {s.label}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {[{ v: true, l: 'Completata' }, { v: false, l: 'Tentativo' }].map(o => (
+                <div key={o.l}
+                  style={{ flex: 1, padding: '5px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', border: `1px solid ${t.completed === o.v ? C.green : C.border}`, background: t.completed === o.v ? C.greenBg : 'transparent', color: t.completed === o.v ? C.greenLight : C.hint }}
+                  onClick={() => updateNew(t._key, 'completed', o.v)}>{o.l}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div style={{ fontSize: '11px', fontWeight: '600', color: C.violetLight, cursor: 'pointer', textAlign: 'center', padding: '10px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '10px', marginBottom: '12px' }}
+          onClick={addNew}>+ Aggiungi tiro</div>
+
+        <div style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1 }} onClick={!saving ? handleSave : undefined}>
+          {saving ? 'Salvataggio...' : 'Salva modifiche'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── CRAG DETAIL ────────────────────────────────────────────────────
 function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession, onDelete, onCragUpdated }) {
-  const [confirmDel, setConfirmDel] = React.useState(false)
-  const [showEdit,   setShowEdit]   = React.useState(false)
-  const [crag,       setCrag]       = React.useState(initialCrag)
+  const [confirmDel,   setConfirmDel]   = React.useState(false)
+  const [showEdit,     setShowEdit]     = React.useState(false)
+  const [editSession,  setEditSession]  = React.useState(null)
+  const [crag,         setCrag]         = React.useState(initialCrag)
 
   const cragSessions = sessions.filter(s => s.crag_id === crag.id)
   const cragAscents  = ascents.filter(a => cragSessions.some(s => s.id === a.session_id))
@@ -553,6 +761,15 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
 
       {showEdit && (
         <CragForm editCrag={crag} onSaved={async () => { setShowEdit(false); await onCragUpdated() }} onClose={() => setShowEdit(false)} />
+      )}
+
+      {editSession && (
+        <EditSessionDrawer
+          session={editSession}
+          ascents={ascents.filter(a => a.session_id === editSession.id)}
+          onClose={() => setEditSession(null)}
+          onSaved={() => { setEditSession(null); onCragUpdated() }}
+        />
       )}
 
       <div style={{ ...ss.hdr, background: C.greenBg, borderBottomColor: C.greenBorder }}>
@@ -648,7 +865,11 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
                     <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>{fmtDateShort(sess.session_date)}</div>
                     <div style={{ fontSize: '10px', color: C.muted, marginTop: '2px' }}>{sessAscents.length} tiri{maxG ? ` · max ${maxG}` : ''}</div>
                   </div>
-                  {maxG && <div style={{ fontSize: '13px', fontWeight: '700', color: C.violetLight, background: C.violetBg, padding: '4px 10px', borderRadius: '8px', border: `1px solid ${C.violetBorder}` }}>{maxG}</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {maxG && <div style={{ fontSize: '13px', fontWeight: '700', color: C.violetLight, background: C.violetBg, padding: '4px 10px', borderRadius: '8px', border: `1px solid ${C.violetBorder}` }}>{maxG}</div>}
+                    <div style={{ fontSize: '11px', color: C.violet, cursor: 'pointer', padding: '4px 10px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '8px', fontWeight: '600' }}
+                      onClick={() => setEditSession(sess)}>✎</div>
+                  </div>
                 </div>
                 {sessAscents.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
