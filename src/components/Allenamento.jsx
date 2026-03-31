@@ -1147,13 +1147,20 @@ function TestForm({ fitSessions, onSaved }) {
 }
 
 // ── MAIN ALLENAMENTO ───────────────────────────────────────────────
-export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange }) {
-  const [sub, setSub]                     = React.useState('oggi')
+export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange }) {
+  const [sub, setSub]                     = React.useState(initialSub || 'oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
   const [showMetrics,   setShowMetrics]   = React.useState(false)
   const [sessionNotes,  setSessionNotes]  = React.useState([])
   const today      = todayStr()
   const todayEntry = getTodayCalEntry()
+
+  // Sync con App quando cambia dall'esterno
+  React.useEffect(() => {
+    if (initialSub && initialSub !== sub) setSub(initialSub)
+  }, [initialSub])
+
+  const changeSub = (s) => { setSub(s); onSubChange?.(s) }
 
   const onLogsChanged = async () => {
     const logs  = await loadTrainingLogs()
@@ -1171,7 +1178,7 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
     return <MetricsDetail
       fitSessions={fitSessions}
       onBack={() => setShowMetrics(false)}
-      onGoToTest={() => { setShowMetrics(false); setSub('test') }}
+      onGoToTest={() => { setShowMetrics(false); changeSub('test') }}
     />
   }
 
@@ -1256,7 +1263,7 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
       <BenchmarkWidget fitSessions={fitSessions} onOpenMetrics={() => setShowMetrics(true)} />
 
       <div style={{ textAlign:'center', marginTop:'-4px', marginBottom:'8px' }}>
-        <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={() => setSub('test')}>
+        <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={() => changeSub('test')}>
           + Registra nuovo test
         </div>
       </div>
@@ -1320,11 +1327,6 @@ export default function AllenamentoSection({ trainingLogs, setTrainingLogs, fitS
         <div style={ss.eyebrow}>Piano · {TRAINING_PLAN.meta.goal}</div>
         <div style={ss.title}>Allenamento</div>
         <div style={ss.subtitle}>{todayEntry ? `oggi: ${SESSION_COLORS[todayEntry.session_type]?.label}` : 'nessun allenamento oggi'}</div>
-      </div>
-      <div style={ss.subBar}>
-        {[{ id:'oggi', l:'Oggi' }, { id:'piano', l:'Piano' }, { id:'storico', l:'Storico' }, { id:'esercizi', l:'Esercizi' }, { id:'test', l:'Test' }].map(t => (
-          <div key={t.id} style={ss.subTab(sub === t.id)} onClick={() => setSub(t.id)}>{t.l}</div>
-        ))}
       </div>
       {sub === 'oggi'     && renderOggi()}
       {sub === 'piano'    && renderPiano()}
