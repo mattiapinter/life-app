@@ -4,7 +4,7 @@ import {
   syncPlanToSupabase, loadPlanFromSupabase,
   syncFoodOptionsToSupabase, loadFoodOptionsFromSupabase,
   loadFitnessSessions, loadTrainingLogs, loadExerciseVideos,
-  loadSessionNotes,
+  loadSessionNotes, loadHrvLogs, saveHrvLog,
 } from './lib/supabase'
 
 import HomeSection        from './components/Home'
@@ -38,6 +38,7 @@ const SUB = {
     { id: 'piano',     l: 'Piano' },
     { id: 'storico',   l: 'Storico' },
     { id: 'esercizi',  l: 'Esercizi' },
+    { id: 'corsa',     l: 'Corsa' },
     { id: 'test',      l: 'Test' },
   ],
   scalate: [
@@ -86,9 +87,7 @@ function SidebarDrawer({ open, onClose, macro, setMacro }) {
           })}
         </div>
         <div style={{ padding:'16px 20px', borderTop:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:'10px', color:C.hint, lineHeight:'1.6' }}>
-            Mattia Brigadoi · <span style={{ color:C.violetLight }}>79.7 kg</span>
-          </div>
+          <div style={{ fontSize:'10px', color:C.hint }}>Mattia Brigadoi</div>
         </div>
       </div>
     </>
@@ -133,6 +132,7 @@ export default function App() {
   const [trainingLogs, setTrainingLogs] = React.useState([])
   const [sessionNotes, setSessionNotes] = React.useState([])
   const [videos,       setVideos]       = React.useState({})
+  const [hrvLogs,      setHrvLogs]      = React.useState([])
 
   const [foodOptions, setFoodOptions] = React.useState(() => {
     if (localStorage.getItem('life_v') !== '2') {
@@ -154,6 +154,7 @@ export default function App() {
     loadFitnessSessions().then(setFitSessions)
     loadTrainingLogs().then(setTrainingLogs)
     loadSessionNotes().then(setSessionNotes)
+    loadHrvLogs().then(setHrvLogs)
     loadExerciseVideos().then(rows => {
       const map = {}; rows.forEach(r => { map[r.exercise_name] = r.video_url }); setVideos(map)
     })
@@ -191,7 +192,7 @@ export default function App() {
 
         {/* Contenuto macro */}
         {macro === 'home' && (
-          <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} sessionNotes={sessionNotes} />
+          <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
         )}
         {macro === 'allenamento' && (
           <AllenamentoSection
