@@ -2,32 +2,10 @@ import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import { C, ss, todayStr, fmtDateShort } from '../constants'
-import { db, loadHrvLogs } from '../lib/supabase'
+import { db, loadHrvLogs, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement } from '../lib/supabase'
 
-// ── SUPABASE HELPERS ───────────────────────────────────────────────
-export const loadBodyMeasurements = async () => {
-  try {
-    const { data, error } = await db.from('body_measurements').select('*').order('measured_at', { ascending: true })
-    if (error) throw error
-    return data || []
-  } catch(e) { return [] }
-}
-
-export const saveBodyMeasurement = async (entry) => {
-  try {
-    const { error } = await db.from('body_measurements').insert([entry])
-    if (error) throw error
-    return true
-  } catch(e) { return false }
-}
-
-export const deleteBodyMeasurement = async (id) => {
-  try {
-    const { error } = await db.from('body_measurements').delete().eq('id', id)
-    if (error) throw error
-    return true
-  } catch(e) { return false }
-}
+// kept for backward compat — re-export so App.jsx import still works if needed
+export { loadBodyMeasurements }
 
 // ── METRIC DEFINITIONS ─────────────────────────────────────────────
 const METRICS = [
