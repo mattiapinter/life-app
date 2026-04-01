@@ -1,16 +1,19 @@
 import React from 'react'
-import { C, ss, DAYS, INIT_OPTS, todayIdx } from './constants'
+import { C, ss, DAYS, INIT_OPTS } from './constants'
 import {
   syncPlanToSupabase, loadPlanFromSupabase,
   syncFoodOptionsToSupabase, loadFoodOptionsFromSupabase,
   loadFitnessSessions, loadTrainingLogs, loadExerciseVideos,
-  loadSessionNotes, loadHrvLogs, saveHrvLog,
+  loadSessionNotes, loadHrvLogs, saveHrvLog, getUser, onAuthChange,
 } from './lib/supabase'
+import { db } from './lib/supabase'
 
 import HomeSection        from './components/Home'
 import DietaSection       from './components/Dieta'
 import AllenamentoSection from './components/Allenamento'
 import ScalateSection     from './components/Scalate'
+import CorpoSection       from './components/Corpo'
+import LoginScreen        from './components/Login'
 import { IcoHome, IcoDiet, IcoTrain, IcoClimb } from './components/Icons'
 
 // ── ICONS ──────────────────────────────────────────────────────────
@@ -22,7 +25,7 @@ const IcoMenu = () => (
   </svg>
 )
 
-// ── MACRO SEZIONI (hamburger) ──────────────────────────────────────
+// ── MACRO SEZIONI ──────────────────────────────────────────────────
 const MACRO = [
   { id: 'home',        label: 'Home',        emoji: '🏠' },
   { id: 'allenamento', label: 'Allenamento', emoji: '💪' },
@@ -30,7 +33,6 @@ const MACRO = [
   { id: 'dieta',       label: 'Dieta',       emoji: '🥗' },
 ]
 
-// ── SOTTO-SEZIONI per macro (bottom nav) ──────────────────────────
 const SUB = {
   home:        [],
   allenamento: [
@@ -55,8 +57,8 @@ const SUB = {
   ],
 }
 
-// ── SIDEBAR DRAWER ─────────────────────────────────────────────────
-function SidebarDrawer({ open, onClose, macro, setMacro }) {
+// ── SIDEBAR ────────────────────────────────────────────────────────
+function SidebarDrawer({ open, onClose, macro, setMacro, onLogout }) {
   const startX = React.useRef(null)
   const handleTouchStart = (e) => { startX.current = e.touches[0].clientX }
   const handleTouchEnd   = (e) => {
@@ -68,16 +70,20 @@ function SidebarDrawer({ open, onClose, macro, setMacro }) {
   return (
     <>
       <div style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(0,0,0,0.6)', opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none', transition:'opacity .25s', backdropFilter: open ? 'blur(2px)' : 'none' }} onClick={onClose} />
-      <div style={{ position:'fixed', top:0, left:0, bottom:0, width:'260px', zIndex:101, background:C.surface, borderRight:`1px solid ${C.border}`, transform: open ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .28s cubic-bezier(.4,0,.2,1)', display:'flex', flexDirection:'column' }} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div style={{ position:'fixed', top:0, left:0, bottom:0, width:'260px', zIndex:101, background:C.surface, borderRight:`1px solid ${C.border}`, transform: open ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .28s cubic-bezier(.4,0,.2,1)', display:'flex', flexDirection:'column' }}
+        onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+
         <div style={{ padding:'52px 20px 16px', borderBottom:`1px solid ${C.border}` }}>
           <div style={{ fontSize:'11px', fontWeight:'700', color:C.violet, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:'4px' }}>LIFE</div>
-          <div style={{ fontSize:'13px', color:C.muted }}>il tuo spazio personale</div>
+          <div style={{ fontSize:'13px', color:C.muted }}>Pinter</div>
         </div>
+
         <div style={{ flex:1, padding:'8px 0', overflowY:'auto' }}>
           {MACRO.map(sec => {
             const isActive = macro === sec.id
             return (
-              <div key={sec.id} style={{ display:'flex', alignItems:'center', gap:'14px', padding:'16px 20px', cursor:'pointer', background: isActive ? C.violetBg : 'transparent', borderRight: isActive ? `3px solid ${C.violet}` : '3px solid transparent' }}
+              <div key={sec.id}
+                style={{ display:'flex', alignItems:'center', gap:'14px', padding:'16px 20px', cursor:'pointer', background: isActive ? C.violetBg : 'transparent', borderRight: isActive ? `3px solid ${C.violet}` : '3px solid transparent' }}
                 onClick={() => { setMacro(sec.id); onClose() }}>
                 <div style={{ fontSize:'20px', lineHeight:1 }}>{sec.emoji}</div>
                 <div style={{ fontSize:'14px', fontWeight: isActive ? '700' : '400', color: isActive ? C.violetLight : C.textSoft }}>{sec.label}</div>
@@ -86,8 +92,11 @@ function SidebarDrawer({ open, onClose, macro, setMacro }) {
             )
           })}
         </div>
+
         <div style={{ padding:'16px 20px', borderTop:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:'10px', color:C.hint }}>Mattia Brigadoi</div>
+          <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', opacity:0.7 }} onClick={onLogout}>
+            Esci →
+          </div>
         </div>
       </div>
     </>
@@ -98,7 +107,6 @@ function SidebarDrawer({ open, onClose, macro, setMacro }) {
 function BottomNav({ macro, sub, setSub }) {
   const subTabs = SUB[macro] || []
   if (subTabs.length === 0) return null
-
   return (
     <nav style={ss.bnav}>
       <div style={{ ...ss.bnavInner, justifyContent: subTabs.length <= 3 ? 'center' : 'space-around', gap: subTabs.length <= 3 ? '32px' : '0' }}>
@@ -116,17 +124,11 @@ function BottomNav({ macro, sub, setSub }) {
 
 // ── APP ────────────────────────────────────────────────────────────
 export default function App() {
-  const [macro,      setMacroRaw]  = React.useState('home')
-  const [sub,        setSub]       = React.useState(null)
+  const [user,       setUser]       = React.useState(undefined) // undefined = loading
+  const [macro,      setMacroRaw]   = React.useState('home')
+  const [sub,        setSub]        = React.useState(null)
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [syncing,    setSyncing]    = React.useState(false)
-
-  // Quando cambia la macro, resetta la sotto-sezione alla prima disponibile
-  const setMacro = (m) => {
-    setMacroRaw(m)
-    const firstSub = SUB[m]?.[0]?.id || null
-    setSub(firstSub)
-  }
 
   const [fitSessions,  setFitSessions]  = React.useState([])
   const [trainingLogs, setTrainingLogs] = React.useState([])
@@ -148,7 +150,17 @@ export default function App() {
     const p = {}; DAYS.forEach(d => { p[d] = { isSkiDay: false, meals: {} } }); return p
   })
 
+  // Auth listener — si triggera subito con la sessione attuale
   React.useEffect(() => {
+    const { data: { subscription } } = onAuthChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Carica dati quando l'utente è loggato
+  React.useEffect(() => {
+    if (!user) return
     loadPlanFromSupabase().then(plan => { if (plan) { setWeeklyPlan(plan); localStorage.setItem('life_plan', JSON.stringify(plan)) } })
     loadFoodOptionsFromSupabase().then(opts => { if (opts) { setFoodOptions(opts); localStorage.setItem('life_options', JSON.stringify(opts)) } })
     loadFitnessSessions().then(setFitSessions)
@@ -158,67 +170,68 @@ export default function App() {
     loadExerciseVideos().then(rows => {
       const map = {}; rows.forEach(r => { map[r.exercise_name] = r.video_url }); setVideos(map)
     })
-  }, [])
+  }, [user])
 
   React.useEffect(() => { localStorage.setItem('life_options', JSON.stringify(foodOptions)) }, [foodOptions])
   React.useEffect(() => { localStorage.setItem('life_plan',    JSON.stringify(weeklyPlan))  }, [weeklyPlan])
 
   const syncPlanTimer = React.useRef(null)
   React.useEffect(() => {
+    if (!user) return
     clearTimeout(syncPlanTimer.current)
     syncPlanTimer.current = setTimeout(() => { setSyncing(true); syncPlanToSupabase(weeklyPlan).finally(() => setSyncing(false)) }, 1500)
-  }, [weeklyPlan])
+  }, [weeklyPlan, user])
 
   const syncOptsTimer = React.useRef(null)
   React.useEffect(() => {
+    if (!user) return
     clearTimeout(syncOptsTimer.current)
     syncOptsTimer.current = setTimeout(() => { syncFoodOptionsToSupabase(foodOptions) }, 1500)
-  }, [foodOptions])
+  }, [foodOptions, user])
 
-  const handleVideosChange = (exerciseName, url) => setVideos(p => ({ ...p, [exerciseName]: url }))
-
+  const setMacro = (m) => { setMacroRaw(m); setSub(SUB[m]?.[0]?.id || null) }
   const activeSub = sub || SUB[macro]?.[0]?.id || null
+  const handleVideosChange = (name, url) => setVideos(p => ({ ...p, [name]: url }))
+  const handleLogout = async () => { await db.auth.signOut(); setUser(null) }
+
+  // Loading state
+  if (user === undefined) {
+    return (
+      <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <div style={{ fontSize:'11px', fontWeight:'700', color:C.violet, textTransform:'uppercase', letterSpacing:'.15em' }}>LIFE</div>
+      </div>
+    )
+  }
+
+  // Not logged in
+  if (!user) {
+    return <LoginScreen onLogin={() => {}} />
+  }
 
   return (
     <div style={ss.app}>
-      <SidebarDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} macro={macro} setMacro={setMacro} />
+      <SidebarDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} macro={macro} setMacro={setMacro} onLogout={handleLogout} />
       <div style={ss.main}>
 
-        {/* Hamburger */}
         <div style={{ position:'fixed', top:12, left:12, zIndex:50, padding:'7px', cursor:'pointer', background:C.surface, borderRadius:'10px', border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}
           onClick={() => setDrawerOpen(true)}>
           <IcoMenu />
         </div>
 
-        {/* Contenuto macro */}
         {macro === 'home' && (
           <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} setSub={setSub} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
         )}
         {macro === 'allenamento' && (
-          <AllenamentoSection
-            initialSub={activeSub}
-            onSubChange={setSub}
-            trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs}
-            fitSessions={fitSessions}   setFitSessions={setFitSessions}
-            videos={videos} onVideosChange={handleVideosChange}
-          />
+          <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} />
         )}
         {macro === 'scalate' && (
           <ScalateSection initialSub={activeSub} onSubChange={setSub} />
         )}
         {macro === 'dieta' && (
-          <DietaSection
-            initialSub={activeSub}
-            onSubChange={setSub}
-            weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan}
-            foodOptions={foodOptions} setFoodOptions={setFoodOptions}
-            syncing={syncing}
-          />
+          <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} syncing={syncing} />
         )}
 
-        {/* Bottom nav sotto-sezioni */}
         <BottomNav macro={macro} sub={activeSub} setSub={setSub} />
-
       </div>
     </div>
   )
