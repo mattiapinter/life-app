@@ -97,7 +97,7 @@ function HrvWidget({ hrvLogs, onHrvSaved }) {
 
       {/* Input */}
       {!alreadyLogged ? (
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <input
             type="number" inputMode="numeric"
             style={{ ...ss.inp, flex: 1, fontSize: '18px', fontWeight: '700', textAlign: 'center' }}
@@ -106,7 +106,7 @@ function HrvWidget({ hrvLogs, onHrvSaved }) {
             onChange={e => setInputVal(e.target.value)}
           />
           <div
-            style={{ padding: '10px 16px', background: saved ? C.greenBg : C.violetBg, border: `1px solid ${saved ? C.greenBorder : C.violetBorder}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: saved ? C.greenLight : C.violetLight, whiteSpace: 'nowrap', opacity: saving ? 0.6 : 1 }}
+            style={{ padding: '10px 16px', background: saved ? C.greenBg : C.violetBg, border: `1px solid ${saved ? C.greenBorder : C.violetBorder}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: saved ? C.greenLight : C.violetLight, whiteSpace: 'nowrap', opacity: saving ? 0.6 : 1, flexShrink: 0 }}
             onClick={!saving ? handleSave : undefined}>
             {saving ? '...' : saved ? '✓' : 'Salva'}
           </div>
@@ -138,7 +138,7 @@ function HrvWidget({ hrvLogs, onHrvSaved }) {
 }
 
 // ── HOME SECTION ───────────────────────────────────────────────────
-export default function HomeSection({ weeklyPlan, fitSessions, setTab, sessionNotes, hrvLogs, onHrvSaved }) {
+export default function HomeSection({ weeklyPlan, fitSessions, setTab, setSub, sessionNotes, hrvLogs, onHrvSaved }) {
   const dayName  = DAYS[todayIdx()]
   const dayData  = weeklyPlan[dayName] || { isSkiDay: false, meals: {} }
   const meals    = dayData.meals || {}
@@ -169,6 +169,12 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab, sessionNo
 
         {/* ── HRV WIDGET ── */}
         <HrvWidget hrvLogs={hrvLogs || []} onHrvSaved={onHrvSaved} />
+        <div style={{ textAlign: 'right', marginTop: '-6px', marginBottom: '8px' }}>
+          <span style={{ fontSize: '10px', color: C.hint, cursor: 'pointer' }}
+            onClick={() => { setTab('dieta'); setSub?.('misure') }}>
+            storico HRV e misure →
+          </span>
+        </div>
 
         {/* ── ALLENAMENTO OGGI ── */}
         {todayEntry && todayDisplayType !== 'REST' && (() => {
