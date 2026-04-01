@@ -2,7 +2,7 @@ import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import { C, ss, todayStr, fmtDateShort } from '../constants'
-import { db } from '../lib/supabase'
+import { db, loadHrvLogs } from '../lib/supabase'
 
 // ── SUPABASE HELPERS ───────────────────────────────────────────────
 export const loadBodyMeasurements = async () => {
@@ -345,6 +345,142 @@ function StoricoTable({ measurements, onDeleted }) {
   )
 }
 
+// ── HRV HISTORY ────────────────────────────────────────────────────
+function HrvHistory() {
+  const [hrvLogs, setHrvLogs] = React.useState([])
+  const [loading, setLoading] = React.useState(true)
+  const canvasRef = React.useRef(null)
+  const chartRef  = React.useRef(null)
+
+  React.useEffect(() => {
+    loadHrvLogs().then(data => { setHrvLogs(data); setLoading(false) })
+  }, [])
+
+  const sorted = [...hrvLogs].sort((a, b) => a.log_date.localeCompare(b.log_date))
+  const avg7 = sorted.length
+    ? Math.round(sorted.slice(-7).reduce((s, r) => s + r.hrv_value, 0) / Math.min(sorted.length, 7))
+    : null
+
+  const getStatus = (v, avg) => {
+    if (!v || !avg) return 'neutral'
+    const p = v / avg
+    if (p >= 0.97) return 'green'
+    if (p >= 0.88) return 'yellow'
+    return 'red'
+  }
+  const statusColor  = { green: C.green, yellow: C.amber, red: C.red, neutral: C.hint }
+  const statusBg     = { green: C.greenBg, yellow: C.amberBg, red: C.redBg, neutral: C.surface }
+  const statusBorder = { green: C.greenBorder, yellow: C.amberBorder, red: C.redBorder, neutral: C.border }
+
+  React.useEffect(() => {
+    if (!canvasRef.current || sorted.length < 2) return
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
+    chartRef.current = new Chart(canvasRef.current, {
+      type: 'line',
+      data: {
+        labels: sorted.map(r => fmtDateShort(r.log_date)),
+        datasets: [
+          {
+            data: sorted.map(r => r.hrv_value),
+            borderColor: C.violet, backgroundColor: 'rgba(123,111,232,0.1)',
+            tension: 0.35, fill: true, pointRadius: 4, borderWidth: 2,
+            pointBackgroundColor: sorted.map(r => statusColor[getStatus(r.hrv_value, avg7)]),
+          },
+          // Media mobile 7gg
+          {
+            data: sorted.map((_, i) => {
+              const slice = sorted.slice(Math.max(0, i - 6), i + 1)
+              return Math.round(slice.reduce((s, r) => s + r.hrv_value, 0) / slice.length)
+            }),
+            borderColor: C.muted, borderDash: [4, 4],
+            tension: 0.35, fill: false, pointRadius: 0, borderWidth: 1.5,
+          },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#666', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+          y: { ticks: { color: '#666', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+        },
+      },
+    })
+    return () => { if (chartRef.current) chartRef.current.destroy() }
+  }, [hrvLogs])
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '32px', fontSize: '12px', color: C.hint }}>Caricamento...</div>
+
+  if (sorted.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px' }}>💓</div>
+        <div style={{ fontSize: '14px', color: C.muted }}>Nessun dato HRV ancora.</div>
+        <div style={{ fontSize: '12px', color: C.hint, marginTop: '8px' }}>Registra ogni mattina dalla Home.</div>
+      </div>
+    )
+  }
+
+  const maxHrv = Math.max(...sorted.map(r => r.hrv_value))
+  const minHrv = Math.min(...sorted.map(r => r.hrv_value))
+  const last   = sorted[sorted.length - 1]
+
+  return (
+    <div style={ss.body}>
+      {/* KPI */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+        {[
+          { l: 'Ultimo',   v: last.hrv_value + ' ms', c: statusColor[getStatus(last.hrv_value, avg7)] },
+          { l: 'Media 7gg', v: avg7 + ' ms',          c: C.violet },
+          { l: 'Misurazioni', v: sorted.length,       c: C.muted },
+        ].map(it => (
+          <div key={it.l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+            <div style={{ fontSize: '18px', fontWeight: '700', color: it.c }}>{it.v}</div>
+            <div style={{ fontSize: '9px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em', marginTop: '3px' }}>{it.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Grafico */}
+      {sorted.length >= 2 && (
+        <div style={ss.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: `1px solid ${C.border}` }}>
+            <div style={ss.secLbl}>Andamento HRV</div>
+            <div style={{ fontSize: '10px', color: C.hint }}>
+              <span style={{ color: C.violet }}>━</span> valore &nbsp;
+              <span style={{ color: C.muted }}>╌</span> media 7gg
+            </div>
+          </div>
+          <div style={{ position: 'relative', height: '160px' }}><canvas ref={canvasRef} /></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10px', color: C.hint }}>
+            <span>Min: <strong style={{ color: C.text }}>{minHrv}</strong></span>
+            <span>Max: <strong style={{ color: C.text }}>{maxHrv}</strong></span>
+            <span>Range: <strong style={{ color: C.text }}>{maxHrv - minHrv}</strong></span>
+          </div>
+        </div>
+      )}
+
+      {/* Lista storica */}
+      <div style={ss.card}>
+        <div style={ss.secLbl}>Storico</div>
+        {[...sorted].reverse().map((r, i) => {
+          const s = getStatus(r.hrv_value, avg7)
+          return (
+            <div key={r.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: '12px', color: C.muted }}>{fmtDateShort(r.log_date)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor[s] }} />
+                <div style={{ fontSize: '14px', fontWeight: '700', color: C.text }}>{r.hrv_value}</div>
+                <div style={{ fontSize: '10px', color: C.hint }}>ms</div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── MAIN CORPO SECTION ─────────────────────────────────────────────
 export default function CorpoSection() {
   const [sub,          setSub]          = React.useState('overview')
@@ -380,6 +516,7 @@ export default function CorpoSection() {
           { id: 'overview', l: 'Overview' },
           { id: 'aggiungi', l: 'Aggiungi' },
           { id: 'storico',  l: 'Storico' },
+          { id: 'hrv',      l: 'HRV' },
         ].map(t => (
           <div key={t.id} style={ss.subTab(sub === t.id)} onClick={() => setSub(t.id)}>{t.l}</div>
         ))}
@@ -460,6 +597,8 @@ export default function CorpoSection() {
               <StoricoTable measurements={measurements} onDeleted={load} />
             </div>
           )}
+
+          {sub === 'hrv' && <HrvHistory />}
         </>
       )}
     </div>
