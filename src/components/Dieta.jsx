@@ -44,6 +44,8 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
     DAYS.forEach(d => { empty[d] = { isSkiDay: weeklyPlan[d]?.isSkiDay || false, meals: {} } })
     setWeeklyPlan(empty)
   }
+
+  const shoppingList = React.useMemo(() => {
     const list = {}
     const parse = str => {
       str = str.trim()
