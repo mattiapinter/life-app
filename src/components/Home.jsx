@@ -2,9 +2,143 @@ import React from 'react'
 import { C, ss, DAYS, MEALS_CATS, todayIdx, fmtDate, fmtDateShort, fmtDayName } from '../constants'
 import { SESSION_COLORS } from '../constants'
 import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
-import { IcoChev } from './Icons'
+import { saveHrvLog } from '../lib/supabase'
 
-export default function HomeSection({ weeklyPlan, fitSessions, setTab, sessionNotes }) {
+// ── HRV WIDGET ─────────────────────────────────────────────────────
+function HrvWidget({ hrvLogs, onHrvSaved }) {
+  const [inputVal, setInputVal] = React.useState('')
+  const [saving,   setSaving]   = React.useState(false)
+  const [saved,    setSaved]    = React.useState(false)
+  const today = new Date().toISOString().split('T')[0]
+
+  const sorted    = [...hrvLogs].sort((a, b) => a.log_date.localeCompare(b.log_date))
+  const last7     = sorted.slice(-7)
+  const avg7      = last7.length ? Math.round(last7.reduce((s, r) => s + r.hrv_value, 0) / last7.length) : null
+  const todayLog  = sorted.find(r => r.log_date === today)
+  const todayHrv  = todayLog?.hrv_value || null
+  const alreadyLogged = !!todayLog
+
+  // Semaforo basato su % della media 7gg
+  const getStatus = (hrv, avg) => {
+    if (!hrv || !avg) return null
+    const pct = hrv / avg
+    if (pct >= 0.97) return 'green'
+    if (pct >= 0.88) return 'yellow'
+    return 'red'
+  }
+
+  const status = getStatus(todayHrv, avg7)
+
+  const coachText = {
+    green: [
+      "Sistema nervoso in forma smagliante! Oggi puoi spingere forte 💪",
+      "HRV da campione. Il corpo ha voglia di soffrire — dagliene!",
+      "Recupero ottimale. È il momento di mettere km nelle gambe.",
+    ],
+    yellow: [
+      "Corpo un po' affaticato. Allenati, ma senza strafare 🎯",
+      "Giallo — non rosso. Fai la sessione, ma ascolta il corpo.",
+      "HRV nella media. Buon allenamento, niente eroismo oggi.",
+    ],
+    red: [
+      "Il corpo urla riposo 🔴 Recupero attivo o rest day, senza se e ma.",
+      "Sistema nervoso stanco. Una passeggiata sì, le trazioni no.",
+      "HRV basso. Mangia bene, dormi tanto, dimentica la scheda per oggi.",
+    ],
+  }
+
+  const getCoachMsg = (s) => {
+    if (!s) return null
+    const msgs = coachText[s]
+    // deterministico per giorno
+    const dayNum = new Date(today).getDate()
+    return msgs[dayNum % msgs.length]
+  }
+
+  const statusColor = { green: C.green, yellow: C.amber, red: C.red }
+  const statusBg    = { green: C.greenBg, yellow: C.amberBg, red: C.redBg }
+  const statusBorder = { green: C.greenBorder, yellow: C.amberBorder, red: C.redBorder }
+  const statusLight  = { green: C.greenLight, yellow: C.amberLight, red: C.redLight }
+
+  const handleSave = async () => {
+    const v = parseInt(inputVal)
+    if (!v || v < 10 || v > 300) return
+    setSaving(true)
+    await saveHrvLog({ log_date: today, hrv_value: v })
+    await onHrvSaved()
+    setSaving(false)
+    setSaved(true)
+    setInputVal('')
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div style={ss.card}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>HRV mattutino</div>
+        {avg7 && <div style={{ fontSize: '10px', color: C.hint }}>media 7gg: <span style={{ color: C.text, fontWeight: '600' }}>{avg7}</span></div>}
+      </div>
+
+      {/* Semaforo + coach */}
+      {todayHrv && status && (
+        <div style={{ background: statusBg[status], border: `1px solid ${statusBorder[status]}`, borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: statusColor[status], flexShrink: 0, boxShadow: `0 0 8px ${statusColor[status]}` }} />
+            <div style={{ fontSize: '20px', fontWeight: '800', color: statusLight[status] }}>{todayHrv} ms</div>
+            <div style={{ fontSize: '10px', color: statusColor[status], fontWeight: '600', marginLeft: 'auto' }}>
+              {status === 'green' ? 'OTTIMO' : status === 'yellow' ? 'MODERATO' : 'RIPOSA'}
+            </div>
+          </div>
+          <div style={{ fontSize: '12px', color: statusLight[status], lineHeight: '1.5', opacity: 0.9 }}>
+            {getCoachMsg(status)}
+          </div>
+        </div>
+      )}
+
+      {/* Input */}
+      {!alreadyLogged ? (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            type="number" inputMode="numeric"
+            style={{ ...ss.inp, flex: 1, fontSize: '18px', fontWeight: '700', textAlign: 'center' }}
+            placeholder="HRV (ms)"
+            value={inputVal}
+            onChange={e => setInputVal(e.target.value)}
+          />
+          <div
+            style={{ padding: '10px 16px', background: saved ? C.greenBg : C.violetBg, border: `1px solid ${saved ? C.greenBorder : C.violetBorder}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: saved ? C.greenLight : C.violetLight, whiteSpace: 'nowrap', opacity: saving ? 0.6 : 1 }}
+            onClick={!saving ? handleSave : undefined}>
+            {saving ? '...' : saved ? '✓' : 'Salva'}
+          </div>
+        </div>
+      ) : (
+        <div style={{ fontSize: '11px', color: C.hint, textAlign: 'center' }}>✓ Già registrato oggi</div>
+      )}
+
+      {/* Mini sparkline testuale ultimi giorni */}
+      {last7.length > 1 && (
+        <div style={{ display: 'flex', gap: '4px', marginTop: '10px', alignItems: 'flex-end', height: '28px' }}>
+          {last7.map((r, i) => {
+            const maxV = Math.max(...last7.map(x => x.hrv_value))
+            const minV = Math.min(...last7.map(x => x.hrv_value))
+            const range = maxV - minV || 1
+            const h = Math.max(8, Math.round(((r.hrv_value - minV) / range) * 24))
+            const s = getStatus(r.hrv_value, avg7)
+            const isToday = r.log_date === today
+            return (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                <div style={{ width: '100%', height: `${h}px`, borderRadius: '3px 3px 0 0', background: s ? statusColor[s] : C.muted, opacity: isToday ? 1 : 0.5 }} />
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── HOME SECTION ───────────────────────────────────────────────────
+export default function HomeSection({ weeklyPlan, fitSessions, setTab, sessionNotes, hrvLogs, onHrvSaved }) {
   const dayName  = DAYS[todayIdx()]
   const dayData  = weeklyPlan[dayName] || { isSkiDay: false, meals: {} }
   const meals    = dayData.meals || {}
@@ -14,13 +148,11 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab, sessionNo
   const todayEntry = getTodayCalEntry()
   const today    = new Date().toISOString().split('T')[0]
 
-  // Controlla se l'allenamento di oggi è stato modificato manualmente
   const todayChange = sessionNotes?.find(n =>
     n.note_date === today && n.original_session && n.original_session !== n.session_type
   )
   const todayDisplayType = todayChange?.session_type || todayEntry?.session_type
 
-  // Week strip — 7 days centered around today
   const weekStrip = TRAINING_PLAN.calendar
     .filter(e => e.day_date >= today)
     .slice(0, 7)
@@ -34,6 +166,9 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab, sessionNo
       </div>
 
       <div style={{ ...ss.body, paddingTop: '20px' }}>
+
+        {/* ── HRV WIDGET ── */}
+        <HrvWidget hrvLogs={hrvLogs || []} onHrvSaved={onHrvSaved} />
 
         {/* ── ALLENAMENTO OGGI ── */}
         {todayEntry && todayDisplayType !== 'REST' && (() => {
