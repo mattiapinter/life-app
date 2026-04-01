@@ -120,38 +120,22 @@ export const loadExerciseVideos = async () => {
 // ── DELETE ─────────────────────────────────────────────────────────
 export const deleteSessionLogs = async (date, sessionType) => {
   try {
-    const { error } = await db.from('training_logs')
-      .delete()
-      .eq('log_date', date)
-      .eq('session_type', sessionType)
+    const { error } = await db.from('training_logs').delete().eq('log_date', date).eq('session_type', sessionType)
     if (error) throw error; return true
   } catch(e) { return false }
 }
-
 export const deleteExerciseLogs = async (exerciseName) => {
   try {
     const { error } = await db.from('training_logs').delete().eq('exercise_name', exerciseName)
     if (error) throw error; return true
   } catch(e) { return false }
 }
-
-export const deleteTrainingLog = async (id) => {
-  try {
-    const { error } = await db.from('training_logs').delete().eq('id', id)
-    if (error) throw error; return true
-  } catch(e) { return false }
-}
-
 export const deleteSessionNote = async (date, sessionType) => {
   try {
-    const { error } = await db.from('session_notes')
-      .delete()
-      .eq('note_date', date)
-      .eq('session_type', sessionType)
+    const { error } = await db.from('session_notes').delete().eq('note_date', date).eq('session_type', sessionType)
     if (error) throw error; return true
   } catch(e) { return false }
 }
-
 export const deleteAllTrainingData = async () => {
   try {
     await db.from('training_logs').delete().neq('id', 0)
@@ -162,50 +146,40 @@ export const deleteAllTrainingData = async () => {
 
 // ── CRAGS ──────────────────────────────────────────────────────────
 export const loadCrags = async () => {
-  try {
-    const { data, error } = await db.from('crags').select('*').order('name')
-    if (error) throw error
-    return data || []
-  } catch(e) { return [] }
+  try { const { data, error } = await db.from('crags').select('*').order('name'); if (error) throw error; return data || [] }
+  catch(e) { return [] }
 }
-
 export const saveCrag = async (crag) => {
   try {
     if (crag.id) {
       const { error } = await db.from('crags').update({
         name: crag.name, region: crag.region, rock_type: crag.rock_type,
         notes: crag.notes, lat: crag.lat, lng: crag.lng,
+        grade_min: crag.grade_min, grade_max: crag.grade_max,
+        approach_min: crag.approach_min, styles: crag.styles, gps_url: crag.gps_url,
       }).eq('id', crag.id)
-      if (error) throw error
-      return crag.id
+      if (error) throw error; return crag.id
     } else {
       const { data, error } = await db.from('crags').insert([{
         name: crag.name, region: crag.region, rock_type: crag.rock_type,
         notes: crag.notes, lat: crag.lat, lng: crag.lng,
+        grade_min: crag.grade_min, grade_max: crag.grade_max,
+        approach_min: crag.approach_min, styles: crag.styles,
       }]).select('id').single()
-      if (error) throw error
-      return data?.id
+      if (error) throw error; return data?.id
     }
   } catch(e) { return null }
 }
-
 export const deleteCrag = async (id) => {
-  try {
-    const { error } = await db.from('crags').delete().eq('id', id)
-    if (error) throw error
-    return true
-  } catch(e) { return false }
+  try { const { error } = await db.from('crags').delete().eq('id', id); if (error) throw error; return true }
+  catch(e) { return false }
 }
 
 // ── CLIMBING SESSIONS ──────────────────────────────────────────────
 export const loadClimbingSessions = async () => {
-  try {
-    const { data, error } = await db.from('climbing_sessions').select('*').order('session_date', { ascending: false })
-    if (error) throw error
-    return data || []
-  } catch(e) { return [] }
+  try { const { data, error } = await db.from('climbing_sessions').select('*').order('session_date', { ascending: false }); if (error) throw error; return data || [] }
+  catch(e) { return [] }
 }
-
 export const saveClimbingSession = async (session) => {
   try {
     if (session.id) {
@@ -213,91 +187,84 @@ export const saveClimbingSession = async (session) => {
         session_date: session.session_date, crag_id: session.crag_id,
         type: session.type || 'falesia', notes: session.notes,
       }).eq('id', session.id)
-      if (error) throw error
-      return session.id
+      if (error) throw error; return session.id
     } else {
       const { data, error } = await db.from('climbing_sessions').insert([{
         session_date: session.session_date, crag_id: session.crag_id,
         type: session.type || 'falesia', notes: session.notes,
       }]).select('id').single()
-      if (error) throw error
-      return data?.id
+      if (error) throw error; return data?.id
     }
   } catch(e) { return null }
 }
-
 export const deleteClimbingSession = async (id) => {
   try {
     await db.from('ascents').delete().eq('session_id', id)
     const { error } = await db.from('climbing_sessions').delete().eq('id', id)
-    if (error) throw error
-    return true
+    if (error) throw error; return true
   } catch(e) { return false }
 }
 
 // ── ASCENTS ────────────────────────────────────────────────────────
 export const loadAscents = async () => {
-  try {
-    const { data, error } = await db.from('ascents').select('*').order('created_at', { ascending: false })
-    if (error) throw error
-    return data || []
-  } catch(e) { return [] }
+  try { const { data, error } = await db.from('ascents').select('*').order('created_at', { ascending: false }); if (error) throw error; return data || [] }
+  catch(e) { return [] }
 }
-
 export const saveAscent = async (ascent) => {
-  try {
-    const { data, error } = await db.from('ascents').insert([ascent]).select('id').single()
-    if (error) throw error
-    return data?.id
-  } catch(e) { return null }
+  try { const { data, error } = await db.from('ascents').insert([ascent]).select('id').single(); if (error) throw error; return data?.id }
+  catch(e) { return null }
 }
-
 export const deleteAscent = async (id) => {
-  try {
-    const { error } = await db.from('ascents').delete().eq('id', id)
-    if (error) throw error
-    return true
-  } catch(e) { return false }
+  try { const { error } = await db.from('ascents').delete().eq('id', id); if (error) throw error; return true }
+  catch(e) { return false }
 }
 
 // ── PROJECTS ───────────────────────────────────────────────────────
 export const loadProjects = async () => {
-  try {
-    const { data, error } = await db.from('projects').select('*').order('created_at', { ascending: false })
-    if (error) throw error
-    return data || []
-  } catch(e) { return [] }
+  try { const { data, error } = await db.from('projects').select('*').order('created_at', { ascending: false }); if (error) throw error; return data || [] }
+  catch(e) { return [] }
 }
-
 export const saveProject = async (project) => {
-  try {
-    const { data, error } = await db.from('projects').insert([project]).select('id').single()
-    if (error) throw error
-    return data?.id
-  } catch(e) { return null }
+  try { const { data, error } = await db.from('projects').insert([project]).select('id').single(); if (error) throw error; return data?.id }
+  catch(e) { return null }
 }
-
 export const updateProject = async (id, updates) => {
-  try {
-    const { error } = await db.from('projects').update(updates).eq('id', id)
-    if (error) throw error
-    return true
-  } catch(e) { return false }
+  try { const { error } = await db.from('projects').update(updates).eq('id', id); if (error) throw error; return true }
+  catch(e) { return false }
 }
 
 // ── PROJECT ATTEMPTS ───────────────────────────────────────────────
 export const loadProjectAttempts = async () => {
-  try {
-    const { data, error } = await db.from('project_attempts').select('*').order('attempt_date', { ascending: true })
-    if (error) throw error
-    return data || []
-  } catch(e) { return [] }
+  try { const { data, error } = await db.from('project_attempts').select('*').order('attempt_date', { ascending: true }); if (error) throw error; return data || [] }
+  catch(e) { return [] }
+}
+export const saveProjectAttempt = async (attempt) => {
+  try { const { data, error } = await db.from('project_attempts').insert([attempt]).select('id').single(); if (error) throw error; return data?.id }
+  catch(e) { return null }
 }
 
-export const saveProjectAttempt = async (attempt) => {
+// ── RUNNING LOGS ───────────────────────────────────────────────────
+export const saveRunningLog = async (log) => {
+  try { const { error } = await db.from('running_logs').insert([log]); if (error) throw error; return true }
+  catch(e) { return false }
+}
+export const loadRunningLogs = async () => {
+  try { const { data, error } = await db.from('running_logs').select('*').order('log_date', { ascending: true }); if (error) throw error; return data || [] }
+  catch(e) { return [] }
+}
+export const deleteRunningLog = async (id) => {
+  try { const { error } = await db.from('running_logs').delete().eq('id', id); if (error) throw error; return true }
+  catch(e) { return false }
+}
+
+// ── HRV LOGS ──────────────────────────────────────────────────────
+export const saveHrvLog = async (log) => {
   try {
-    const { data, error } = await db.from('project_attempts').insert([attempt]).select('id').single()
-    if (error) throw error
-    return data?.id
-  } catch(e) { return null }
+    const { error } = await db.from('hrv_logs').upsert([log], { onConflict: 'log_date' })
+    if (error) throw error; return true
+  } catch(e) { return false }
+}
+export const loadHrvLogs = async () => {
+  try { const { data, error } = await db.from('hrv_logs').select('*').order('log_date', { ascending: true }); if (error) throw error; return data || [] }
+  catch(e) { return [] }
 }
