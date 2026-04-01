@@ -192,7 +192,7 @@ export default function App() {
 
         {/* Contenuto macro */}
         {macro === 'home' && (
-          <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
+          <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} setSub={setSub} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
         )}
         {macro === 'allenamento' && (
           <AllenamentoSection
