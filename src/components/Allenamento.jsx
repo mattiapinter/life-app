@@ -6,7 +6,7 @@ import {
   USER_HEIGHT, USER_LEG, todayStr, fmtDate, fmtDateShort, fmtDayName,
 } from '../constants'
 import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
-import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessions, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData } from '../lib/supabase'
+import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessions, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData, saveRunningLog, loadRunningLogs, loadClimbingSessions, loadAscents, loadCrags } from '../lib/supabase'
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 
@@ -122,7 +122,7 @@ function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, act
 }
 
 // ── SESSION DETAIL ─────────────────────────────────────────────────
-function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onVideosChange, sessionNotes }) {
+function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onVideosChange, sessionNotes, climbingSessions, crags, ascents }) {
   const [showCoach,    setShowCoach]    = React.useState(false)
   const [showWarmup,   setShowWarmup]   = React.useState(false)
   const [showCooldown, setShowCooldown] = React.useState(false)
@@ -132,6 +132,15 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const [exData,       setExData]       = React.useState({})
   const [saving,       setSaving]       = React.useState(false)
   const [savedMsg,     setSavedMsg]     = React.useState(false)
+
+  // Corsa state
+  const [runDist,     setRunDist]     = React.useState('')
+  const [runPace,     setRunPace]     = React.useState('')
+  const [runHr,       setRunHr]       = React.useState('')
+  const [runElev,     setRunElev]     = React.useState('')
+
+  // Collegamento falesia state
+  const [linkedSessionId, setLinkedSessionId] = React.useState('')
 
   const savedChange = sessionNotes?.find(n =>
     n.note_date === entry.day_date &&
@@ -186,7 +195,31 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       }))
     }
 
-    if (sessionNote.trim()) {
+    // Per CORSA salva running log se ci sono dati
+    if (sessionType === 'CORSA' && (runDist || runPace || runHr)) {
+      promises.push(saveRunningLog({
+        log_date:    entry.day_date,
+        distance_km: runDist  ? parseFloat(runDist)  : null,
+        pace_avg:    runPace  ? runPace.trim()        : null,
+        hr_avg:      runHr    ? parseInt(runHr)       : null,
+        elevation_m: runElev  ? parseInt(runElev)     : null,
+        rpe:         sessionRpe ? parseInt(sessionRpe) : null,
+        notes:       sessionNote.trim() || null,
+        created_at:  new Date().toISOString(),
+      }))
+    }
+
+    // Per sessioni roccia salva collegamento falesia se selezionato
+    if (linkedSessionId) {
+      promises.push(saveSessionNote({
+        note_date:    entry.day_date,
+        session_type: sessionType,
+        note_text:    sessionNote.trim(),
+        original_session: null,
+        climbing_session_id: parseInt(linkedSessionId),
+        created_at:   new Date().toISOString(),
+      }))
+    } else if (sessionNote.trim()) {
       promises.push(saveSessionNote({
         note_date:    entry.day_date,
         session_type: sessionType,
@@ -300,19 +333,49 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
 
   const renderCORSA = () => {
     const wd = TRAINING_PLAN.sessions.CORSA.weeks.find(w => w.week === week) || TRAINING_PLAN.sessions.CORSA.weeks[0]
+    const inpStyle = { ...ss.inp, fontSize:'18px', fontWeight:'700', textAlign:'center', padding:'12px' }
     return (
-      <div style={ss.card}>
-        <div style={ss.secLbl}>Easy Run · Settimana {week}</div>
-        <div style={{ display:'flex', gap:'8px', marginBottom:'12px' }}>
-          {[{ l:'Durata', v:`${wd.duration_min} min` }, { l:'Zona', v: wd.zone }].map(it => (
-            <div key={it.l} style={{ flex:1, background:C.bg, border:`1px solid ${C.border}`, borderRadius:'10px', padding:'12px', textAlign:'center' }}>
-              <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:'4px' }}>{it.l}</div>
-              <div style={{ fontSize:'22px', fontWeight:'700', color:C.orangeLight }}>{it.v}</div>
-            </div>
-          ))}
+      <div>
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Easy Run · Settimana {week}</div>
+          <div style={{ display:'flex', gap:'8px', marginBottom:'12px' }}>
+            {[{ l:'Durata', v:`${wd.duration_min} min` }, { l:'Zona', v: wd.zone }].map(it => (
+              <div key={it.l} style={{ flex:1, background:C.bg, border:`1px solid ${C.border}`, borderRadius:'10px', padding:'12px', textAlign:'center' }}>
+                <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:'4px' }}>{it.l}</div>
+                <div style={{ fontSize:'22px', fontWeight:'700', color:C.orangeLight }}>{it.v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize:'11px', color:C.muted, lineHeight:'1.6', background:C.bg, padding:'10px', borderRadius:'8px', border:`1px solid ${C.border}` }}>
+            Test della chiacchiera: devi poter parlare senza affanno. Quando finisci devi sentirti rinvigorito, non stanco.
+          </div>
         </div>
-        <div style={{ fontSize:'11px', color:C.muted, lineHeight:'1.6', background:C.bg, padding:'10px', borderRadius:'8px', border:`1px solid ${C.border}` }}>
-          Test della chiacchiera: devi poter parlare senza affanno. Quando finisci devi sentirti rinvigorito, non stanco.
+
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Registra uscita</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
+            <div>
+              <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Distanza km</div>
+              <input type="number" inputMode="decimal" step="0.1" style={inpStyle} placeholder="—" value={runDist} onChange={e => setRunDist(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Passo medio</div>
+              <input type="text" inputMode="text" style={inpStyle} placeholder="5:30" value={runPace} onChange={e => setRunPace(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>FC media bpm</div>
+              <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runHr} onChange={e => setRunHr(e.target.value)} />
+            </div>
+            <div>
+              <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Dislivello m</div>
+              <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runElev} onChange={e => setRunElev(e.target.value)} />
+            </div>
+          </div>
+          {runDist && runPace && runHr && (
+            <div style={{ fontSize:'10px', color:C.green, background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 12px', textAlign:'center' }}>
+              Efficienza: {(parseFloat(runHr) / (1 / (parseFloat(runPace?.split(':')[0] || 0) + (parseFloat(runPace?.split(':')[1] || 0) / 60)))).toFixed(0)} bpm·min/km
+            </div>
+          )}
         </div>
       </div>
     )
@@ -321,6 +384,12 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const renderROCCIA = (tipo) => {
     const sd = TRAINING_PLAN.sessions[tipo] || TRAINING_PLAN.sessions.STRAPIOMBO
     const wd = sd.weeks?.find(w => w.week === week) || sd.weeks?.[0] || { double_routes: 2 }
+
+    // Ultime 5 sessioni arrampicata con info falesia
+    const recentClimbing = [...(climbingSessions || [])]
+      .sort((a, b) => b.session_date.localeCompare(a.session_date))
+      .slice(0, 5)
+
     return (
       <div>
         <div style={ss.card}>
@@ -349,6 +418,44 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
             Al 2° giro devi <strong style={{ color:C.green }}>cadere nella seconda metà</strong> o chiudere con fatica estrema (RPE 9-10).
           </div>
         </div>
+
+        {/* Collegamento sessione arrampicata */}
+        {recentClimbing.length > 0 && (
+          <div style={ss.card}>
+            <div style={ss.secLbl}>Collega sessione arrampicata</div>
+            <div style={{ fontSize:'11px', color:C.muted, marginBottom:'10px' }}>Quale sessione hai fatto oggi?</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+              <div
+                style={{ padding:'10px 14px', borderRadius:'10px', cursor:'pointer', border:`1px solid ${linkedSessionId === '' ? C.border : C.border}`, background: !linkedSessionId ? C.surface : C.bg, fontSize:'12px', color: !linkedSessionId ? C.hint : C.hint }}
+                onClick={() => setLinkedSessionId('')}>
+                <div style={{ fontSize:'11px', color: !linkedSessionId ? C.muted : C.hint }}>Nessun collegamento</div>
+              </div>
+              {recentClimbing.map(sess => {
+                const crag = (crags || []).find(c => c.id === sess.crag_id)
+                const sessAscents = (ascents || []).filter(a => a.session_id === sess.id)
+                const GRADE_ORDER_LOCAL = ['4','4+','5','5+','6a','6a+','6b','6b+','6c','6c+','7a','7a+','7b','7b+','7c','7c+','8a','8a+','8b','8b+','8c','8c+','9a']
+                const completed = sessAscents.filter(a => a.completed)
+                const maxG = completed.length ? completed.reduce((m, a) => (GRADE_ORDER_LOCAL.indexOf(a.grade) > GRADE_ORDER_LOCAL.indexOf(m) ? a.grade : m), completed[0].grade) : null
+                const isSelected = linkedSessionId === String(sess.id)
+                return (
+                  <div key={sess.id}
+                    style={{ padding:'10px 14px', borderRadius:'10px', cursor:'pointer', border:`1px solid ${isSelected ? C.greenBorder : C.border}`, background: isSelected ? C.greenBg : C.bg }}
+                    onClick={() => setLinkedSessionId(isSelected ? '' : String(sess.id))}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div>
+                        <div style={{ fontSize:'12px', fontWeight:'600', color: isSelected ? C.greenLight : C.text }}>{crag?.name || 'Falesia'}</div>
+                        <div style={{ fontSize:'10px', color: isSelected ? C.green : C.hint, marginTop:'2px' }}>
+                          {fmtDateShort(sess.session_date)} · {sessAscents.length} tiri{maxG ? ` · max ${maxG}` : ''}
+                        </div>
+                      </div>
+                      {isSelected && <div style={{ fontSize:'14px', color:C.green }}>✓</div>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -915,34 +1022,45 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
   })
   const exercises = Object.keys(byEx).sort()
 
-  const calcVolume = (log) => {
-    const s = log.sets_done || 1
-    const r = log.reps_done || 0
-    const w = log.weight_kg || 0
-    return w > 0 ? s * r * w : s * r
+  // Aggrega per data: somma reps*weight di tutti i set della stessa sessione
+  const aggregateByDate = (logs) => {
+    const byDate = {}
+    logs.forEach(log => {
+      const d = log.log_date
+      if (!byDate[d]) byDate[d] = { date: d, totalVolume: 0, maxWeight: 0, sets: 0 }
+      const r = log.reps_done || 0
+      const w = log.weight_kg || 0
+      byDate[d].totalVolume += w > 0 ? r * w : r
+      byDate[d].maxWeight = Math.max(byDate[d].maxWeight, w)
+      byDate[d].sets++
+    })
+    return Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date))
   }
 
   React.useEffect(() => {
     if (!selectedEx || !canvasRef.current) return
     if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
-    const logs = [...(byEx[selectedEx] || [])].reverse()
-    if (logs.length < 2) return
+    const logs = byEx[selectedEx] || []
+    const aggregated = aggregateByDate(logs)
+    if (aggregated.length < 2) return
     chartRef.current = new Chart(canvasRef.current, {
-      type:'bar',
-      data:{
-        labels: logs.map(l => l.log_date),
-        datasets:[{
-          data: logs.map(l => calcVolume(l)),
-          backgroundColor:'rgba(123,111,232,0.6)',
-          borderColor:'#7B6FE8', borderWidth:1, borderRadius:4,
+      type: 'line',
+      data: {
+        labels: aggregated.map(d => d.date),
+        datasets: [{
+          data: aggregated.map(d => d.maxWeight || d.totalVolume),
+          borderColor: '#7B6FE8',
+          backgroundColor: 'rgba(123,111,232,0.1)',
+          pointBackgroundColor: '#7B6FE8',
+          tension: 0.35, fill: true, pointRadius: 4, borderWidth: 2,
         }]
       },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{ display:false } },
-        scales:{
-          x:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } },
-          y:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+          y: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
         },
       },
     })
@@ -1026,7 +1144,9 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
 
       {exercises.map(ex => {
         const logs = byEx[ex]
-        const last = logs[0]
+        const aggregated = aggregateByDate(logs)
+        const lastAgg = aggregated[aggregated.length - 1]
+        const lastLog = logs[0] // most recent individual log for weight display
         return (
           <div key={ex}
             style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 14px',
@@ -1037,20 +1157,197 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
             onClick={() => setSelectedEx(selectedEx === ex ? null : ex)}>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:'12px', fontWeight:'600', color:C.text }}>{ex}</div>
-              <div style={{ fontSize:'10px', color:C.hint, marginTop:'2px' }}>{logs.length} log</div>
+              <div style={{ fontSize:'10px', color:C.hint, marginTop:'2px' }}>{aggregated.length} sessioni</div>
             </div>
             <div style={{ textAlign:'right' }}>
-              {last.weight_kg
-                ? <div style={{ fontSize:'13px', fontWeight:'700', color:C.violetLight }}>{last.weight_kg}kg</div>
-                : last.reps_done
-                ? <div style={{ fontSize:'13px', fontWeight:'700', color:C.muted }}>{last.reps_done} reps</div>
+              {lastLog.weight_kg
+                ? <div style={{ fontSize:'13px', fontWeight:'700', color:C.violetLight }}>{lastLog.weight_kg}kg</div>
+                : lastLog.reps_done
+                ? <div style={{ fontSize:'13px', fontWeight:'700', color:C.muted }}>{lastLog.reps_done} reps</div>
                 : null
               }
-              <div style={{ fontSize:'9px', color:C.hint }}>vol {calcVolume(last)}</div>
+              {lastAgg && <div style={{ fontSize:'9px', color:C.hint }}>vol {Math.round(lastAgg.totalVolume)}</div>}
             </div>
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// ── CORSA SECTION ──────────────────────────────────────────────────
+function CorsaSection({ runningLogs, onRefresh }) {
+  const paceToSec = (pace) => {
+    if (!pace) return null
+    const parts = pace.split(':')
+    if (parts.length !== 2) return null
+    return parseInt(parts[0]) * 60 + parseInt(parts[1])
+  }
+
+  const canvasPaceRef = React.useRef(null)
+  const canvasHrRef   = React.useRef(null)
+  const canvasKmRef   = React.useRef(null)
+  const chartPaceRef  = React.useRef(null)
+  const chartHrRef    = React.useRef(null)
+  const chartKmRef    = React.useRef(null)
+
+  const sorted = [...runningLogs].sort((a, b) => a.log_date.localeCompare(b.log_date))
+  const withPaceHr = sorted.filter(r => r.pace_avg && r.hr_avg)
+
+  // Weekly km aggregation
+  const weeklyKm = React.useMemo(() => {
+    const weeks = {}
+    sorted.forEach(r => {
+      if (!r.distance_km) return
+      const d = new Date(r.log_date + 'T12:00:00')
+      const mon = new Date(d); mon.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1))
+      const key = mon.toISOString().split('T')[0]
+      if (!weeks[key]) weeks[key] = 0
+      weeks[key] += parseFloat(r.distance_km)
+    })
+    return Object.entries(weeks).sort((a, b) => a[0].localeCompare(b[0])).map(([w, km]) => ({ w, km: parseFloat(km.toFixed(1)) }))
+  }, [runningLogs])
+
+  React.useEffect(() => {
+    // Passo Medio vs FC
+    if (canvasPaceRef.current && withPaceHr.length >= 2) {
+      if (chartPaceRef.current) chartPaceRef.current.destroy()
+      chartPaceRef.current = new Chart(canvasPaceRef.current, {
+        type: 'line',
+        data: {
+          labels: withPaceHr.map(r => fmtDateShort(r.log_date)),
+          datasets: [
+            {
+              label: 'Passo (sec/km)',
+              data: withPaceHr.map(r => paceToSec(r.pace_avg)),
+              borderColor: C.orange, backgroundColor: C.orangeBg,
+              tension: 0.35, fill: false, pointRadius: 4, borderWidth: 2,
+              yAxisID: 'y',
+            },
+            {
+              label: 'FC media (bpm)',
+              data: withPaceHr.map(r => r.hr_avg),
+              borderColor: C.red, backgroundColor: C.redBg,
+              tension: 0.35, fill: false, pointRadius: 4, borderWidth: 2,
+              yAxisID: 'y2',
+            },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, labels: { color: '#888', font: { size: 9 }, boxWidth: 10 } } },
+          scales: {
+            x: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+            y: { position: 'left', ticks: { color: C.orange, font: { size: 9 }, callback: v => { const m = Math.floor(v/60); return `${m}:${String(v%60).padStart(2,'0')}` } }, grid: { color: '#1E1E1E' } },
+            y2: { position: 'right', ticks: { color: C.red, font: { size: 9 } }, grid: { display: false } },
+          },
+        },
+      })
+    }
+
+    // Volume km settimanale (linee)
+    if (canvasKmRef.current && weeklyKm.length >= 2) {
+      if (chartKmRef.current) chartKmRef.current.destroy()
+      chartKmRef.current = new Chart(canvasKmRef.current, {
+        type: 'line',
+        data: {
+          labels: weeklyKm.map(w => fmtDateShort(w.w)),
+          datasets: [{
+            data: weeklyKm.map(w => w.km),
+            borderColor: C.violet, backgroundColor: 'rgba(123,111,232,0.1)',
+            tension: 0.35, fill: true, pointRadius: 4, borderWidth: 2,
+            pointBackgroundColor: C.violet,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+            y: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+          },
+        },
+      })
+    }
+
+    return () => {
+      if (chartPaceRef.current) chartPaceRef.current.destroy()
+      if (chartKmRef.current)   chartKmRef.current.destroy()
+    }
+  }, [runningLogs])
+
+  if (sorted.length === 0) {
+    return (
+      <div style={{ ...ss.body, textAlign: 'center', paddingTop: '48px' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🏃</div>
+        <div style={{ fontSize: '14px', color: C.muted }}>Nessuna uscita ancora.</div>
+        <div style={{ fontSize: '12px', color: C.hint, marginTop: '8px' }}>Registra la prima dalla schermata della sessione CORSA.</div>
+      </div>
+    )
+  }
+
+  const totalKm   = sorted.reduce((s, r) => s + (parseFloat(r.distance_km) || 0), 0)
+  const avgHr     = sorted.filter(r => r.hr_avg).reduce((s, r, _, a) => s + r.hr_avg / a.length, 0)
+  const lastRun   = sorted[sorted.length - 1]
+
+  return (
+    <div style={ss.body}>
+      {/* KPI veloci */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+        {[
+          { l: 'Km totali',   v: totalKm.toFixed(1),         c: C.violet },
+          { l: 'FC media',    v: avgHr ? Math.round(avgHr) + ' bpm' : '—', c: C.red },
+          { l: 'Uscite',      v: sorted.length,               c: C.orange },
+        ].map(it => (
+          <div key={it.l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: it.c }}>{it.v}</div>
+            <div style={{ fontSize: '9px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em', marginTop: '3px' }}>{it.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Grafico Passo vs FC */}
+      {withPaceHr.length >= 2 && (
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Passo Medio vs FC — correlazione</div>
+          <div style={{ position: 'relative', height: '160px' }}><canvas ref={canvasPaceRef} /></div>
+          <div style={{ fontSize: '10px', color: C.hint, marginTop: '8px' }}>Passo che cala con FC stabile = miglioramento aerobico 📈</div>
+        </div>
+      )}
+
+      {/* Volume km settimanale */}
+      {weeklyKm.length >= 2 && (
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Volume km settimanale</div>
+          <div style={{ position: 'relative', height: '130px' }}><canvas ref={canvasKmRef} /></div>
+        </div>
+      )}
+
+      {/* Lista uscite */}
+      <div style={ss.card}>
+        <div style={ss.secLbl}>Storico uscite</div>
+        {[...sorted].reverse().map((r, i) => (
+          <div key={r.id || i} style={{ padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: C.text }}>{fmtDateShort(r.log_date)}</div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {r.distance_km && <div style={{ fontSize: '11px', fontWeight: '700', color: C.violetLight }}>{r.distance_km} km</div>}
+                {r.pace_avg    && <div style={{ fontSize: '11px', color: C.orange }}>⏱ {r.pace_avg}/km</div>}
+                {r.hr_avg      && <div style={{ fontSize: '11px', color: C.red }}>♥ {r.hr_avg} bpm</div>}
+                {r.elevation_m && <div style={{ fontSize: '11px', color: C.muted }}>↑ {r.elevation_m}m</div>}
+                {r.rpe         && (
+                  <div style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '999px',
+                    background: r.rpe <= 6 ? C.greenBg : r.rpe <= 8 ? C.amberBg : C.redBg,
+                    color: r.rpe <= 6 ? C.greenLight : r.rpe <= 8 ? C.amberLight : C.redLight }}>
+                    RPE {r.rpe}
+                  </div>
+                )}
+              </div>
+            </div>
+            {r.notes && <div style={{ fontSize: '11px', color: C.hint, marginTop: '4px', fontStyle: 'italic' }}>{r.notes}</div>}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -1147,15 +1444,171 @@ function TestForm({ fitSessions, onSaved }) {
 }
 
 // ── MAIN ALLENAMENTO ───────────────────────────────────────────────
+// ── RUNNING TAB ────────────────────────────────────────────────────
+function RunningTab({ runningLogs, onRefresh }) {
+  const kmRef    = React.useRef(null)
+  const paceRef  = React.useRef(null)
+  const hrRef    = React.useRef(null)
+  const kmChart  = React.useRef(null)
+  const paceChart= React.useRef(null)
+  const hrChart  = React.useRef(null)
+
+  const sorted = [...runningLogs].sort((a,b) => a.log_date.localeCompare(b.log_date))
+
+  // Converti passo "5:30" in numero decimale per il grafico
+  const paceToNum = (p) => {
+    if (!p) return null
+    const parts = p.split(':')
+    if (parts.length !== 2) return null
+    return parseFloat(parts[0]) + parseFloat(parts[1]) / 60
+  }
+  const numToPace = (n) => {
+    if (!n) return '—'
+    const m = Math.floor(n)
+    const s = Math.round((n - m) * 60)
+    return `${m}:${String(s).padStart(2,'0')}`
+  }
+
+  // Volume km settimanale
+  const weeklyKm = React.useMemo(() => {
+    const byWeek = {}
+    sorted.forEach(r => {
+      if (!r.distance_km) return
+      const d = new Date(r.log_date + 'T12:00:00')
+      const day = d.getDay()
+      const diff = day === 0 ? -6 : 1 - day
+      d.setDate(d.getDate() + diff)
+      const wk = d.toISOString().split('T')[0]
+      byWeek[wk] = (byWeek[wk] || 0) + r.distance_km
+    })
+    return Object.entries(byWeek).sort((a,b) => a[0].localeCompare(b[0])).map(([wk, km]) => ({ wk, km: parseFloat(km.toFixed(1)) }))
+  }, [runningLogs])
+
+  const buildChart = (ref, chartRef, labels, datasets, yTickCb) => {
+    if (!ref.current) return
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
+    if (labels.length < 2) return
+    chartRef.current = new Chart(ref.current, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: datasets.length > 1, labels: { color: '#888', font: { size: 9 }, boxWidth: 10 } } },
+        scales: {
+          x: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+          y: { ticks: { color: '#888', font: { size: 9 }, callback: yTickCb }, grid: { color: '#1E1E1E' } },
+          ...(datasets.length > 1 ? { y1: { position: 'right', ticks: { color: '#888', font: { size: 9 } }, grid: { drawOnChartArea: false } } } : {}),
+        },
+      },
+    })
+  }
+
+  React.useEffect(() => {
+    // Volume km settimanale
+    buildChart(kmRef, kmChart,
+      weeklyKm.map(w => w.wk.slice(5)),
+      [{ data: weeklyKm.map(w => w.km), borderColor: C.orange, backgroundColor: `${C.orange}15`, pointBackgroundColor: C.orange, tension: 0.35, fill: true, pointRadius: 4, borderWidth: 2, label: 'km/settimana' }],
+      v => `${v}km`
+    )
+    // Passo vs FC
+    const withBoth = sorted.filter(r => r.pace_avg && r.hr_avg)
+    buildChart(paceRef, paceChart,
+      withBoth.map(r => r.log_date.slice(5)),
+      [
+        { data: withBoth.map(r => paceToNum(r.pace_avg)), borderColor: C.violet, backgroundColor: `${C.violet}10`, pointBackgroundColor: C.violet, tension: 0.35, fill: false, pointRadius: 4, borderWidth: 2, label: 'Passo (min/km)', yAxisID: 'y' },
+        { data: withBoth.map(r => r.hr_avg), borderColor: C.red, backgroundColor: `${C.red}10`, pointBackgroundColor: C.red, tension: 0.35, fill: false, pointRadius: 4, borderWidth: 2, label: 'FC media (bpm)', yAxisID: 'y1' },
+      ],
+      v => numToPace(v)
+    )
+  }, [runningLogs])
+
+  if (sorted.length === 0) {
+    return (
+      <div style={{ ...ss.body, textAlign:'center', paddingTop:'48px' }}>
+        <div style={{ fontSize:'32px', marginBottom:'12px' }}>🏃</div>
+        <div style={{ fontSize:'14px', color:C.muted }}>Nessuna corsa registrata.</div>
+        <div style={{ fontSize:'12px', color:C.hint, marginTop:'8px' }}>Salva una sessione CORSA per vedere i dati qui.</div>
+      </div>
+    )
+  }
+
+  const last = sorted[sorted.length - 1]
+  const totalKm = sorted.reduce((s,r) => s + (r.distance_km || 0), 0)
+
+  return (
+    <div style={ss.body}>
+      {/* KPI */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'8px', marginBottom:'12px' }}>
+        {[
+          { l:'Uscite', v: sorted.length, c: C.orange },
+          { l:'Km totali', v: totalKm.toFixed(1), c: C.orangeLight },
+          { l:'Ultimo passo', v: last.pace_avg || '—', c: C.violet },
+        ].map(it => (
+          <div key={it.l} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:'12px', padding:'12px', textAlign:'center' }}>
+            <div style={{ fontSize:'18px', fontWeight:'700', color:it.c }}>{it.v}</div>
+            <div style={{ fontSize:'9px', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em', marginTop:'3px' }}>{it.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Grafico volume settimanale */}
+      {weeklyKm.length >= 2 && (
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Volume km settimanale</div>
+          <div style={{ position:'relative', height:'130px' }}><canvas ref={kmRef} /></div>
+        </div>
+      )}
+
+      {/* Grafico Passo vs FC */}
+      {sorted.filter(r => r.pace_avg && r.hr_avg).length >= 2 && (
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Passo medio vs FC media</div>
+          <div style={{ fontSize:'10px', color:C.hint, marginBottom:'8px' }}>Passo che scende + FC stabile = miglioramento</div>
+          <div style={{ position:'relative', height:'140px' }}><canvas ref={paceRef} /></div>
+        </div>
+      )}
+
+      {/* Lista uscite */}
+      <div style={ss.card}>
+        <div style={ss.secLbl}>Storico uscite</div>
+        {[...sorted].reverse().map((r, i) => (
+          <div key={r.id || i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 0', borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:'12px', fontWeight:'600', color:C.text }}>{r.log_date}</div>
+              <div style={{ fontSize:'10px', color:C.muted, marginTop:'2px', display:'flex', gap:'8px', flexWrap:'wrap' }}>
+                {r.distance_km && <span>🏃 {r.distance_km}km</span>}
+                {r.pace_avg && <span>⚡ {r.pace_avg}/km</span>}
+                {r.hr_avg && <span>❤️ {r.hr_avg}bpm</span>}
+                {r.elevation_m && <span>⛰️ {r.elevation_m}m</span>}
+              </div>
+              {r.notes && <div style={{ fontSize:'10px', color:C.hint, marginTop:'3px', fontStyle:'italic' }}>{r.notes}</div>}
+            </div>
+            {r.rpe && (
+              <div style={{ fontSize:'10px', fontWeight:'600', padding:'2px 7px', borderRadius:'999px',
+                background: r.rpe <= 6 ? C.greenBg : r.rpe <= 8 ? C.amberBg : C.redBg,
+                color:      r.rpe <= 6 ? C.greenLight : r.rpe <= 8 ? C.amberLight : C.redLight }}>
+                RPE {r.rpe}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange }) {
   const [sub, setSub]                     = React.useState(initialSub || 'oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
   const [showMetrics,   setShowMetrics]   = React.useState(false)
   const [sessionNotes,  setSessionNotes]  = React.useState([])
+  const [runningLogs,   setRunningLogs]   = React.useState([])
+  const [climbingSessions, setClimbingSessions] = React.useState([])
+  const [crags,         setCrags]         = React.useState([])
+  const [ascents,       setAscents]       = React.useState([])
   const today      = todayStr()
   const todayEntry = getTodayCalEntry()
 
-  // Sync con App quando cambia dall'esterno
   React.useEffect(() => {
     if (initialSub && initialSub !== sub) setSub(initialSub)
   }, [initialSub])
@@ -1172,6 +1625,10 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
 
   React.useEffect(() => {
     loadSessionNotes().then(setSessionNotes)
+    loadRunningLogs().then(setRunningLogs)
+    loadClimbingSessions().then(setClimbingSessions)
+    loadCrags().then(setCrags)
+    loadAscents().then(setAscents)
   }, [])
 
   if (showMetrics) {
@@ -1191,6 +1648,9 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
       videos={videos}
       onVideosChange={onVideosChange}
       sessionNotes={sessionNotes}
+      climbingSessions={climbingSessions}
+      crags={crags}
+      ascents={ascents}
     />
   }
 
@@ -1332,6 +1792,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
       {sub === 'piano'    && renderPiano()}
       {sub === 'storico'  && <StoricoAllenamenti trainingLogs={trainingLogs} sessionNotes={sessionNotes} onDataChanged={onLogsChanged} />}
       {sub === 'esercizi' && <ExercisesTable trainingLogs={trainingLogs} onDataChanged={onLogsChanged} />}
+      {sub === 'corsa'    && <CorsaSection runningLogs={runningLogs} onRefresh={() => loadRunningLogs().then(setRunningLogs)} />}
       {sub === 'test'     && <TestForm fitSessions={fitSessions} onSaved={onFitSaved} />}
     </div>
   )
