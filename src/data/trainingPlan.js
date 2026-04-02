@@ -21,29 +21,27 @@ export const TRAINING_PLAN = {
   },
 
   calendar: [
-    // ── SETTIMANA 1 ──────────────────────────────────────────────
-    { week:1, day_date:'2026-03-25', session_type:'PLACCA_VERTICALE', also:'PESI' },
-    { week:1, day_date:'2026-03-26', session_type:'REST' },
-    { week:1, day_date:'2026-03-27', session_type:'PALESTRA' },
-    { week:1, day_date:'2026-03-28', session_type:'PESI' },
+    // SETTIMANA 1 — inizia mercoledì 25/03
+    { week:1, day_date:'2026-03-25', session_type:'PESI' },
+    { week:1, day_date:'2026-03-26', session_type:'PALESTRA' },
+    { week:1, day_date:'2026-03-27', session_type:'CORSA' },
+    { week:1, day_date:'2026-03-28', session_type:'REST' },
     { week:1, day_date:'2026-03-29', session_type:'STRAPIOMBO' },
-    { week:1, day_date:'2026-03-30', session_type:'CORSA' },
-    { week:1, day_date:'2026-03-31', session_type:'PALESTRA' },
-    // 2026-04-01 era REST nel piano originale — spostato a PLACCA_VERTICALE
-    { week:2, day_date:'2026-04-01', session_type:'PLACCA_VERTICALE' },
+    { week:1, day_date:'2026-03-30', session_type:'PESI' },
+    { week:1, day_date:'2026-03-31', session_type:'REST' },
+    { week:1, day_date:'2026-04-01', session_type:'PLACCA_VERTICALE' },
 
-    // ── SETTIMANA 2 ──────────────────────────────────────────────
-    // 2026-04-02 era PLACCA_VERTICALE nel piano originale — spostato a PALESTRA
+    // SETTIMANA 2 — inizia giovedì 02/04
     { week:2, day_date:'2026-04-02', session_type:'PALESTRA' },
     { week:2, day_date:'2026-04-03', session_type:'PESI' },
     { week:2, day_date:'2026-04-04', session_type:'STRAPIOMBO' },
-    { week:2, day_date:'2026-04-05', session_type:'CORSA' },
-    { week:2, day_date:'2026-04-06', session_type:'PALESTRA' },
+    { week:2, day_date:'2026-04-05', session_type:'REST' },
+    { week:2, day_date:'2026-04-06', session_type:'PLACCA_VERTICALE' },
     { week:2, day_date:'2026-04-07', session_type:'CORSA' },
     { week:2, day_date:'2026-04-08', session_type:'PLACCA_VERTICALE', also:'PESI' },
-    { week:2, day_date:'2026-04-09', session_type:'REST' },
+    { week:2, day_date:'2026-04-09', session_type:'CORSA' },
 
-    // ── SETTIMANA 3 ──────────────────────────────────────────────
+    // SETTIMANA 3 — inizia venerdì 10/04
     { week:3, day_date:'2026-04-10', session_type:'PALESTRA' },
     { week:3, day_date:'2026-04-11', session_type:'REST' },
     { week:3, day_date:'2026-04-12', session_type:'STRAPIOMBO' },
@@ -53,13 +51,13 @@ export const TRAINING_PLAN = {
     { week:3, day_date:'2026-04-16', session_type:'PLACCA_VERTICALE', also:'PESI' },
     { week:3, day_date:'2026-04-17', session_type:'CORSA' },
 
-    // ── SETTIMANA 4 (Scarico) ────────────────────────────────────
+    // SETTIMANA 4 SCARICO — inizia sabato 18/04
     { week:4, day_date:'2026-04-18', session_type:'STRAPIOMBO',              scarico:true },
-    { week:4, day_date:'2026-04-19', session_type:'PESI',                    scarico:true },
-    { week:4, day_date:'2026-04-20', session_type:'PALESTRA',                scarico:true },
-    { week:4, day_date:'2026-04-21', session_type:'REST',                    scarico:true },
-    { week:4, day_date:'2026-04-22', session_type:'PLACCA_VERTICALE', also:'PESI', scarico:true },
-    { week:4, day_date:'2026-04-23', session_type:'CORSA',                   scarico:true },
+    { week:4, day_date:'2026-04-19', session_type:'REST',                    scarico:true },
+    { week:4, day_date:'2026-04-20', session_type:'PLACCA_VERTICALE', also:'PESI', scarico:true },
+    { week:4, day_date:'2026-04-21', session_type:'CORSA',                   scarico:true },
+    { week:4, day_date:'2026-04-22', session_type:'PALESTRA',                scarico:true },
+    { week:4, day_date:'2026-04-23', session_type:'PESI',                    scarico:true },
     { week:4, day_date:'2026-04-24', session_type:'STRAPIOMBO_TRAZIONI_SETT4', scarico:true },
     { week:4, day_date:'2026-04-25', session_type:'REST',                    scarico:true },
   ],
@@ -68,7 +66,7 @@ export const TRAINING_PLAN = {
     PALESTRA: {
       blocks_working: [
         { week:1, sets:2, reps:4, rest_min:5 },
-        { week:2, sets:4, reps:4, rest_min:5 },
+        { week:2, sets:3, reps:4, rest_min:5 },
         { week:3, sets:3, reps:4, rest_min:5 },
         { week:4, sets:4, reps:4, rest_min:5 },
       ],
@@ -87,12 +85,12 @@ export const TRAINING_PLAN = {
         { name:'Lift of',                                            sets:1, duration:'15s x lato', rest:'1 min' },
       ],
       circuit_2: [
-        { name:'Goblet squat',           tempo:'3-2-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
+        { name:'Goblet squat',        tempo:'3-2-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
         { name:'Panca piana bilanciere', tempo:'3-2-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
-        { name:'Crunch libretto',        tempo:'3-2-2', bodyweight:true,  weeks:[{week:1,sets:2,reps:12},{week:2,sets:3,reps:10},{week:3,sets:3,reps:12},{week:4,sets:2,reps:12}] },
-        { name:'Stacco da terra',        tempo:'3-0-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
-        { name:'Rematore manubri',       tempo:'3-2-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
-        { name:'Arch body',              tempo:'3-2-2', bodyweight:true,  weeks:[{week:1,sets:2,reps:12},{week:2,sets:3,reps:10},{week:3,sets:3,reps:12},{week:4,sets:2,reps:12}] },
+        { name:'Crunch libretto',     tempo:'3-2-2', bodyweight:true,  weeks:[{week:1,sets:2,reps:12},{week:2,sets:3,reps:10},{week:3,sets:3,reps:12},{week:4,sets:2,reps:12}] },
+        { name:'Stacco da terra',     tempo:'3-0-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
+        { name:'Rematore manubri',    tempo:'3-2-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
+        { name:'Arch body',           tempo:'3-2-2', bodyweight:true,  weeks:[{week:1,sets:2,reps:12},{week:2,sets:3,reps:10},{week:3,sets:3,reps:12},{week:4,sets:2,reps:12}] },
       ],
     },
     CORSA: {
