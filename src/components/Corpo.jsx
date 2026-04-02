@@ -2,9 +2,8 @@ import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import { C, ss, todayStr, fmtDateShort } from '../constants'
-import { db, loadHrvLogs, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement } from '../lib/supabase'
+import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement } from '../lib/supabase'
 
-// kept for backward compat — re-export so App.jsx import still works if needed
 export { loadBodyMeasurements }
 
 // ── METRIC DEFINITIONS ─────────────────────────────────────────────
@@ -15,7 +14,7 @@ const METRICS = [
   { id: 'waist_cm',     label: 'Vita',          unit: 'cm',  color: C.amber,   desc: 'Punto più stretto della vita' },
   { id: 'abdomen_cm',   label: 'Addome',        unit: 'cm',  color: C.orange,  desc: 'A livello dell\'ombelico' },
   { id: 'hips_cm',      label: 'Fianchi',       unit: 'cm',  color: C.red,     desc: 'Massima estensione del gluteo' },
-  { id: 'thigh_cm',     label: 'Coscia DX',     unit: 'cm',  color: C.greenLight.replace('#','') ? C.green : C.green, desc: 'Metà coscia destra' },
+  { id: 'thigh_cm',     label: 'Coscia DX',     unit: 'cm',  color: C.green,   desc: 'Metà coscia destra' },
 ]
 
 // ── MINI SPARKLINE ─────────────────────────────────────────────────
@@ -41,10 +40,7 @@ function Sparkline({ data, color }) {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { display: false },
-          y: { display: false },
-        },
+        scales: { x: { display: false }, y: { display: false } },
         animation: false,
       }
     })
@@ -113,23 +109,16 @@ function AddMeasurementForm({ onSaved }) {
     }
     const ok = await saveBodyMeasurement(entry)
     setSaving(false)
-    if (ok) {
-      setSaved(true)
-      setVals({})
-      onSaved()
-      setTimeout(() => setSaved(false), 2000)
-    }
+    if (ok) { setSaved(true); setVals({}); onSaved(); setTimeout(() => setSaved(false), 2000) }
   }
 
   return (
     <div style={ss.card}>
       <div style={ss.secLbl}>Nuova misurazione</div>
-
       <div style={{ marginBottom: '14px' }}>
         <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Data</div>
         <input type="date" style={ss.inp} value={date} onChange={e => setDate(e.target.value)} />
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
         {METRICS.map(m => (
           <div key={m.id}>
@@ -148,10 +137,7 @@ function AddMeasurementForm({ onSaved }) {
           </div>
         ))}
       </div>
-
-      <div
-        style={{ ...ss.savBtn, opacity: (!hasAny || saving) ? 0.4 : 1, background: saved ? C.green : C.violet }}
-        onClick={handleSave}>
+      <div style={{ ...ss.savBtn, opacity: (!hasAny || saving) ? 0.4 : 1, background: saved ? C.green : C.violet }} onClick={handleSave}>
         {saving ? 'Salvataggio...' : saved ? '✓ Salvato!' : 'Salva misurazione'}
       </div>
     </div>
@@ -177,57 +163,36 @@ function OverviewCards({ measurements, onSelectMetric, selectedMetric }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
       {METRICS.map(m => {
-        const val     = last[m.id]
-        const prevVal = prev?.[m.id]
+        const val      = last[m.id]
+        const prevVal  = prev?.[m.id]
         const firstVal = first[m.id]
-        const delta   = (val != null && prevVal != null) ? (val - prevVal).toFixed(1) : null
+        const delta    = (val != null && prevVal != null) ? (val - prevVal).toFixed(1) : null
         const totalDelta = (val != null && firstVal != null && first !== last) ? (val - firstVal).toFixed(1) : null
-        const pts     = measurements.map(ms => ({ x: ms.measured_at?.slice(0,10), y: ms[m.id] })).filter(p => p.y != null)
+        const pts      = measurements.map(ms => ({ x: ms.measured_at?.slice(0,10), y: ms[m.id] })).filter(p => p.y != null)
         const isSelected = selectedMetric?.id === m.id
-
         if (val == null && pts.length === 0) return null
-
         return (
-          <div
-            key={m.id}
-            style={{
-              background: isSelected ? `${m.color}12` : C.surface,
-              border: `1px solid ${isSelected ? m.color + '55' : C.border}`,
-              borderRadius: '14px', padding: '12px',
-              cursor: 'pointer',
-              transition: 'all .15s',
-            }}
+          <div key={m.id}
+            style={{ background: isSelected ? `${m.color}12` : C.surface, border: `1px solid ${isSelected ? m.color + '55' : C.border}`, borderRadius: '14px', padding: '12px', cursor: 'pointer' }}
             onClick={() => onSelectMetric(isSelected ? null : m)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
               <div>
                 <div style={{ fontSize: '9px', fontWeight: '600', color: m.color, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '2px' }}>{m.label}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: val != null ? C.text : C.hint, letterSpacing: '-.02em' }}>
-                    {val != null ? val : '—'}
-                  </div>
+                  <div style={{ fontSize: '22px', fontWeight: '800', color: val != null ? C.text : C.hint, letterSpacing: '-.02em' }}>{val != null ? val : '—'}</div>
                   <div style={{ fontSize: '10px', color: C.muted }}>{m.unit}</div>
                 </div>
               </div>
               <Sparkline data={pts} color={m.color} />
             </div>
-
             <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
               {delta !== null && (
-                <div style={{
-                  fontSize: '10px', fontWeight: '700',
-                  padding: '2px 6px', borderRadius: '999px',
-                  background: getDeltaBg(m.id, parseFloat(delta)),
-                  color: getDeltaColor(m.id, parseFloat(delta)),
-                }}>
+                <div style={{ fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '999px', background: getDeltaBg(m.id, parseFloat(delta)), color: getDeltaColor(m.id, parseFloat(delta)) }}>
                   {parseFloat(delta) > 0 ? '+' : ''}{delta} vs prec.
                 </div>
               )}
               {totalDelta !== null && (
-                <div style={{
-                  fontSize: '10px', fontWeight: '600',
-                  padding: '2px 6px', borderRadius: '999px',
-                  background: C.surface, color: C.hint, border: `1px solid ${C.border}`,
-                }}>
+                <div style={{ fontSize: '10px', fontWeight: '600', padding: '2px 6px', borderRadius: '999px', background: C.surface, color: C.hint, border: `1px solid ${C.border}` }}>
                   {parseFloat(totalDelta) > 0 ? '+' : ''}{totalDelta} totale
                 </div>
               )}
@@ -239,20 +204,14 @@ function OverviewCards({ measurements, onSelectMetric, selectedMetric }) {
   )
 }
 
-// Delta color logic — per peso e misure "grasso" (addome, fianchi, vita) calo = verde
 function getDeltaBg(id, delta) {
   const lowerIsBetter = ['abdomen_cm', 'hips_cm', 'waist_cm', 'weight_kg']
-  if (lowerIsBetter.includes(id)) {
-    return delta <= 0 ? C.greenBg : C.redBg
-  }
-  // Per muscoli (bicipite, petto, coscia) aumento = verde
+  if (lowerIsBetter.includes(id)) return delta <= 0 ? C.greenBg : C.redBg
   return delta >= 0 ? C.greenBg : C.redBg
 }
 function getDeltaColor(id, delta) {
   const lowerIsBetter = ['abdomen_cm', 'hips_cm', 'waist_cm', 'weight_kg']
-  if (lowerIsBetter.includes(id)) {
-    return delta <= 0 ? C.greenLight : C.redLight
-  }
+  if (lowerIsBetter.includes(id)) return delta <= 0 ? C.greenLight : C.redLight
   return delta >= 0 ? C.greenLight : C.redLight
 }
 
@@ -260,15 +219,10 @@ function getDeltaColor(id, delta) {
 function StoricoTable({ measurements, onDeleted }) {
   const [confirmDel, setConfirmDel] = React.useState(null)
   const [deleting,   setDeleting]   = React.useState(false)
-
   const sorted = [...measurements].reverse()
 
   if (sorted.length === 0) {
-    return (
-      <div style={{ textAlign: 'center', padding: '32px 20px', fontSize: '13px', color: C.hint }}>
-        Nessuna misurazione ancora.
-      </div>
-    )
+    return <div style={{ textAlign: 'center', padding: '32px 20px', fontSize: '13px', color: C.hint }}>Nessuna misurazione ancora.</div>
   }
 
   return (
@@ -296,7 +250,6 @@ function StoricoTable({ measurements, onDeleted }) {
           </div>
         </div>
       )}
-
       {sorted.map((m, i) => (
         <div key={m.id || i} style={{ ...ss.card, marginBottom: '8px', padding: '12px 14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -327,15 +280,19 @@ function StoricoTable({ measurements, onDeleted }) {
 function HrvHistory() {
   const [hrvLogs, setHrvLogs] = React.useState([])
   const [loading, setLoading] = React.useState(true)
+  // id della riga in modifica, null = nessuna
+  const [editingId,  setEditingId]  = React.useState(null)
+  const [editVal,    setEditVal]    = React.useState('')
+  const [savingEdit, setSavingEdit] = React.useState(false)
+
   const canvasRef = React.useRef(null)
   const chartRef  = React.useRef(null)
 
-  React.useEffect(() => {
-    loadHrvLogs().then(data => { setHrvLogs(data); setLoading(false) })
-  }, [])
+  const load = () => loadHrvLogs().then(data => { setHrvLogs(data); setLoading(false) })
+  React.useEffect(() => { load() }, [])
 
   const sorted = [...hrvLogs].sort((a, b) => a.log_date.localeCompare(b.log_date))
-  const avg7 = sorted.length
+  const avg7   = sorted.length
     ? Math.round(sorted.slice(-7).reduce((s, r) => s + r.hrv_value, 0) / Math.min(sorted.length, 7))
     : null
 
@@ -346,6 +303,7 @@ function HrvHistory() {
     if (p >= 0.88) return 'yellow'
     return 'red'
   }
+
   const statusColor  = { green: C.green, yellow: C.amber, red: C.red, neutral: C.hint }
   const statusBg     = { green: C.greenBg, yellow: C.amberBg, red: C.redBg, neutral: C.surface }
   const statusBorder = { green: C.greenBorder, yellow: C.amberBorder, red: C.redBorder, neutral: C.border }
@@ -364,7 +322,6 @@ function HrvHistory() {
             tension: 0.35, fill: true, pointRadius: 4, borderWidth: 2,
             pointBackgroundColor: sorted.map(r => statusColor[getStatus(r.hrv_value, avg7)]),
           },
-          // Media mobile 7gg
           {
             data: sorted.map((_, i) => {
               const slice = sorted.slice(Math.max(0, i - 6), i + 1)
@@ -387,6 +344,18 @@ function HrvHistory() {
     return () => { if (chartRef.current) chartRef.current.destroy() }
   }, [hrvLogs])
 
+  // Salva modifica
+  const handleSaveEdit = async (row) => {
+    const v = parseInt(editVal)
+    if (!v || v < 10 || v > 300) return
+    setSavingEdit(true)
+    await saveHrvLog({ log_date: row.log_date, hrv_value: v })
+    await load()
+    setSavingEdit(false)
+    setEditingId(null)
+    setEditVal('')
+  }
+
   if (loading) return <div style={{ textAlign: 'center', padding: '32px', fontSize: '12px', color: C.hint }}>Caricamento...</div>
 
   if (sorted.length === 0) {
@@ -408,9 +377,9 @@ function HrvHistory() {
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
         {[
-          { l: 'Ultimo',   v: last.hrv_value + ' ms', c: statusColor[getStatus(last.hrv_value, avg7)] },
-          { l: 'Media 7gg', v: avg7 + ' ms',          c: C.violet },
-          { l: 'Misurazioni', v: sorted.length,       c: C.muted },
+          { l: 'Ultimo',      v: last.hrv_value + ' ms', c: statusColor[getStatus(last.hrv_value, avg7)] },
+          { l: 'Media 7gg',   v: avg7 + ' ms',           c: C.violet },
+          { l: 'Misurazioni', v: sorted.length,           c: C.muted },
         ].map(it => (
           <div key={it.l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
             <div style={{ fontSize: '18px', fontWeight: '700', color: it.c }}>{it.v}</div>
@@ -438,18 +407,60 @@ function HrvHistory() {
         </div>
       )}
 
-      {/* Lista storica */}
+      {/* Storico con edit inline */}
       <div style={ss.card}>
         <div style={ss.secLbl}>Storico</div>
         {[...sorted].reverse().map((r, i) => {
-          const s = getStatus(r.hrv_value, avg7)
+          const s         = getStatus(r.hrv_value, avg7)
+          const isEditing = editingId === r.id
+
           return (
-            <div key={r.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: '12px', color: C.muted }}>{fmtDateShort(r.log_date)}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor[s] }} />
-                <div style={{ fontSize: '14px', fontWeight: '700', color: C.text }}>{r.hrv_value}</div>
-                <div style={{ fontSize: '10px', color: C.hint }}>ms</div>
+            <div key={r.id || i} style={{ padding: '9px 0', borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* Data + semaforo */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor[s], flexShrink: 0 }} />
+                  <div style={{ fontSize: '12px', color: C.muted }}>{fmtDateShort(r.log_date)}</div>
+                </div>
+
+                {/* Valore + tasto modifica */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {!isEditing && (
+                    <>
+                      <div style={{ fontSize: '14px', fontWeight: '700', color: C.text }}>{r.hrv_value} <span style={{ fontSize: '10px', color: C.hint, fontWeight: '400' }}>ms</span></div>
+                      <div
+                        style={{ fontSize: '10px', color: C.hint, cursor: 'pointer', padding: '2px 8px', border: `1px solid ${C.border}`, borderRadius: '6px', background: C.bg }}
+                        onClick={() => { setEditingId(r.id); setEditVal(String(r.hrv_value)) }}>
+                        ✎
+                      </div>
+                    </>
+                  )}
+
+                  {/* Input inline quando in modifica */}
+                  {isEditing && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        autoFocus
+                        style={{ ...ss.inp, width: '72px', fontSize: '14px', fontWeight: '700', textAlign: 'center', padding: '4px 8px' }}
+                        value={editVal}
+                        onChange={e => setEditVal(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(r) }}
+                      />
+                      <div
+                        style={{ fontSize: '11px', fontWeight: '700', color: C.greenLight, cursor: 'pointer', padding: '4px 10px', background: C.greenBg, border: `1px solid ${C.greenBorder}`, borderRadius: '6px', opacity: savingEdit ? 0.5 : 1 }}
+                        onClick={() => !savingEdit && handleSaveEdit(r)}>
+                        {savingEdit ? '...' : '✓'}
+                      </div>
+                      <div
+                        style={{ fontSize: '11px', color: C.hint, cursor: 'pointer', padding: '4px 8px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: '6px' }}
+                        onClick={() => { setEditingId(null); setEditVal('') }}>
+                        ✕
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )
@@ -461,9 +472,9 @@ function HrvHistory() {
 
 // ── MAIN CORPO SECTION ─────────────────────────────────────────────
 export default function CorpoSection() {
-  const [sub,          setSub]          = React.useState('overview')
-  const [measurements, setMeasurements] = React.useState([])
-  const [loading,      setLoading]      = React.useState(true)
+  const [sub,            setSub]            = React.useState('overview')
+  const [measurements,   setMeasurements]   = React.useState([])
+  const [loading,        setLoading]        = React.useState(true)
   const [selectedMetric, setSelectedMetric] = React.useState(null)
 
   const load = async () => {
@@ -506,13 +517,7 @@ export default function CorpoSection() {
         <>
           {sub === 'overview' && (
             <div style={ss.body}>
-              <OverviewCards
-                measurements={measurements}
-                selectedMetric={selectedMetric}
-                onSelectMetric={setSelectedMetric}
-              />
-
-              {/* Grafico grande per metrica selezionata */}
+              <OverviewCards measurements={measurements} selectedMetric={selectedMetric} onSelectMetric={setSelectedMetric} />
               {selectedMetric && (
                 <div style={{ ...ss.card, marginTop: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: `1px solid ${C.border}` }}>
@@ -523,8 +528,6 @@ export default function CorpoSection() {
                     <div style={{ fontSize: '18px', color: C.hint, cursor: 'pointer', padding: '4px 8px' }} onClick={() => setSelectedMetric(null)}>✕</div>
                   </div>
                   <MetricChart measurements={measurements} metric={selectedMetric} />
-
-                  {/* Min/Max/Avg */}
                   {(() => {
                     const vals = measurements.map(m => m[selectedMetric.id]).filter(v => v != null)
                     if (vals.length < 2) return null
@@ -545,37 +548,28 @@ export default function CorpoSection() {
                   })()}
                 </div>
               )}
-
               {measurements.length === 0 && (
                 <div style={{ textAlign: 'center', marginTop: '8px' }}>
-                  <div style={{ ...ss.savBtn, maxWidth: '200px', margin: '0 auto' }} onClick={() => setSub('aggiungi')}>
-                    + Prima misurazione
-                  </div>
+                  <div style={{ ...ss.savBtn, maxWidth: '200px', margin: '0 auto' }} onClick={() => setSub('aggiungi')}>+ Prima misurazione</div>
                 </div>
               )}
-
               {measurements.length > 0 && (
                 <div style={{ textAlign: 'center', marginTop: '4px' }}>
-                  <div style={{ fontSize: '11px', color: C.hint, cursor: 'pointer', padding: '8px' }} onClick={() => setSub('aggiungi')}>
-                    + Aggiungi misurazione
-                  </div>
+                  <div style={{ fontSize: '11px', color: C.hint, cursor: 'pointer', padding: '8px' }} onClick={() => setSub('aggiungi')}>+ Aggiungi misurazione</div>
                 </div>
               )}
             </div>
           )}
-
           {sub === 'aggiungi' && (
             <div style={ss.body}>
               <AddMeasurementForm onSaved={() => { load(); setSub('overview') }} />
             </div>
           )}
-
           {sub === 'storico' && (
             <div style={ss.body}>
               <StoricoTable measurements={measurements} onDeleted={load} />
             </div>
           )}
-
           {sub === 'hrv' && <HrvHistory />}
         </>
       )}
