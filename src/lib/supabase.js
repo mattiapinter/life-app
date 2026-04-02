@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 
-const SUPA_URL = 'https://hqibitypbemsxlooeqfo.supabase.co'
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxaWJpdHlwYmVtc3hsb29lcWZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDE4NDUsImV4cCI6MjA4OTkxNzg0NX0.1b-CAVcjFezX1d52DgFlIoXPsYOi-hZgVXr5ppJ8_4k'
+// FIX: chiavi spostate in variabili d'ambiente — non più hardcoded nel sorgente
+// In locale: crea .env con VITE_SUPABASE_URL e VITE_SUPABASE_KEY
+// Su GitHub Actions: aggiungi le due vars nelle Repository Variables (Settings → Secrets and variables → Actions → Variables)
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_KEY
+
+if (!SUPA_URL || !SUPA_KEY) {
+  console.error('⚠️ Mancano VITE_SUPABASE_URL o VITE_SUPABASE_KEY nel file .env')
+}
 
 export const db = createClient(SUPA_URL, SUPA_KEY)
 
