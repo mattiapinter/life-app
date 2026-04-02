@@ -44,29 +44,48 @@ export const C = {
 
 // ── SESSION COLORS ─────────────────────────────────────────────────
 export const SESSION_COLORS = {
-  PALESTRA:                  { bg: C.blueBg,   border: C.blueBorder,   text: C.blue,        label: 'Palestra' },
-  PESI:                      { bg: C.violetBg, border: C.violetBorder, text: C.violet,      label: 'Pesi' },
-  CORSA:                     { bg: C.orangeBg, border: C.orangeBorder, text: C.orange,      label: 'Corsa' },
-  PLACCA_VERTICALE:          { bg: C.greenBg,  border: C.greenBorder,  text: C.green,       label: 'Placca / Verticale' },
-  STRAPIOMBO:                { bg: C.greenBg,  border: C.greenBorder,  text: C.green,       label: 'Strapiombo' },
-  STRAPIOMBO_TRAZIONI_SETT4: { bg: C.greenBg,  border: C.greenBorder,  text: C.green,       label: 'Strapiombo + Trazioni' },
-  DAY_PROJECT:               { bg: C.amberBg,  border: C.amberBorder,  text: C.amber,       label: 'Day Project' },
-  REST:                      { bg: '#161616',  border: C.border,       text: C.hint,        label: 'Riposo' },
+  PALESTRA:                  { bg: C.blueBg,   border: C.blueBorder,   text: C.blue,   label: 'Palestra' },
+  PESI:                      { bg: C.violetBg, border: C.violetBorder, text: C.violet, label: 'Pesi' },
+  CORSA:                     { bg: C.orangeBg, border: C.orangeBorder, text: C.orange, label: 'Corsa' },
+  PLACCA_VERTICALE:          { bg: C.greenBg,  border: C.greenBorder,  text: C.green,  label: 'Placca / Verticale' },
+  STRAPIOMBO:                { bg: C.greenBg,  border: C.greenBorder,  text: C.green,  label: 'Strapiombo' },
+  STRAPIOMBO_TRAZIONI_SETT4: { bg: C.greenBg,  border: C.greenBorder,  text: C.green,  label: 'Strapiombo + Trazioni' },
+  DAY_PROJECT:               { bg: C.amberBg,  border: C.amberBorder,  text: C.amber,  label: 'Day Project' },
+  REST:                      { bg: '#161616',  border: C.border,       text: C.hint,   label: 'Riposo' },
 }
 
 // ── SHARED STYLES ──────────────────────────────────────────────────
 export const ss = {
   app:   { minHeight: '100vh', background: C.bg, fontFamily: "'DM Sans', system-ui, sans-serif" },
   main:  { maxWidth: '448px', margin: '0 auto', minHeight: '100vh', background: C.bg, position: 'relative' },
-  hdr:   { background: C.bg, padding: '52px 20px 18px', borderBottom: `1px solid ${C.border}` },
+
+  // FIX: safe area per iPhone 15 Dynamic Island (env safe-area-inset-top = ~59px)
+  hdr:   {
+    background: C.bg,
+    padding: 'calc(env(safe-area-inset-top, 44px) + 16px) 20px 18px',
+    borderBottom: `1px solid ${C.border}`,
+  },
+
   eyebrow: { fontSize: '10px', fontWeight: '500', color: C.hint, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: '8px' },
   title:   { fontSize: '28px', fontWeight: '700', color: C.text, letterSpacing: '-.02em', lineHeight: '1.1' },
   subtitle:{ fontSize: '12px', color: C.muted, marginTop: '5px', fontWeight: '400' },
-  body:    { padding: '16px', paddingBottom: '100px' },
+  body:    { padding: '16px', paddingBottom: '120px' },  // più spazio sotto per home indicator iPhone 15
   card:    { background: C.surface, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', marginBottom: '12px' },
   secLbl:  { fontSize: '10px', fontWeight: '600', color: C.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '10px', paddingBottom: '8px', borderBottom: `1px solid ${C.border}` },
   inp:     { width: '100%', background: C.bg, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: C.text, outline: 'none' },
-  bnav:    { position: 'fixed', bottom: '0', left: '0', right: '0', zIndex: '50', background: C.bg, borderTop: `1px solid ${C.border}`, padding: '10px 0 20px' },
+
+  // FIX: bottom nav con safe area per home indicator iPhone 15
+  bnav:    {
+    position: 'fixed',
+    bottom: '0',
+    left: '0',
+    right: '0',
+    zIndex: '50',
+    background: C.bg,
+    borderTop: `1px solid ${C.border}`,
+    padding: '10px 0',
+    paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 6px)',
+  },
   bnavInner: { maxWidth: '448px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', alignItems: 'center' },
   bnavItem: (a) => ({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '4px 16px', cursor: 'pointer', opacity: a ? 1 : 0.4 }),
   bnavLabel: (a) => ({ fontSize: '9px', fontWeight: '600', color: a ? C.violet : C.hint, letterSpacing: '.06em', textTransform: 'uppercase' }),
@@ -109,7 +128,6 @@ export const STR_TESTS = [
   { id:'trazione_kg', label:'Forza massimale trazione',  unit:'kg extra', desc:'Carico aggiuntivo singola trazione' },
   { id:'resist_reps', label:'Resistenza tacca 20mm',     unit:'reps',     desc:'7"/3" off a cedimento — Beast' },
 ]
-// Solo rotazioni — input da foto/video, nessun campo numerico nell'app
 export const PHOTO_TESTS = [
   { id:'flessione_braccia', label:'Flessione braccia a muro', unit:'°', desc:'Angolo da foto/video' },
   { id:'extra_sx',          label:'Extrarotazione femore SX', unit:'°', desc:'Da foto/video' },
@@ -124,8 +142,18 @@ export const USER_LEG    = 104.5
 
 // ── HELPERS ────────────────────────────────────────────────────────
 export const todayIdx = () => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1 }
-export const todayStr = () => new Date().toISOString().split('T')[0]
-export const fmtDate  = () => {
+
+// FIX: usava toISOString() che è UTC → alle 23:30 in Italia dava "domani"
+// Ora usa ora locale del dispositivo
+export const todayStr = () => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export const fmtDate = () => {
   const d = new Date()
   return `${DAYS[todayIdx()]} · ${d.getDate()} ${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][d.getMonth()]}`
 }
