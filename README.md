@@ -121,3 +121,5 @@ Quando il coach manda un nuovo piano:
 3. Push su GitHub → deploy automatico
 
 I log storici in `training_logs` non vengono mai toccati.
+
+
