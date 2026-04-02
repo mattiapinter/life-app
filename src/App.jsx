@@ -16,7 +16,6 @@ import CorpoSection       from './components/Corpo'
 import LoginScreen        from './components/Login'
 import { IcoHome, IcoDiet, IcoTrain, IcoClimb } from './components/Icons'
 
-// ── ICONS ──────────────────────────────────────────────────────────
 const IcoMenu = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
     <line x1="3" y1="6"  x2="17" y2="6"  stroke={C.muted} strokeWidth="1.6" strokeLinecap="round" />
@@ -25,7 +24,6 @@ const IcoMenu = () => (
   </svg>
 )
 
-// ── MACRO SEZIONI ──────────────────────────────────────────────────
 const MACRO = [
   { id: 'home',        label: 'Home',        emoji: '🏠' },
   { id: 'allenamento', label: 'Allenamento', emoji: '💪' },
@@ -57,7 +55,6 @@ const SUB = {
   ],
 }
 
-// ── SIDEBAR ────────────────────────────────────────────────────────
 function SidebarDrawer({ open, onClose, macro, setMacro, onLogout }) {
   const startX = React.useRef(null)
   const handleTouchStart = (e) => { startX.current = e.touches[0].clientX }
@@ -73,7 +70,8 @@ function SidebarDrawer({ open, onClose, macro, setMacro, onLogout }) {
       <div style={{ position:'fixed', top:0, left:0, bottom:0, width:'260px', zIndex:101, background:C.surface, borderRight:`1px solid ${C.border}`, transform: open ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .28s cubic-bezier(.4,0,.2,1)', display:'flex', flexDirection:'column' }}
         onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
 
-        <div style={{ padding:'52px 20px 16px', borderBottom:`1px solid ${C.border}` }}>
+        {/* FIX: padding-top usa safe area per non sovrapporsi alla Dynamic Island */}
+        <div style={{ padding:'calc(env(safe-area-inset-top, 44px) + 12px) 20px 16px', borderBottom:`1px solid ${C.border}` }}>
           <div style={{ fontSize:'11px', fontWeight:'700', color:C.violet, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:'4px' }}>LIFE</div>
           <div style={{ fontSize:'13px', color:C.muted }}>Pinter</div>
         </div>
@@ -103,7 +101,6 @@ function SidebarDrawer({ open, onClose, macro, setMacro, onLogout }) {
   )
 }
 
-// ── BOTTOM NAV ─────────────────────────────────────────────────────
 function BottomNav({ macro, sub, setSub }) {
   const subTabs = SUB[macro] || []
   if (subTabs.length === 0) return null
@@ -122,9 +119,8 @@ function BottomNav({ macro, sub, setSub }) {
   )
 }
 
-// ── APP ────────────────────────────────────────────────────────────
 export default function App() {
-  const [user,       setUser]       = React.useState(undefined) // undefined = loading
+  const [user,       setUser]       = React.useState(undefined)
   const [macro,      setMacroRaw]   = React.useState('home')
   const [sub,        setSub]        = React.useState(null)
   const [drawerOpen, setDrawerOpen] = React.useState(false)
@@ -150,7 +146,6 @@ export default function App() {
     const p = {}; DAYS.forEach(d => { p[d] = { isSkiDay: false, meals: {} } }); return p
   })
 
-  // Auth listener — si triggera subito con la sessione attuale
   React.useEffect(() => {
     const { data: { subscription } } = onAuthChange((_event, session) => {
       setUser(session?.user || null)
@@ -158,7 +153,6 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Carica dati quando l'utente è loggato
   React.useEffect(() => {
     if (!user) return
     loadPlanFromSupabase().then(plan => { if (plan) { setWeeklyPlan(plan); localStorage.setItem('life_plan', JSON.stringify(plan)) } })
@@ -194,7 +188,6 @@ export default function App() {
   const handleVideosChange = (name, url) => setVideos(p => ({ ...p, [name]: url }))
   const handleLogout = async () => { await db.auth.signOut(); setUser(null) }
 
-  // Loading state
   if (user === undefined) {
     return (
       <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -203,7 +196,6 @@ export default function App() {
     )
   }
 
-  // Not logged in
   if (!user) {
     return <LoginScreen onLogin={() => {}} />
   }
@@ -213,7 +205,21 @@ export default function App() {
       <SidebarDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} macro={macro} setMacro={setMacro} onLogout={handleLogout} />
       <div style={ss.main}>
 
-        <div style={{ position:'fixed', top:12, left:12, zIndex:50, padding:'7px', cursor:'pointer', background:C.surface, borderRadius:'10px', border:`1px solid ${C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}
+        {/* FIX: burger posizionato sotto la Dynamic Island usando safe-area-inset-top */}
+        <div style={{
+          position: 'fixed',
+          top: 'calc(env(safe-area-inset-top, 44px) + 8px)',
+          left: '12px',
+          zIndex: 50,
+          padding: '7px',
+          cursor: 'pointer',
+          background: C.surface,
+          borderRadius: '10px',
+          border: `1px solid ${C.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
           onClick={() => setDrawerOpen(true)}>
           <IcoMenu />
         </div>
