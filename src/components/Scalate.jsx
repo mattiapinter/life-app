@@ -217,12 +217,21 @@ function MapboxMap({ crags, selectedCragId, onCragClick, onMapClick, interactive
     crags.forEach(crag => {
       if (!crag.lat || !crag.lng) return
       const isSelected = crag.id === selectedCragId
+
+      // Colore pin in base allo stile della falesia
+      let pinColor = C.amber
+      const styles = crag.styles || []
+      if (styles.includes('strapiombo') || styles.includes('tetto')) pinColor = C.red
+      else if (styles.includes('placca')) pinColor = C.blue
+      else if (styles.includes('verticale')) pinColor = C.green
+      else if (styles.includes('misto')) pinColor = C.violet
+
       const el = document.createElement('div')
       el.style.cssText = `
         width: ${isSelected ? '18px' : '13px'};
         height: ${isSelected ? '18px' : '13px'};
         border-radius: 50%;
-        background: ${isSelected ? C.green : C.amber};
+        background: ${isSelected ? C.primary : pinColor};
         border: 2.5px solid #fff;
         cursor: pointer;
         box-shadow: 0 2px 8px rgba(0,0,0,0.6);
@@ -271,11 +280,12 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   const [gradeMax,   setGradeMax]   = React.useState(editCrag?.grade_max || '8a')
   const [approach,   setApproach]   = React.useState(editCrag?.approach_min || '')
   const [cragStyles, setCragStyles] = React.useState(editCrag?.styles || [])
-  const [exposure,   setExposure]   = React.useState(editCrag?.exposure || null)
+  const [exposures,  setExposures]  = React.useState(editCrag?.exposure || [])
   const [gpsUrl,     setGpsUrl]     = React.useState(editCrag?.gps_url || null)
   const [saving,     setSaving]     = React.useState(false)
 
   const toggleCragStyle = (id) => setCragStyles(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id])
+  const toggleExposure = (exp) => setExposures(p => p.includes(exp) ? p.filter(e => e !== exp) : [...p, exp])
   const previewCrag = lat && lng ? [{ id: 'preview', name: name || 'Nuova falesia', lat, lng }] : []
 
   const handleSave = async () => {
@@ -288,7 +298,7 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
       grade_min: gradeMin, grade_max: gradeMax,
       approach_min: approach ? parseInt(approach) : null,
       styles: cragStyles,
-      exposure: exposure || null,
+      exposure: exposures.length > 0 ? exposures : null,
       gps_url: gpsUrl,
     })
     setSaving(false)
@@ -351,14 +361,14 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
         </div>
 
         <div style={{ marginBottom: '14px' }}>
-          <div style={{ fontSize: '10px', color: C.hint, marginBottom: '6px' }}>Esposizione</div>
+          <div style={{ fontSize: '10px', color: C.hint, marginBottom: '6px' }}>Esposizione (puoi sceglierne più di una)</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
             {EXPOSURES.map(e => {
-              const sel = exposure === e
+              const sel = exposures.includes(e)
               return (
                 <div key={e}
                   style={{ padding: '4px 11px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${sel ? C.blue : C.border}`, background: sel ? C.blueBg : 'transparent', color: sel ? C.blueLight : C.hint, fontFamily: 'monospace' }}
-                  onClick={() => setExposure(sel ? null : e)}>
+                  onClick={() => toggleExposure(e)}>
                   {e}
                 </div>
               )
@@ -1558,6 +1568,12 @@ export default function ScalateSection({ initialSub, onSubChange }) {
   const [showSessForm, setShowSessForm] = React.useState(false)
   const [toast,        setToast]        = React.useState(null)
 
+  // Filtri
+  const [showFilters,    setShowFilters]    = React.useState(false)
+  const [filterGrade,    setFilterGrade]    = React.useState(null)
+  const [filterStyles,   setFilterStyles]   = React.useState([])
+  const [filterExposure, setFilterExposure] = React.useState([])
+
   // Sync con App quando cambia dall'esterno
   React.useEffect(() => {
     if (initialSub && initialSub !== sub) setSub(initialSub)
@@ -1616,6 +1632,19 @@ export default function ScalateSection({ initialSub, onSubChange }) {
     )
   }
 
+  // Logica filtri
+  const toggleFilterStyle = (id) => setFilterStyles(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id])
+  const toggleFilterExposure = (exp) => setFilterExposure(p => p.includes(exp) ? p.filter(e => e !== exp) : [...p, exp])
+  const clearFilters = () => { setFilterGrade(null); setFilterStyles([]); setFilterExposure([]) }
+  const hasActiveFilters = filterGrade || filterStyles.length > 0 || filterExposure.length > 0
+
+  const filteredCrags = crags.filter(crag => {
+    if (filterGrade && crag.grade_max && GRADE_ORDER[crag.grade_max] < GRADE_ORDER[filterGrade]) return false
+    if (filterStyles.length > 0 && !filterStyles.some(s => (crag.styles || []).includes(s))) return false
+    if (filterExposure.length > 0 && !filterExposure.some(e => (crag.exposure || []).includes(e))) return false
+    return true
+  })
+
   const renderFalesie = () => (
     <div style={ss.body}>
       {showCragForm && <CragForm onSaved={() => { setShowCragForm(false); loadAll(); setToast('Falesia salvata') }} onClose={() => setShowCragForm(false)} />}
@@ -1623,7 +1652,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
 
       {crags.length > 0 && (
         <div style={{ marginBottom: '16px' }}>
-          <MapboxMap crags={crags} onCragClick={(crag) => setSelectedCrag(crag)} height="220px" />
+          <MapboxMap crags={filteredCrags} selectedCragId={selectedCrag?.id} onCragClick={(crag) => setSelectedCrag(crag)} height="220px" />
           <div style={{ fontSize: '10px', color: C.hint, textAlign: 'center', marginTop: '6px' }}>
             Tocca un marker per aprire la falesia
           </div>
@@ -1631,8 +1660,12 @@ export default function ScalateSection({ initialSub, onSubChange }) {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ fontSize: '11px', fontWeight: '600', color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-          {crags.length} {crags.length === 1 ? 'falesia' : 'falesie'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ fontSize: '11px', fontWeight: '600', color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+            {filteredCrags.length} {filteredCrags.length === 1 ? 'falesia' : 'falesie'} {hasActiveFilters && <span style={{ color: C.primary }}>· Filtri attivi</span>}
+          </div>
+          <div style={{ fontSize: '11px', fontWeight: '600', color: showFilters ? C.primaryLight : C.hint, cursor: 'pointer', padding: '5px 10px', background: showFilters ? C.primaryBgSolid : 'transparent', border: `1px solid ${showFilters ? C.primaryBorder : C.border}`, borderRadius: '8px' }}
+            onClick={() => setShowFilters(!showFilters)}>Filtri {hasActiveFilters ? `(${[filterGrade, ...filterStyles, ...filterExposure].filter(Boolean).length})` : ''}</div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <div style={{ fontSize: '11px', fontWeight: '600', color: C.violetLight, cursor: 'pointer', padding: '5px 10px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '8px' }}
@@ -1641,6 +1674,57 @@ export default function ScalateSection({ initialSub, onSubChange }) {
             onClick={() => setShowCragForm(true)}>+ Falesia</div>
         </div>
       </div>
+
+      {showFilters && (
+        <div style={{ ...ss.card, padding: '14px', marginBottom: '14px', background: C.bg, border: `1px solid ${C.primaryBorder}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: C.primary, textTransform: 'uppercase', letterSpacing: '.08em' }}>Filtri</div>
+            {hasActiveFilters && (
+              <div style={{ fontSize: '10px', fontWeight: '600', color: C.hint, cursor: 'pointer', textDecoration: 'underline' }} onClick={clearFilters}>Cancella tutto</div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '6px', fontWeight: '600' }}>Grado minimo</div>
+            <select style={{ ...ss.inp, appearance: 'none', padding: '8px 10px', fontSize: '12px' }} value={filterGrade || ''} onChange={e => setFilterGrade(e.target.value || null)}>
+              <option value="">Tutti</option>
+              {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '6px', fontWeight: '600' }}>Stile falesia</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {CRAG_STYLES.map(s => {
+                const sel = filterStyles.includes(s.id)
+                return (
+                  <div key={s.id}
+                    style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', border: `1px solid ${sel ? C.greenBorder : C.border}`, background: sel ? C.greenBg : 'transparent', color: sel ? C.greenLight : C.hint }}
+                    onClick={() => toggleFilterStyle(s.id)}>
+                    {s.label}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '6px', fontWeight: '600' }}>Esposizione</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+              {EXPOSURES.map(e => {
+                const sel = filterExposure.includes(e)
+                return (
+                  <div key={e}
+                    style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${sel ? C.blue : C.border}`, background: sel ? C.blueBg : 'transparent', color: sel ? C.blueLight : C.hint, fontFamily: 'monospace' }}
+                    onClick={() => toggleFilterExposure(e)}>
+                    {e}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {crags.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 20px' }}>
@@ -1651,8 +1735,15 @@ export default function ScalateSection({ initialSub, onSubChange }) {
             Aggiungi prima falesia
           </div>
         </div>
+      ) : filteredCrags.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+          <div style={{ fontSize: '36px', marginBottom: '14px' }}>🔍</div>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: C.text, marginBottom: '6px' }}>Nessuna falesia corrisponde ai filtri</div>
+          <div style={{ fontSize: '11px', color: C.muted, marginBottom: '18px' }}>Prova a modificare i criteri di ricerca</div>
+          <div style={{ fontSize: '11px', fontWeight: '600', color: C.primary, cursor: 'pointer', textDecoration: 'underline' }} onClick={clearFilters}>Cancella filtri</div>
+        </div>
       ) : (
-        crags.map(crag => {
+        filteredCrags.map(crag => {
           const cragSessions     = sessions.filter(s => s.crag_id === crag.id)
           const cragAscents      = ascents.filter(a => cragSessions.some(s => s.id === a.session_id))
           const firstAscentsHere = cragAscents.filter(a => IS_FIRST_ASCENT.includes(a.style) && a.completed)
@@ -1667,7 +1758,9 @@ export default function ScalateSection({ initialSub, onSubChange }) {
                     {crag.region && <span>{crag.region}</span>}
                     {crag.rock_type && <span style={{ color: C.hint }}>· {crag.rock_type}</span>}
                     {crag.grade_min && crag.grade_max && <span style={{ color: C.hint }}>· {crag.grade_min}–{crag.grade_max}</span>}
-                    {crag.exposure && <span style={{ color: C.blueLight, fontWeight: '700', fontFamily: 'monospace', fontSize: '9px', padding: '1px 6px', background: C.blueBg, borderRadius: '999px', border: `1px solid ${C.blueBorder}` }}>{crag.exposure}</span>}
+                    {(crag.exposure || []).length > 0 && (crag.exposure || []).map(exp => (
+                      <span key={exp} style={{ color: C.blueLight, fontWeight: '700', fontFamily: 'monospace', fontSize: '9px', padding: '1px 6px', background: C.blueBg, borderRadius: '999px', border: `1px solid ${C.blueBorder}` }}>{exp}</span>
+                    ))}
                   </div>
                   {(crag.styles || []).length > 0 && (
                     <div style={{ display: 'flex', gap: '4px', marginTop: '5px', flexWrap: 'wrap' }}>
