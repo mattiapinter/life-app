@@ -12,7 +12,7 @@ import HomeSection        from './components/Home'
 import DietaSection       from './components/Dieta'
 import AllenamentoSection from './components/Allenamento'
 import ScalateSection     from './components/Scalate'
-import CorpoSection       from './components/Corpo'
+import MetricheSection    from './components/Corpo'
 import LoginScreen        from './components/Login'
 import BottomNav          from './components/BottomNav'
 
@@ -35,10 +35,9 @@ const SUB = {
   dieta: [
     { id: 'piano',     l: 'Piano' },
     { id: 'spesa',     l: 'Spesa' },
-    { id: 'misure',    l: 'Misure' },
     { id: 'opzioni',   l: 'Opzioni' },
   ],
-  corpo: []
+  metriche: []
 }
 
 function SubNav({ tabs, active, onChange }) {
@@ -177,8 +176,8 @@ export default function App() {
         {macro === 'dieta' && (
           <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} syncing={syncing} />
         )}
-        {macro === 'corpo' && (
-          <CorpoSection />
+        {macro === 'metriche' && (
+          <MetricheSection />
         )}
       </main>
 

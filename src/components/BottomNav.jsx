@@ -6,7 +6,7 @@ export default function BottomNav({ active, onChange }) {
     { id: 'allenamento', icon: 'fitness_center', label: 'Train' },
     { id: 'scalate', icon: 'landscape', label: 'Climb' },
     { id: 'dieta', icon: 'restaurant', label: 'Diet' },
-    { id: 'corpo', icon: 'person', label: 'Body' },
+    { id: 'metriche', icon: 'monitoring', label: 'Stats' },
   ]
 
   return (

@@ -482,7 +482,106 @@ function HrvHistory() {
   )
 }
 
-export default function CorpoSection() {
+function BodyComposition({ measurements }) {
+  const last = measurements.length > 0 ? measurements[measurements.length - 1] : null
+
+  if (!last) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-5xl mb-4">📊</div>
+        <div className="text-base text-on-surface mb-2">Nessun dato disponibile</div>
+        <div className="text-sm text-on-surface-variant">Aggiungi misurazioni per vedere la stima della composizione corporea.</div>
+      </div>
+    )
+  }
+
+  const height_m = 1.77
+  const weight = last.weight_kg
+  const waist = last.waist_cm
+  const abdomen = last.abdomen_cm
+  const neck = 38
+  const hips = last.hips_cm
+
+  if (!weight || !abdomen || !hips) {
+    return (
+      <div className="text-center py-16">
+        <div className="text-5xl mb-4">📊</div>
+        <div className="text-base text-on-surface mb-2">Dati insufficienti</div>
+        <div className="text-sm text-on-surface-variant">Serve almeno: peso, addome e fianchi per la stima.</div>
+      </div>
+    )
+  }
+
+  const bmi = weight / (height_m * height_m)
+
+  const bodyFatPercentage = 495 / (1.0324 - 0.19077 * Math.log10(abdomen - neck) + 0.15456 * Math.log10(height_m * 100)) - 450
+
+  const fatMass = (bodyFatPercentage / 100) * weight
+  const leanMass = weight - fatMass
+
+  const getBmiCategory = (bmi) => {
+    if (bmi < 18.5) return { label: 'Sottopeso', color: '#89ceff' }
+    if (bmi < 25) return { label: 'Normopeso', color: '#4ae176' }
+    if (bmi < 30) return { label: 'Sovrappeso', color: '#fbbf24' }
+    return { label: 'Obesità', color: '#ffb4ab' }
+  }
+
+  const getBfCategory = (bf) => {
+    if (bf < 6) return { label: 'Essenziale', color: '#89ceff' }
+    if (bf < 14) return { label: 'Atleta', color: '#4ae176' }
+    if (bf < 18) return { label: 'Fitness', color: '#c6bfff' }
+    if (bf < 25) return { label: 'Media', color: '#fbbf24' }
+    return { label: 'Elevata', color: '#ffb4ab' }
+  }
+
+  const bmiCat = getBmiCategory(bmi)
+  const bfCat = getBfCategory(bodyFatPercentage)
+
+  const metrics = [
+    { label: 'BMI', value: bmi.toFixed(1), unit: '', desc: bmiCat.label, color: bmiCat.color },
+    { label: 'Grasso', value: bodyFatPercentage.toFixed(1), unit: '%', desc: bfCat.label, color: bfCat.color },
+    { label: 'Massa Grassa', value: fatMass.toFixed(1), unit: 'kg', desc: 'Tessuto adiposo', color: '#fb923c' },
+    { label: 'Massa Magra', value: leanMass.toFixed(1), unit: 'kg', desc: 'Muscoli + ossa', color: '#4ae176' },
+  ]
+
+  return (
+    <div className="px-6 pb-32">
+      <div className="bg-surface-container-low rounded-xl p-5 mb-4 border border-outline-variant/20">
+        <div className="text-xs text-on-surface-variant mb-3">
+          ⓘ Stima basata su Navy Method (circonferenze + altezza). Margine errore ±3-4%.
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {metrics.map(m => (
+          <div key={m.label} className="bg-surface-container-low rounded-xl p-5 border border-outline-variant/10">
+            <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: m.color }}>
+              {m.label}
+            </div>
+            <div className="flex items-baseline gap-1.5 mb-2">
+              <div className="text-3xl font-headline font-extrabold tracking-tight text-on-surface">
+                {m.value}
+              </div>
+              {m.unit && <div className="text-sm text-on-surface-variant">{m.unit}</div>}
+            </div>
+            <div className="text-xs text-on-surface-variant">{m.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-surface-container-low rounded-xl p-6">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface mb-4">Info</h3>
+        <div className="space-y-3 text-xs text-on-surface-variant leading-relaxed">
+          <p><strong className="text-on-surface">BMI:</strong> Rapporto peso/altezza. Indicativo, non considera la massa muscolare.</p>
+          <p><strong className="text-on-surface">Grasso corporeo:</strong> Stimato con circonferenze. Per atleti può sottostimare la massa muscolare.</p>
+          <p><strong className="text-on-surface">Massa magra:</strong> Include muscoli, ossa, organi e acqua.</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function MetricheSection() {
   const [sub,            setSub]            = React.useState('overview')
   const [measurements,   setMeasurements]   = React.useState([])
   const [loading,        setLoading]        = React.useState(true)
@@ -501,19 +600,21 @@ export default function CorpoSection() {
 
   const tabs = [
     { id: 'overview', l: 'Overview' },
+    { id: 'hrv',      l: 'HRV' },
+    { id: 'misure',   l: 'Misure' },
+    { id: 'composizione', l: 'Composizione' },
     { id: 'aggiungi', l: 'Aggiungi' },
     { id: 'storico',  l: 'Storico' },
-    { id: 'hrv',      l: 'HRV' },
   ]
 
   return (
     <div className="min-h-screen bg-background pb-32">
       <div className="px-6 pt-6 pb-8">
         <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
-          Misure · Composizione
+          Salute · Biometria
         </p>
         <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">
-          Corpo
+          Metriche
         </h1>
         <p className="text-on-surface-variant font-medium">
           {last
@@ -540,9 +641,9 @@ export default function CorpoSection() {
       {loading ? (
         <div className="text-center py-16 text-sm text-on-surface-variant">Caricamento...</div>
       ) : (
-        <div className="px-6">
+        <div>
           {sub === 'overview' && (
-            <>
+            <div className="px-6">
               <OverviewCards measurements={measurements} selectedMetric={selectedMetric} onSelectMetric={setSelectedMetric} />
               {selectedMetric && (
                 <div className="bg-surface-container-low rounded-xl p-6 mb-4">
@@ -595,11 +696,59 @@ export default function CorpoSection() {
                   </button>
                 </div>
               )}
-            </>
+            </div>
           )}
-          {sub === 'aggiungi' && <AddMeasurementForm onSaved={() => { load(); setSub('overview') }} />}
-          {sub === 'storico' && <StoricoTable measurements={measurements} onDeleted={load} />}
           {sub === 'hrv' && <HrvHistory />}
+          {sub === 'misure' && (
+            <div className="px-6">
+              <OverviewCards measurements={measurements} selectedMetric={selectedMetric} onSelectMetric={setSelectedMetric} />
+              {selectedMetric && (
+                <div className="bg-surface-container-low rounded-xl p-6 mb-4">
+                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/10">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: selectedMetric.color }}>
+                        {selectedMetric.label}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">{selectedMetric.desc}</div>
+                    </div>
+                    <button className="text-2xl text-on-surface-variant/60 hover:text-on-surface px-2" onClick={() => setSelectedMetric(null)}>
+                      ✕
+                    </button>
+                  </div>
+                  <MetricChart measurements={measurements} metric={selectedMetric} />
+                  {(() => {
+                    const vals = measurements.map(m => m[selectedMetric.id]).filter(v => v != null)
+                    if (vals.length < 2) return null
+                    const min = Math.min(...vals).toFixed(1)
+                    const max = Math.max(...vals).toFixed(1)
+                    const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1)
+                    return (
+                      <div className="grid grid-cols-3 gap-3 mt-4">
+                        {[{ l: 'Min', v: min }, { l: 'Media', v: avg }, { l: 'Max', v: max }].map(it => (
+                          <div key={it.l} className="text-center p-3 bg-surface-container-highest rounded-lg border border-outline-variant">
+                            <div className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">{it.l}</div>
+                            <div className="text-lg font-headline font-bold text-on-surface">{it.v}</div>
+                            <div className="text-[10px] text-on-surface-variant">{selectedMetric.unit}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+          {sub === 'composizione' && <BodyComposition measurements={measurements} />}
+          {sub === 'aggiungi' && (
+            <div className="px-6">
+              <AddMeasurementForm onSaved={() => { load(); setSub('overview') }} />
+            </div>
+          )}
+          {sub === 'storico' && (
+            <div className="px-6">
+              <StoricoTable measurements={measurements} onDeleted={load} />
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,7 +1,6 @@
 import React from 'react'
 import { C, ss, DAYS, MEALS_CATS, todayIdx, fmtDate } from '../constants'
 import { IcoCheck, IcoRandom } from './Icons'
-import CorpoSection from './Corpo'
 
 export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setWeeklyPlan, foodOptions, setFoodOptions, syncing }) {
   const [sub, setSub] = React.useState(initialSub || 'piano')
@@ -196,7 +195,6 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
 
       {sub === 'piano'   && renderPiano()}
       {sub === 'spesa'   && renderSpesa()}
-      {sub === 'misure'  && <CorpoSection />}
       {sub === 'opzioni' && renderOpzioni()}
     </div>
   )
