@@ -849,20 +849,25 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
                   ))
                 })()}
 
-                {note && (
-                  <div style={{ marginTop:'10px' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', padding:'6px 0' }}
-                      onClick={() => setNoteExpanded(noteOpen ? null : key)}>
-                      <div style={{ fontSize:'10px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em' }}>📝 Nota</div>
-                      <div style={{ fontSize:'12px', color:C.hint }}>{noteOpen ? '▲' : '▼'}</div>
-                    </div>
-                    {noteOpen && (
-                      <div style={{ fontSize:'12px', color:C.muted, lineHeight:'1.6', padding:'8px', background:C.bg, borderRadius:'8px', border:`1px solid ${C.border}` }}>
-                        {note.note_text}
+                {note && (() => {
+                  const text = note.note_text || ''
+                  const isLong = text.length > 120
+                  const preview = isLong ? text.slice(0, 120).trimEnd() + '...' : text
+                  return (
+                    <div style={{ marginTop:'10px', padding:'10px', background:C.bg, borderRadius:'8px', border:`1px solid ${C.border}`, borderLeft:`3px solid ${C.primary}` }}>
+                      <div style={{ fontSize:'9px', fontWeight:'700', color:C.primary, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'5px' }}>Nota sessione</div>
+                      <div style={{ fontSize:'12px', color:C.muted, lineHeight:'1.6' }}>
+                        {noteOpen ? text : preview}
                       </div>
-                    )}
-                  </div>
-                )}
+                      {isLong && (
+                        <div style={{ fontSize:'10px', fontWeight:'700', color:C.primary, marginTop:'6px', cursor:'pointer' }}
+                          onClick={(e) => { e.stopPropagation(); setNoteExpanded(noteOpen ? null : key) }}>
+                          {noteOpen ? 'Mostra meno ▲' : 'Leggi di più ▼'}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 <div style={{ marginTop:'12px', textAlign:'right' }}>
                   <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', opacity:0.7 }}

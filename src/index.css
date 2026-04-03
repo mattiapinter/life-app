@@ -128,6 +128,9 @@ button:active, div[role="button"]:active {
 
 .drawer-enter {
   animation: drawerIn 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
 }
 
 /* ── BOTTOM NAV ICON BOUNCE ───────────────────────── */

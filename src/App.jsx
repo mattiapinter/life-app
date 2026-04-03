@@ -45,7 +45,7 @@ function SubNav({ tabs, active, onChange }) {
   return (
     <nav className="fixed top-0 w-full z-40 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <div className="flex items-center h-14 px-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="flex items-center h-14 px-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', justifyContent: 'center', WebkitOverflowScrolling: 'touch' }}>
         <style>{`.flex::-webkit-scrollbar { display: none; }`}</style>
         {tabs.map(t => {
           const isActive = active === t.id

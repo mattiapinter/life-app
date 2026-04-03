@@ -37,9 +37,9 @@ const GRADES = [
 const GRADE_ORDER = Object.fromEntries(GRADES.map((g, i) => [g, i]))
 
 const CLIMB_STYLES = [
-  { id: 'a_vista',     label: 'A vista',     color: C.amber,  short: 'AV' },
-  { id: 'flash',       label: 'Flash',       color: C.green,  short: 'FL' },
-  { id: 'redpoint',    label: 'Redpoint',    color: C.violet, short: 'RP' },
+  { id: 'a_vista',     label: 'A vista',     color: C.green,  short: 'AV' },
+  { id: 'flash',       label: 'Flash',       color: C.amber,  short: 'FL' },
+  { id: 'redpoint',    label: 'Redpoint',    color: C.red,    short: 'RP' },
   { id: 'ripetizione', label: 'Ripetizione', color: C.blue,   short: 'RI' },
   { id: 'top_rope',    label: 'Top rope',    color: C.muted,  short: 'TR' },
 ]
@@ -294,8 +294,8 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '90vh', overflowY: 'auto' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '90vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
         onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -421,8 +421,8 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuova sessione</div>
@@ -536,7 +536,7 @@ function ProjectForm({ crags, onSaved, onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
       <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -587,7 +587,7 @@ function AttemptForm({ project, onSaved, onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
       <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -696,8 +696,8 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
   const visibleRows = rows.filter(r => !r._deleted)
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
         onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1029,21 +1029,62 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
 }
 
 // ── TIRI TAB ───────────────────────────────────────────────────────
+function AscentCard({ a, sess, crag, onEdit }) {
+  const styleInfo = STYLE_MAP[a.style] || STYLE_MAP.redpoint
+  return (
+    <div className="card-enter press-scale" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px', background: C.surface, borderRadius: '12px', marginBottom: '6px', border: `1px solid ${styleInfo.color}33` }}>
+      <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${styleInfo.color}18`, border: `1px solid ${styleInfo.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: '800', color: styleInfo.color }}>{a.grade}</div>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ fontSize: '12px', fontWeight: '600', color: a.route_name ? C.text : C.muted }}>
+            {a.route_name || 'Via senza nome'}
+          </div>
+          <div style={{ fontSize: '9px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: `${styleInfo.color}22`, color: styleInfo.color, flexShrink: 0 }}>{styleInfo.short}</div>
+          {!a.completed && <div style={{ fontSize: '9px', color: C.hint }}>tentativo</div>}
+        </div>
+        <div style={{ fontSize: '10px', color: C.hint, marginTop: '2px' }}>
+          {crag?.name && <span>{crag.name}</span>}
+          {sess?.session_date && <span style={{ marginLeft: '6px' }}>· {fmtDateShort(sess.session_date)}</span>}
+          {a.attempts > 1 && <span style={{ marginLeft: '6px' }}>· {a.attempts} tent.</span>}
+        </div>
+        {a.notes && (
+          <div style={{ fontSize: '10px', color: C.muted, marginTop: '3px', lineHeight: '1.5', borderLeft: `2px solid ${styleInfo.color}44`, paddingLeft: '6px' }}>
+            {a.notes}
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
+        {a.quality_stars > 0 && (
+          <div style={{ fontSize: '9px', color: styleInfo.color }}>{'★'.repeat(a.quality_stars)}</div>
+        )}
+        {a.rpe && (
+          <div style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: a.rpe <= 6 ? C.greenBg : a.rpe <= 8 ? C.amberBg : C.redBg, color: a.rpe <= 6 ? C.greenLight : a.rpe <= 8 ? C.amberLight : C.redLight }}>
+            RPE {a.rpe}
+          </div>
+        )}
+        {sess && onEdit && (
+          <div style={{ fontSize: '11px', color: C.violet, cursor: 'pointer', padding: '3px 7px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '6px', fontWeight: '600' }}
+            onClick={() => onEdit(sess)}>✎</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function TiriTab({ ascents, sessions, crags, onRefresh }) {
-  const [filter, setFilter] = React.useState('tutti')
-  const [editSession, setEditSession] = React.useState(null)
+  const [editSession,     setEditSession]     = React.useState(null)
+  const [showRipetizioni, setShowRipetizioni] = React.useState(false)
 
-  const filtered = ascents.filter(a => {
-    if (filter === 'prime')       return IS_FIRST_ASCENT.includes(a.style) && a.completed
-    if (filter === 'ripetizioni') return a.style === 'ripetizione'
-    return true
-  })
-
-  const sorted = [...filtered].sort((a, b) => {
+  const sortByDate = (arr) => [...arr].sort((a, b) => {
     const sA = sessions.find(s => s.id === a.session_id)
     const sB = sessions.find(s => s.id === b.session_id)
     return (sB?.session_date || '').localeCompare(sA?.session_date || '')
   })
+
+  const primeSalite  = sortByDate(ascents.filter(a => IS_FIRST_ASCENT.includes(a.style) && a.completed))
+  const ripetizioni  = sortByDate(ascents.filter(a => a.style === 'ripetizione'))
 
   if (ascents.length === 0) {
     return (
@@ -1066,47 +1107,55 @@ function TiriTab({ ascents, sessions, crags, onRefresh }) {
         />
       )}
 
-      <div style={{ display: 'flex', background: C.surface, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '3px', marginBottom: '16px' }}>
-        {[{ id: 'tutti', l: 'Tutti' }, { id: 'prime', l: 'Prime salite' }, { id: 'ripetizioni', l: 'Ripetizioni' }].map(f => (
-          <div key={f.id} style={ss.pill(filter === f.id)} onClick={() => setFilter(f.id)}>{f.l}</div>
-        ))}
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+        {[
+          { style: 'a_vista', label: 'A vista', color: C.green },
+          { style: 'flash',   label: 'Flash',   color: C.amber },
+          { style: 'redpoint', label: 'Redpoint', color: C.red },
+        ].map(({ style, label, color }) => {
+          const count = primeSalite.filter(a => a.style === style).length
+          return (
+            <div key={style} style={{ flex: 1, background: `${color}12`, border: `1px solid ${color}33`, borderRadius: '10px', padding: '8px 4px', textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', fontWeight: '800', color }}>{count}</div>
+              <div style={{ fontSize: '9px', fontWeight: '700', color, textTransform: 'uppercase', letterSpacing: '.06em', marginTop: '2px' }}>{label}</div>
+            </div>
+          )
+        })}
       </div>
-      <div style={{ fontSize: '11px', color: C.hint, marginBottom: '12px' }}>{sorted.length} tiri</div>
-      {sorted.map((a, i) => {
-        const sess      = sessions.find(s => s.id === a.session_id)
-        const crag      = crags.find(c => c.id === sess?.crag_id)
-        const styleInfo = STYLE_MAP[a.style] || STYLE_MAP.redpoint
-        return (
-          <div key={a.id || i} className="card-enter press-scale" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px', background: C.surface, borderRadius: '12px', marginBottom: '6px', border: `1px solid ${C.border}` }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${styleInfo.color}18`, border: `1px solid ${styleInfo.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <div style={{ fontSize: '13px', fontWeight: '800', color: styleInfo.color }}>{a.grade}</div>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: a.route_name ? C.text : C.muted }}>
-                  {a.route_name || 'Via senza nome'}
-                </div>
-                <div style={{ fontSize: '9px', fontWeight: '700', padding: '1px 6px', borderRadius: '999px', background: `${styleInfo.color}22`, color: styleInfo.color, flexShrink: 0 }}>{styleInfo.short}</div>
-                {!a.completed && <div style={{ fontSize: '9px', color: C.hint }}>tentativo</div>}
-              </div>
-              <div style={{ fontSize: '10px', color: C.hint, marginTop: '2px' }}>
-                {crag?.name && <span>{crag.name}</span>}
-                {sess?.session_date && <span style={{ marginLeft: '6px' }}>· {fmtDateShort(sess.session_date)}</span>}
-                {a.attempts > 1 && <span style={{ marginLeft: '6px' }}>· {a.attempts} tent.</span>}
-              </div>
-            </div>
-            {a.rpe && (
-              <div style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: a.rpe <= 6 ? C.greenBg : a.rpe <= 8 ? C.amberBg : C.redBg, color: a.rpe <= 6 ? C.greenLight : a.rpe <= 8 ? C.amberLight : C.redLight, flexShrink: 0 }}>
-                RPE {a.rpe}
-              </div>
-            )}
-            {sess && (
-              <div style={{ fontSize: '11px', color: C.violet, cursor: 'pointer', padding: '4px 8px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '8px', fontWeight: '600', flexShrink: 0 }}
-                onClick={() => setEditSession(sess)}>✎</div>
-            )}
-          </div>
-        )
+
+      <div style={{ fontSize: '11px', color: C.hint, marginBottom: '12px' }}>{primeSalite.length} prime salite</div>
+
+      {primeSalite.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '24px', fontSize: '12px', color: C.hint }}>Nessuna prima salita ancora</div>
+      )}
+
+      {primeSalite.map((a) => {
+        const sess = sessions.find(s => s.id === a.session_id)
+        const crag = crags.find(c => c.id === sess?.crag_id)
+        return <AscentCard key={a.id} a={a} sess={sess} crag={crag} onEdit={setEditSession} />
       })}
+
+      {ripetizioni.length > 0 && (
+        <div style={{ marginTop: '16px' }}>
+          <div
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '10px 14px', background: C.surface, borderRadius: '10px', border: `1px solid ${C.border}` }}
+            onClick={() => setShowRipetizioni(p => !p)}>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: C.blue, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              Ripetizioni · {ripetizioni.length}
+            </div>
+            <div style={{ fontSize: '14px', color: C.hint }}>{showRipetizioni ? '▲' : '▼'}</div>
+          </div>
+          {showRipetizioni && (
+            <div style={{ marginTop: '8px' }}>
+              {ripetizioni.map(a => {
+                const sess = sessions.find(s => s.id === a.session_id)
+                const crag = crags.find(c => c.id === sess?.crag_id)
+                return <AscentCard key={a.id} a={a} sess={sess} crag={crag} onEdit={setEditSession} />
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
