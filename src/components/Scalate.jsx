@@ -374,7 +374,7 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
   const [ascents, setAscents] = React.useState([])
   const [saving,  setSaving]  = React.useState(false)
 
-  const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null }])
+  const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '' }])
   const updateAscent = (i, field, val) => setAscents(p => p.map((a, idx) => idx === i ? { ...a, [field]: val } : a))
   const removeAscent = (i) => setAscents(p => p.filter((_, idx) => idx !== i))
 
@@ -394,7 +394,7 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
     if (sessionId) {
       for (const a of ascents) {
         if (!a.route_name.trim() && !a.grade) continue
-        await saveAscent({ session_id: sessionId, route_name: a.route_name.trim(), grade: a.grade, style: a.style, completed: a.completed, attempts: parseInt(a.attempts) || 1, rpe: a.rpe ? parseInt(a.rpe) : null, quality_stars: a.quality_stars ?? null })
+        await saveAscent({ session_id: sessionId, route_name: a.route_name.trim(), grade: a.grade, style: a.style, completed: a.completed, attempts: parseInt(a.attempts) || 1, rpe: a.rpe ? parseInt(a.rpe) : null, quality_stars: a.quality_stars ?? null, notes: a.notes?.trim() || null })
       }
     }
     setSaving(false)
@@ -477,6 +477,11 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
               <div style={{ fontSize: '10px', color: C.hint }}>Qualita':</div>
               <StarRating value={a.quality_stars} onChange={v => updateAscent(i, 'quality_stars', v)} size={18} />
             </div>
+            {a.style !== 'ripetizione' && (
+              <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.5', marginTop: '8px', fontSize: '12px' }}
+                rows={2} placeholder="Note tiro..." value={a.notes || ''}
+                onChange={e => updateAscent(i, 'notes', e.target.value)} />
+            )}
           </div>
         ))}
 
@@ -607,7 +612,7 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
     setRows(p => p.map(r => r.id === id ? { ...r, _deleted: true } : r))
 
   const addNew = () =>
-    setNewTiri(p => [...p, { _key: Date.now(), route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null }])
+    setNewTiri(p => [...p, { _key: Date.now(), route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '' }])
   const updateNew = (key, field, val) =>
     setNewTiri(p => p.map(t => t._key === key ? { ...t, [field]: val } : t))
   const removeNew = (key) =>
@@ -643,6 +648,7 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
             attempts: parseInt(r.attempts) || 1,
             rpe: r.rpe ? parseInt(r.rpe) : null,
             quality_stars: r.quality_stars ?? null,
+            notes: r.notes?.trim() || null,
           }).eq('id', r.id)
         })()
       )
@@ -659,6 +665,7 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
         attempts: parseInt(t.attempts) || 1,
         rpe: t.rpe ? parseInt(t.rpe) : null,
         quality_stars: t.quality_stars ?? null,
+        notes: t.notes?.trim() || null,
       }))
     }
 
@@ -747,6 +754,11 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
                     <div style={{ fontSize: '9px', color: C.hint }}>Qualita':</div>
                     <StarRating value={r.quality_stars} onChange={v => updateRow(r.id, 'quality_stars', v)} size={16} />
                   </div>
+                  {r.style !== 'ripetizione' && (
+                    <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.5', marginTop: '8px', fontSize: '12px' }}
+                      rows={2} placeholder="Note tiro..." value={r.notes || ''}
+                      onChange={e => updateRow(r.id, 'notes', e.target.value)} />
+                  )}
                 </div>
               )
             })}
@@ -795,6 +807,11 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
               <div style={{ fontSize: '9px', color: C.hint }}>Qualita':</div>
               <StarRating value={t.quality_stars} onChange={v => updateNew(t._key, 'quality_stars', v)} size={16} />
             </div>
+            {t.style !== 'ripetizione' && (
+              <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.5', marginTop: '8px', fontSize: '12px' }}
+                rows={2} placeholder="Note tiro..." value={t.notes || ''}
+                onChange={e => updateNew(t._key, 'notes', e.target.value)} />
+            )}
           </div>
         ))}
 
