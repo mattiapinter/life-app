@@ -143,9 +143,9 @@ export default function App() {
 
   if (user === undefined) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse">
-          <div className="text-2xl font-headline font-extrabold tracking-tighter text-primary uppercase">
+      <div className="min-h-screen bg-background flex items-center justify-center overflow-hidden">
+        <div className="logo-loader">
+          <div className="text-6xl font-headline font-extrabold tracking-tighter text-primary uppercase">
             LIFE
           </div>
         </div>

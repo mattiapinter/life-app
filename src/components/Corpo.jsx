@@ -2,7 +2,7 @@ import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import { todayStr, fmtDateShort } from '../constants'
-import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement } from '../lib/supabase'
+import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement, loadUserProfile } from '../lib/supabase'
 
 export { loadBodyMeasurements }
 
@@ -482,7 +482,7 @@ function HrvHistory() {
   )
 }
 
-function BodyComposition({ measurements }) {
+function BodyComposition({ measurements, userProfile }) {
   const last = measurements.length > 0 ? measurements[measurements.length - 1] : null
 
   if (!last) {
@@ -495,11 +495,11 @@ function BodyComposition({ measurements }) {
     )
   }
 
-  const height_m = 1.77
+  const height_m = (userProfile?.height_cm || 185) / 100
   const weight = last.weight_kg
   const waist = last.waist_cm
   const abdomen = last.abdomen_cm
-  const neck = 38
+  const neck = userProfile?.neck_cm || 38
   const hips = last.hips_cm
 
   if (!weight || !abdomen || !hips) {
@@ -586,11 +586,16 @@ export default function MetricheSection() {
   const [measurements,   setMeasurements]   = React.useState([])
   const [loading,        setLoading]        = React.useState(true)
   const [selectedMetric, setSelectedMetric] = React.useState(null)
+  const [userProfile,    setUserProfile]    = React.useState(null)
 
   const load = async () => {
     setLoading(true)
-    const data = await loadBodyMeasurements()
+    const [data, profile] = await Promise.all([
+      loadBodyMeasurements(),
+      loadUserProfile()
+    ])
     setMeasurements(data)
+    setUserProfile(profile)
     setLoading(false)
   }
 
@@ -738,7 +743,7 @@ export default function MetricheSection() {
               )}
             </div>
           )}
-          {sub === 'composizione' && <BodyComposition measurements={measurements} />}
+          {sub === 'composizione' && <BodyComposition measurements={measurements} userProfile={userProfile} />}
           {sub === 'aggiungi' && (
             <div className="px-6">
               <AddMeasurementForm onSaved={() => { load(); setSub('overview') }} />

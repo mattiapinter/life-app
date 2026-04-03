@@ -333,3 +333,33 @@ export const deleteBodyMeasurement = async (id) => {
   try { const { error } = await db.from('body_measurements').delete().eq('id', id).eq('user_id', userId); if (error) throw error; return true }
   catch(e) { return false }
 }
+
+// ── USER PROFILE ────────────────────────────────────────────────────
+export const loadUserProfile = async () => {
+  const userId = await uid(); if (!userId) return null
+  try {
+    const { data, error } = await db.from('user_profiles').select('*').eq('user_id', userId).maybeSingle()
+    if (error) throw error
+    if (!data) {
+      const { data: newProfile, error: insertError } = await db.from('user_profiles')
+        .insert([{ user_id: userId, height_cm: 185, neck_cm: 38.0 }])
+        .select()
+        .single()
+      if (insertError) throw insertError
+      return newProfile
+    }
+    return data
+  } catch(e) { return null }
+}
+export const saveUserProfile = async (profile) => {
+  const userId = await uid(); if (!userId) return false
+  try {
+    const { error } = await db.from('user_profiles').upsert([{
+      user_id: userId,
+      height_cm: profile.height_cm,
+      neck_cm: profile.neck_cm,
+      updated_at: new Date().toISOString()
+    }], { onConflict: 'user_id' })
+    if (error) throw error; return true
+  } catch(e) { return false }
+}
