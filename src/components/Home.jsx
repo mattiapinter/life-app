@@ -119,7 +119,7 @@ function HrvWidget({ hrvLogs, onHrvSaved }) {
           <input
             type="number"
             inputMode="numeric"
-            className="flex-1 bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-2xl font-headline font-bold text-center text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="w-24 bg-surface-container-highest border-2 border-outline-variant rounded-xl px-3 py-3 text-2xl font-headline font-bold text-center text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/20"
             placeholder="HRV"
             value={inputVal}
             onChange={e => setInputVal(e.target.value)}
@@ -127,7 +127,7 @@ function HrvWidget({ hrvLogs, onHrvSaved }) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+            className="flex-1 rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-50 whitespace-nowrap"
             style={{
               background: saved ? '#4ae176' : 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
               color: saved ? '#003915' : '#160066',
