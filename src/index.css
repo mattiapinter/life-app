@@ -7,12 +7,29 @@
 
 html, body, #root {
   height: 100%;
-  background: #0A0E12;
-  color: #F7FAFC;
-  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #131313;
+  color: #e5e2e1;
+  font-family: 'Inter', sans-serif;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.kinetic-gradient {
+  background: linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @keyframes slideUp {
@@ -42,11 +59,11 @@ html, body, #root {
 select {
   -webkit-appearance: none;
   appearance: none;
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 textarea, input {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 input[type=number] {
@@ -60,8 +77,8 @@ input::-webkit-inner-spin-button {
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: #14B8A6 !important;
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.15) !important;
+  border-color: #c6bfff !important;
+  box-shadow: 0 0 0 3px rgba(198, 191, 255, 0.15) !important;
 }
 
 button:active, div[role="button"]:active {
@@ -69,6 +86,6 @@ button:active, div[role="button"]:active {
 }
 
 ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: #0A0E12; }
-::-webkit-scrollbar-thumb { background: #1F2933; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #2D3748; }
+::-webkit-scrollbar-track { background: #131313; }
+::-webkit-scrollbar-thumb { background: #353534; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #474553; }

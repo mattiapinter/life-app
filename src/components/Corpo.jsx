@@ -1,23 +1,21 @@
 import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
-import { C, ss, todayStr, fmtDateShort } from '../constants'
+import { todayStr, fmtDateShort } from '../constants'
 import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement } from '../lib/supabase'
 
 export { loadBodyMeasurements }
 
-// ── METRIC DEFINITIONS ─────────────────────────────────────────────
 const METRICS = [
-  { id: 'weight_kg',    label: 'Peso',         unit: 'kg',  color: C.violet,  desc: 'Peso corporeo a digiuno' },
-  { id: 'bicep_cm',     label: 'Bicipite',      unit: 'cm',  color: C.blue,    desc: 'Metà del bicipite, braccio rilassato' },
-  { id: 'chest_cm',     label: 'Petto',         unit: 'cm',  color: C.green,   desc: 'A livello dei capezzoli' },
-  { id: 'waist_cm',     label: 'Vita',          unit: 'cm',  color: C.amber,   desc: 'Punto più stretto della vita' },
-  { id: 'abdomen_cm',   label: 'Addome',        unit: 'cm',  color: C.orange,  desc: 'A livello dell\'ombelico' },
-  { id: 'hips_cm',      label: 'Fianchi',       unit: 'cm',  color: C.red,     desc: 'Massima estensione del gluteo' },
-  { id: 'thigh_cm',     label: 'Coscia DX',     unit: 'cm',  color: C.green,   desc: 'Metà coscia destra' },
+  { id: 'weight_kg',    label: 'Peso',      unit: 'kg',  color: '#c6bfff',  desc: 'Peso corporeo a digiuno' },
+  { id: 'bicep_cm',     label: 'Bicipite',  unit: 'cm',  color: '#89ceff',  desc: 'Metà del bicipite, braccio rilassato' },
+  { id: 'chest_cm',     label: 'Petto',     unit: 'cm',  color: '#4ae176',  desc: 'A livello dei capezzoli' },
+  { id: 'waist_cm',     label: 'Vita',      unit: 'cm',  color: '#fbbf24',  desc: 'Punto più stretto della vita' },
+  { id: 'abdomen_cm',   label: 'Addome',    unit: 'cm',  color: '#fb923c',  desc: 'A livello dell\'ombelico' },
+  { id: 'hips_cm',      label: 'Fianchi',   unit: 'cm',  color: '#ffb4ab',  desc: 'Massima estensione del gluteo' },
+  { id: 'thigh_cm',     label: 'Coscia DX', unit: 'cm',  color: '#4ae176',  desc: 'Metà coscia destra' },
 ]
 
-// ── MINI SPARKLINE ─────────────────────────────────────────────────
 function Sparkline({ data, color }) {
   const canvasRef = React.useRef(null)
   const chartRef  = React.useRef(null)
@@ -48,10 +46,9 @@ function Sparkline({ data, color }) {
   }, [data, color])
 
   if (data.length < 2) return null
-  return <div style={{ position: 'relative', height: '32px', width: '80px' }}><canvas ref={canvasRef} /></div>
+  return <div className="relative h-8 w-20"><canvas ref={canvasRef} /></div>
 }
 
-// ── FULL CHART ─────────────────────────────────────────────────────
 function MetricChart({ measurements, metric }) {
   const canvasRef = React.useRef(null)
   const chartRef  = React.useRef(null)
@@ -78,19 +75,18 @@ function MetricChart({ measurements, metric }) {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { enabled: true, mode: 'index', intersect: false } },
         scales: {
-          x: { ticks: { color: '#666', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
-          y: { ticks: { color: '#666', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+          x: { ticks: { color: '#928f9f', font: { size: 9 } }, grid: { color: '#353534' } },
+          y: { ticks: { color: '#928f9f', font: { size: 9 } }, grid: { color: '#353534' } },
         }
       }
     })
     return () => { if (chartRef.current) chartRef.current.destroy() }
   }, [measurements, metric])
 
-  if (pts.length === 0) return <div style={{ textAlign: 'center', padding: '20px', fontSize: '11px', color: C.hint }}>Nessun dato per questa metrica</div>
-  return <div style={{ position: 'relative', height: '160px' }}><canvas ref={canvasRef} /></div>
+  if (pts.length === 0) return <div className="text-center py-8 text-xs text-on-surface-variant">Nessun dato per questa metrica</div>
+  return <div className="relative h-40"><canvas ref={canvasRef} /></div>
 }
 
-// ── INPUT FORM ─────────────────────────────────────────────────────
 function AddMeasurementForm({ onSaved }) {
   const [date,   setDate]   = React.useState(todayStr())
   const [vals,   setVals]   = React.useState({})
@@ -113,23 +109,23 @@ function AddMeasurementForm({ onSaved }) {
   }
 
   return (
-    <div style={ss.card}>
-      <div style={ss.secLbl}>Nuova misurazione</div>
-      <div style={{ marginBottom: '14px' }}>
-        <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Data</div>
-        <input type="date" style={ss.inp} value={date} onChange={e => setDate(e.target.value)} />
+    <div className="bg-surface-container-low rounded-xl p-6">
+      <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface mb-5">Nuova Misurazione</h3>
+      <div className="mb-5">
+        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Data</label>
+        <input type="date" className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-on-surface" value={date} onChange={e => setDate(e.target.value)} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+      <div className="grid grid-cols-2 gap-4 mb-6">
         {METRICS.map(m => (
           <div key={m.id}>
-            <div style={{ fontSize: '10px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: m.color, flexShrink: 0 }} />
-              <span style={{ color: C.muted, fontWeight: '500' }}>{m.label}</span>
-              <span style={{ color: C.hint, fontSize: '9px' }}>{m.unit}</span>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
+              <span className="text-xs text-on-surface-variant font-semibold">{m.label}</span>
+              <span className="text-[10px] text-on-surface-variant/60">{m.unit}</span>
             </div>
             <input
               type="number" step="0.1"
-              style={{ ...ss.inp, fontSize: '15px', fontWeight: '600', padding: '10px', textAlign: 'center' }}
+              className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-base font-bold text-on-surface"
               placeholder="—"
               value={vals[m.id] || ''}
               onChange={e => sv(m.id, e.target.value)}
@@ -137,21 +133,28 @@ function AddMeasurementForm({ onSaved }) {
           </div>
         ))}
       </div>
-      <div style={{ ...ss.savBtn, opacity: (!hasAny || saving) ? 0.4 : 1, background: saved ? C.green : C.violet }} onClick={handleSave}>
-        {saving ? 'Salvataggio...' : saved ? '✓ Salvato!' : 'Salva misurazione'}
-      </div>
+      <button
+        onClick={handleSave}
+        disabled={!hasAny || saving}
+        className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all disabled:opacity-40"
+        style={{
+          background: saved ? '#4ae176' : 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
+          color: saved ? '#003915' : '#160066',
+          boxShadow: saved ? '0 4px 16px rgba(74, 225, 118, 0.3)' : '0 4px 16px rgba(198, 191, 255, 0.3)'
+        }}>
+        {saving ? 'Salvataggio...' : saved ? '✓ Salvato!' : 'Salva Misurazione'}
+      </button>
     </div>
   )
 }
 
-// ── OVERVIEW CARDS ─────────────────────────────────────────────────
 function OverviewCards({ measurements, onSelectMetric, selectedMetric }) {
   if (measurements.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-        <div style={{ fontSize: '36px', marginBottom: '12px' }}>📏</div>
-        <div style={{ fontSize: '14px', color: C.muted, marginBottom: '6px' }}>Nessuna misurazione ancora</div>
-        <div style={{ fontSize: '12px', color: C.hint }}>Aggiungi la prima per iniziare a tracciare il progresso.</div>
+      <div className="text-center py-16">
+        <div className="text-5xl mb-4">📏</div>
+        <div className="text-base text-on-surface mb-2">Nessuna misurazione ancora</div>
+        <div className="text-sm text-on-surface-variant">Aggiungi la prima per iniziare a tracciare il progresso.</div>
       </div>
     )
   }
@@ -161,7 +164,7 @@ function OverviewCards({ measurements, onSelectMetric, selectedMetric }) {
   const first = measurements[0]
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+    <div className="grid grid-cols-2 gap-3 mb-4">
       {METRICS.map(m => {
         const val      = last[m.id]
         const prevVal  = prev?.[m.id]
@@ -171,73 +174,88 @@ function OverviewCards({ measurements, onSelectMetric, selectedMetric }) {
         const pts      = measurements.map(ms => ({ x: ms.measured_at?.slice(0,10), y: ms[m.id] })).filter(p => p.y != null)
         const isSelected = selectedMetric?.id === m.id
         if (val == null && pts.length === 0) return null
+
+        const getDeltaBg = (delta) => {
+          const lowerIsBetter = ['abdomen_cm', 'hips_cm', 'waist_cm', 'weight_kg']
+          if (lowerIsBetter.includes(m.id)) return delta <= 0 ? 'rgba(74, 225, 118, 0.1)' : 'rgba(255, 180, 171, 0.1)'
+          return delta >= 0 ? 'rgba(74, 225, 118, 0.1)' : 'rgba(255, 180, 171, 0.1)'
+        }
+
+        const getDeltaColor = (delta) => {
+          const lowerIsBetter = ['abdomen_cm', 'hips_cm', 'waist_cm', 'weight_kg']
+          if (lowerIsBetter.includes(m.id)) return delta <= 0 ? '#4ae176' : '#ffb4ab'
+          return delta >= 0 ? '#4ae176' : '#ffb4ab'
+        }
+
         return (
-          <div key={m.id}
-            style={{ background: isSelected ? `${m.color}12` : C.surface, border: `1px solid ${isSelected ? m.color + '55' : C.border}`, borderRadius: '14px', padding: '12px', cursor: 'pointer' }}
-            onClick={() => onSelectMetric(isSelected ? null : m)}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+          <button
+            key={m.id}
+            onClick={() => onSelectMetric(isSelected ? null : m)}
+            className="rounded-xl p-4 transition-all text-left"
+            style={{
+              background: isSelected ? `${m.color}12` : '#1c1b1b',
+              border: `1.5px solid ${isSelected ? m.color + '55' : '#353534'}`
+            }}>
+            <div className="flex justify-between items-start mb-3">
               <div>
-                <div style={{ fontSize: '9px', fontWeight: '600', color: m.color, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '2px' }}>{m.label}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: val != null ? C.text : C.hint, letterSpacing: '-.02em' }}>{val != null ? val : '—'}</div>
-                  <div style={{ fontSize: '10px', color: C.muted }}>{m.unit}</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: m.color }}>
+                  {m.label}
+                </div>
+                <div className="flex items-baseline gap-1.5">
+                  <div className="text-2xl font-headline font-extrabold tracking-tight text-on-surface">
+                    {val != null ? val : '—'}
+                  </div>
+                  <div className="text-xs text-on-surface-variant">{m.unit}</div>
                 </div>
               </div>
               <Sparkline data={pts} color={m.color} />
             </div>
-            <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+            <div className="flex gap-2 flex-wrap">
               {delta !== null && (
-                <div style={{ fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '999px', background: getDeltaBg(m.id, parseFloat(delta)), color: getDeltaColor(m.id, parseFloat(delta)) }}>
+                <div className="text-[10px] font-bold px-2 py-1 rounded-full"
+                  style={{
+                    background: getDeltaBg(parseFloat(delta)),
+                    color: getDeltaColor(parseFloat(delta))
+                  }}>
                   {parseFloat(delta) > 0 ? '+' : ''}{delta} vs prec.
                 </div>
               )}
               {totalDelta !== null && (
-                <div style={{ fontSize: '10px', fontWeight: '600', padding: '2px 6px', borderRadius: '999px', background: C.surface, color: C.hint, border: `1px solid ${C.border}` }}>
+                <div className="text-[10px] font-semibold px-2 py-1 rounded-full bg-surface-container border border-outline-variant text-on-surface-variant">
                   {parseFloat(totalDelta) > 0 ? '+' : ''}{totalDelta} totale
                 </div>
               )}
             </div>
-          </div>
+          </button>
         )
       }).filter(Boolean)}
     </div>
   )
 }
 
-function getDeltaBg(id, delta) {
-  const lowerIsBetter = ['abdomen_cm', 'hips_cm', 'waist_cm', 'weight_kg']
-  if (lowerIsBetter.includes(id)) return delta <= 0 ? C.greenBg : C.redBg
-  return delta >= 0 ? C.greenBg : C.redBg
-}
-function getDeltaColor(id, delta) {
-  const lowerIsBetter = ['abdomen_cm', 'hips_cm', 'waist_cm', 'weight_kg']
-  if (lowerIsBetter.includes(id)) return delta <= 0 ? C.greenLight : C.redLight
-  return delta >= 0 ? C.greenLight : C.redLight
-}
-
-// ── STORICO TABELLA ────────────────────────────────────────────────
 function StoricoTable({ measurements, onDeleted }) {
   const [confirmDel, setConfirmDel] = React.useState(null)
   const [deleting,   setDeleting]   = React.useState(false)
   const sorted = [...measurements].reverse()
 
   if (sorted.length === 0) {
-    return <div style={{ textAlign: 'center', padding: '32px 20px', fontSize: '13px', color: C.hint }}>Nessuna misurazione ancora.</div>
+    return <div className="text-center py-12 text-sm text-on-surface-variant">Nessuna misurazione ancora.</div>
   }
 
   return (
     <div>
       {confirmDel && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
-          onClick={() => setConfirmDel(null)}>
-          <div style={{ background: C.surface, borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '320px', border: `1px solid ${C.redBorder}` }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: C.text, marginBottom: '8px' }}>Elimina misurazione</div>
-            <div style={{ fontSize: '13px', color: C.muted, marginBottom: '20px' }}>del {fmtDateShort(confirmDel.measured_at?.slice(0,10))}?</div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: 'pointer', background: C.bg, border: `1px solid ${C.border}`, fontSize: '13px', color: C.muted }}
-                onClick={() => setConfirmDel(null)}>Annulla</div>
-              <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: 'pointer', background: C.redBg, border: `1px solid ${C.redBorder}`, fontSize: '13px', fontWeight: '600', color: C.red, opacity: deleting ? 0.5 : 1 }}
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6" onClick={() => setConfirmDel(null)}>
+          <div className="bg-surface-container rounded-xl p-6 w-full max-w-sm border border-error/20" onClick={e => e.stopPropagation()}>
+            <div className="text-base font-bold text-on-surface mb-2">Elimina misurazione</div>
+            <div className="text-sm text-on-surface-variant mb-5">del {fmtDateShort(confirmDel.measured_at?.slice(0,10))}?</div>
+            <div className="flex gap-3">
+              <button className="flex-1 py-3 rounded-xl text-sm font-semibold text-on-surface-variant bg-surface-container-highest border border-outline-variant" onClick={() => setConfirmDel(null)}>
+                Annulla
+              </button>
+              <button
+                className="flex-1 py-3 rounded-xl text-sm font-bold text-error bg-error/10 border border-error/20 disabled:opacity-50"
+                disabled={deleting}
                 onClick={async () => {
                   setDeleting(true)
                   await deleteBodyMeasurement(confirmDel.id)
@@ -245,27 +263,29 @@ function StoricoTable({ measurements, onDeleted }) {
                   setDeleting(false); setConfirmDel(null)
                 }}>
                 {deleting ? '...' : 'Elimina'}
-              </div>
+              </button>
             </div>
           </div>
         </div>
       )}
       {sorted.map((m, i) => (
-        <div key={m.id || i} style={{ ...ss.card, marginBottom: '8px', padding: '12px 14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <div style={{ fontSize: '12px', fontWeight: '700', color: C.text }}>{fmtDateShort(m.measured_at?.slice(0,10))}</div>
-            <div style={{ fontSize: '10px', color: C.red, cursor: 'pointer', opacity: 0.6 }} onClick={() => setConfirmDel(m)}>Elimina</div>
+        <div key={m.id || i} className="bg-surface-container-low rounded-xl p-4 mb-3">
+          <div className="flex justify-between items-center mb-3">
+            <div className="text-sm font-bold text-on-surface">{fmtDateShort(m.measured_at?.slice(0,10))}</div>
+            <button className="text-xs text-error/60 hover:text-error" onClick={() => setConfirmDel(m)}>
+              Elimina
+            </button>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div className="flex flex-wrap gap-2">
             {METRICS.map(met => {
               const val = m[met.id]
               if (val == null) return null
               return (
-                <div key={met.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: '6px' }}>
-                  <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: met.color }} />
-                  <span style={{ fontSize: '10px', color: C.muted }}>{met.label}</span>
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: C.text }}>{val}</span>
-                  <span style={{ fontSize: '9px', color: C.hint }}>{met.unit}</span>
+                <div key={met.id} className="flex items-center gap-2 px-3 py-1.5 bg-surface-container-highest rounded-lg border border-outline-variant">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: met.color }} />
+                  <span className="text-xs text-on-surface-variant">{met.label}</span>
+                  <span className="text-sm font-bold text-on-surface">{val}</span>
+                  <span className="text-[10px] text-on-surface-variant/60">{met.unit}</span>
                 </div>
               )
             })}
@@ -276,11 +296,9 @@ function StoricoTable({ measurements, onDeleted }) {
   )
 }
 
-// ── HRV HISTORY ────────────────────────────────────────────────────
 function HrvHistory() {
   const [hrvLogs, setHrvLogs] = React.useState([])
   const [loading, setLoading] = React.useState(true)
-  // id della riga in modifica, null = nessuna
   const [editingId,  setEditingId]  = React.useState(null)
   const [editVal,    setEditVal]    = React.useState('')
   const [savingEdit, setSavingEdit] = React.useState(false)
@@ -304,9 +322,7 @@ function HrvHistory() {
     return 'red'
   }
 
-  const statusColor  = { green: C.green, yellow: C.amber, red: C.red, neutral: C.hint }
-  const statusBg     = { green: C.greenBg, yellow: C.amberBg, red: C.redBg, neutral: C.surface }
-  const statusBorder = { green: C.greenBorder, yellow: C.amberBorder, red: C.redBorder, neutral: C.border }
+  const statusColor = { green: '#4ae176', yellow: '#fbbf24', red: '#ffb4ab', neutral: '#928f9f' }
 
   React.useEffect(() => {
     if (!canvasRef.current || sorted.length < 2) return
@@ -318,7 +334,7 @@ function HrvHistory() {
         datasets: [
           {
             data: sorted.map(r => r.hrv_value),
-            borderColor: C.violet, backgroundColor: 'rgba(123,111,232,0.1)',
+            borderColor: '#c6bfff', backgroundColor: 'rgba(198, 191, 255, 0.1)',
             tension: 0.35, fill: true, pointRadius: 4, borderWidth: 2,
             pointBackgroundColor: sorted.map(r => statusColor[getStatus(r.hrv_value, avg7)]),
           },
@@ -327,7 +343,7 @@ function HrvHistory() {
               const slice = sorted.slice(Math.max(0, i - 6), i + 1)
               return Math.round(slice.reduce((s, r) => s + r.hrv_value, 0) / slice.length)
             }),
-            borderColor: C.muted, borderDash: [4, 4],
+            borderColor: '#928f9f', borderDash: [4, 4],
             tension: 0.35, fill: false, pointRadius: 0, borderWidth: 1.5,
           },
         ],
@@ -336,15 +352,14 @@ function HrvHistory() {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { ticks: { color: '#666', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
-          y: { ticks: { color: '#666', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
+          x: { ticks: { color: '#928f9f', font: { size: 9 } }, grid: { color: '#353534' } },
+          y: { ticks: { color: '#928f9f', font: { size: 9 } }, grid: { color: '#353534' } },
         },
       },
     })
     return () => { if (chartRef.current) chartRef.current.destroy() }
   }, [hrvLogs])
 
-  // Salva modifica
   const handleSaveEdit = async (row) => {
     const v = parseInt(editVal)
     if (!v || v < 10 || v > 300) return
@@ -356,14 +371,14 @@ function HrvHistory() {
     setEditVal('')
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '32px', fontSize: '12px', color: C.hint }}>Caricamento...</div>
+  if (loading) return <div className="text-center py-12 text-sm text-on-surface-variant">Caricamento...</div>
 
   if (sorted.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-        <div style={{ fontSize: '32px', marginBottom: '12px' }}>💓</div>
-        <div style={{ fontSize: '14px', color: C.muted }}>Nessun dato HRV ancora.</div>
-        <div style={{ fontSize: '12px', color: C.hint, marginTop: '8px' }}>Registra ogni mattina dalla Home.</div>
+      <div className="text-center py-16">
+        <div className="text-5xl mb-4">💓</div>
+        <div className="text-base text-on-surface mb-2">Nessun dato HRV ancora.</div>
+        <div className="text-sm text-on-surface-variant">Registra ogni mattina dalla Home.</div>
       </div>
     )
   }
@@ -373,91 +388,88 @@ function HrvHistory() {
   const last   = sorted[sorted.length - 1]
 
   return (
-    <div style={ss.body}>
-      {/* KPI */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+    <div className="px-6 pb-32">
+      <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { l: 'Ultimo',      v: last.hrv_value + ' ms', c: statusColor[getStatus(last.hrv_value, avg7)] },
-          { l: 'Media 7gg',   v: avg7 + ' ms',           c: C.violet },
-          { l: 'Misurazioni', v: sorted.length,           c: C.muted },
+          { l: 'Ultimo', v: last.hrv_value + ' ms', c: statusColor[getStatus(last.hrv_value, avg7)] },
+          { l: 'Media 7gg', v: avg7 + ' ms', c: '#c6bfff' },
+          { l: 'Misurazioni', v: sorted.length, c: '#928f9f' },
         ].map(it => (
-          <div key={it.l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: it.c }}>{it.v}</div>
-            <div style={{ fontSize: '9px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em', marginTop: '3px' }}>{it.l}</div>
+          <div key={it.l} className="bg-surface-container-low rounded-xl p-4 text-center">
+            <div className="text-xl font-headline font-extrabold tracking-tight" style={{ color: it.c }}>{it.v}</div>
+            <div className="text-[10px] uppercase tracking-wider text-on-surface-variant mt-1">{it.l}</div>
           </div>
         ))}
       </div>
 
-      {/* Grafico */}
       {sorted.length >= 2 && (
-        <div style={ss.card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={ss.secLbl}>Andamento HRV</div>
-            <div style={{ fontSize: '10px', color: C.hint }}>
-              <span style={{ color: C.violet }}>━</span> valore &nbsp;
-              <span style={{ color: C.muted }}>╌</span> media 7gg
+        <div className="bg-surface-container-low rounded-xl p-6 mb-6">
+          <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/10">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface">Andamento HRV</h3>
+            <div className="text-xs text-on-surface-variant">
+              <span style={{ color: '#c6bfff' }}>━</span> valore &nbsp;
+              <span style={{ color: '#928f9f' }}>╌</span> media 7gg
             </div>
           </div>
-          <div style={{ position: 'relative', height: '160px' }}><canvas ref={canvasRef} /></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10px', color: C.hint }}>
-            <span>Min: <strong style={{ color: C.text }}>{minHrv}</strong></span>
-            <span>Max: <strong style={{ color: C.text }}>{maxHrv}</strong></span>
-            <span>Range: <strong style={{ color: C.text }}>{maxHrv - minHrv}</strong></span>
+          <div className="relative h-40"><canvas ref={canvasRef} /></div>
+          <div className="flex justify-between mt-3 text-xs text-on-surface-variant">
+            <span>Min: <strong className="text-on-surface">{minHrv}</strong></span>
+            <span>Max: <strong className="text-on-surface">{maxHrv}</strong></span>
+            <span>Range: <strong className="text-on-surface">{maxHrv - minHrv}</strong></span>
           </div>
         </div>
       )}
 
-      {/* Storico con edit inline */}
-      <div style={ss.card}>
-        <div style={ss.secLbl}>Storico</div>
+      <div className="bg-surface-container-low rounded-xl p-6">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface mb-4">Storico</h3>
         {[...sorted].reverse().map((r, i) => {
-          const s         = getStatus(r.hrv_value, avg7)
+          const s = getStatus(r.hrv_value, avg7)
           const isEditing = editingId === r.id
 
           return (
-            <div key={r.id || i} style={{ padding: '9px 0', borderBottom: `1px solid ${C.border}` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {/* Data + semaforo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: statusColor[s], flexShrink: 0 }} />
-                  <div style={{ fontSize: '12px', color: C.muted }}>{fmtDateShort(r.log_date)}</div>
+            <div key={r.id || i} className="py-3 border-b border-outline-variant/10">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full" style={{ background: statusColor[s] }} />
+                  <div className="text-sm text-on-surface-variant">{fmtDateShort(r.log_date)}</div>
                 </div>
 
-                {/* Valore + tasto modifica */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="flex items-center gap-3">
                   {!isEditing && (
                     <>
-                      <div style={{ fontSize: '14px', fontWeight: '700', color: C.text }}>{r.hrv_value} <span style={{ fontSize: '10px', color: C.hint, fontWeight: '400' }}>ms</span></div>
-                      <div
-                        style={{ fontSize: '10px', color: C.hint, cursor: 'pointer', padding: '2px 8px', border: `1px solid ${C.border}`, borderRadius: '6px', background: C.bg }}
+                      <div className="text-base font-bold text-on-surface">
+                        {r.hrv_value} <span className="text-xs text-on-surface-variant font-normal">ms</span>
+                      </div>
+                      <button
+                        className="text-xs text-on-surface-variant/60 hover:text-on-surface px-3 py-1 rounded-lg border border-outline-variant bg-surface-container"
                         onClick={() => { setEditingId(r.id); setEditVal(String(r.hrv_value)) }}>
                         ✎
-                      </div>
+                      </button>
                     </>
                   )}
 
-                  {/* Input inline quando in modifica */}
                   {isEditing && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div className="flex items-center gap-2">
                       <input
                         type="number"
                         inputMode="numeric"
                         autoFocus
-                        style={{ ...ss.inp, width: '72px', fontSize: '14px', fontWeight: '700', textAlign: 'center', padding: '4px 8px' }}
+                        className="w-20 bg-surface-container-highest border-2 border-outline-variant rounded-lg px-3 py-1 text-sm font-bold text-center text-on-surface"
                         value={editVal}
                         onChange={e => setEditVal(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(r) }}
                       />
-                      <div
-                        style={{ fontSize: '11px', fontWeight: '700', color: C.greenLight, cursor: 'pointer', padding: '4px 10px', background: C.greenBg, border: `1px solid ${C.greenBorder}`, borderRadius: '6px', opacity: savingEdit ? 0.5 : 1 }}
+                      <button
+                        className="px-3 py-1 rounded-lg text-xs font-bold bg-tertiary/10 text-tertiary border border-tertiary/20 disabled:opacity-50"
+                        disabled={savingEdit}
                         onClick={() => !savingEdit && handleSaveEdit(r)}>
                         {savingEdit ? '...' : '✓'}
-                      </div>
-                      <div
-                        style={{ fontSize: '11px', color: C.hint, cursor: 'pointer', padding: '4px 8px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: '6px' }}
+                      </button>
+                      <button
+                        className="px-2 py-1 rounded-lg text-xs text-on-surface-variant bg-surface-container border border-outline-variant"
                         onClick={() => { setEditingId(null); setEditVal('') }}>
                         ✕
-                      </div>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -470,7 +482,6 @@ function HrvHistory() {
   )
 }
 
-// ── MAIN CORPO SECTION ─────────────────────────────────────────────
 export default function CorpoSection() {
   const [sub,            setSub]            = React.useState('overview')
   const [measurements,   setMeasurements]   = React.useState([])
@@ -488,44 +499,63 @@ export default function CorpoSection() {
 
   const last = measurements.length > 0 ? measurements[measurements.length - 1] : null
 
+  const tabs = [
+    { id: 'overview', l: 'Overview' },
+    { id: 'aggiungi', l: 'Aggiungi' },
+    { id: 'storico',  l: 'Storico' },
+    { id: 'hrv',      l: 'HRV' },
+  ]
+
   return (
-    <div>
-      <div style={ss.hdr}>
-        <div style={ss.eyebrow}>misure · composizione</div>
-        <div style={ss.title}>Corpo</div>
-        <div style={ss.subtitle}>
+    <div className="min-h-screen bg-background pb-32">
+      <div className="px-6 pt-6 pb-8">
+        <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+          Misure · Composizione
+        </p>
+        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">
+          Corpo
+        </h1>
+        <p className="text-on-surface-variant font-medium">
           {last
             ? `ultimo aggiornamento: ${fmtDateShort(last.measured_at?.slice(0,10))}${last.weight_kg ? ` · ${last.weight_kg} kg` : ''}`
             : 'nessuna misurazione ancora'}
-        </div>
+        </p>
       </div>
 
-      <div style={ss.subBar}>
-        {[
-          { id: 'overview', l: 'Overview' },
-          { id: 'aggiungi', l: 'Aggiungi' },
-          { id: 'storico',  l: 'Storico' },
-          { id: 'hrv',      l: 'HRV' },
-        ].map(t => (
-          <div key={t.id} style={ss.subTab(sub === t.id)} onClick={() => setSub(t.id)}>{t.l}</div>
+      <div className="flex gap-2 px-6 mb-6 overflow-x-auto hide-scrollbar">
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setSub(t.id)}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
+              sub === t.id
+                ? 'bg-primary/10 text-primary border-2 border-primary/20'
+                : 'bg-surface-container-low text-on-surface-variant border-2 border-outline-variant/10'
+            }`}>
+            {t.l}
+          </button>
         ))}
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '48px', fontSize: '12px', color: C.hint }}>Caricamento...</div>
+        <div className="text-center py-16 text-sm text-on-surface-variant">Caricamento...</div>
       ) : (
-        <>
+        <div className="px-6">
           {sub === 'overview' && (
-            <div style={ss.body}>
+            <>
               <OverviewCards measurements={measurements} selectedMetric={selectedMetric} onSelectMetric={setSelectedMetric} />
               {selectedMetric && (
-                <div style={{ ...ss.card, marginTop: '4px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', paddingBottom: '8px', borderBottom: `1px solid ${C.border}` }}>
+                <div className="bg-surface-container-low rounded-xl p-6 mb-4">
+                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/10">
                     <div>
-                      <div style={{ fontSize: '9px', fontWeight: '600', color: selectedMetric.color, textTransform: 'uppercase', letterSpacing: '.06em' }}>{selectedMetric.label}</div>
-                      <div style={{ fontSize: '11px', color: C.hint, marginTop: '1px' }}>{selectedMetric.desc}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: selectedMetric.color }}>
+                        {selectedMetric.label}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">{selectedMetric.desc}</div>
                     </div>
-                    <div style={{ fontSize: '18px', color: C.hint, cursor: 'pointer', padding: '4px 8px' }} onClick={() => setSelectedMetric(null)}>✕</div>
+                    <button className="text-2xl text-on-surface-variant/60 hover:text-on-surface px-2" onClick={() => setSelectedMetric(null)}>
+                      ✕
+                    </button>
                   </div>
                   <MetricChart measurements={measurements} metric={selectedMetric} />
                   {(() => {
@@ -535,12 +565,12 @@ export default function CorpoSection() {
                     const max = Math.max(...vals).toFixed(1)
                     const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1)
                     return (
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <div className="grid grid-cols-3 gap-3 mt-4">
                         {[{ l: 'Min', v: min }, { l: 'Media', v: avg }, { l: 'Max', v: max }].map(it => (
-                          <div key={it.l} style={{ flex: 1, textAlign: 'center', padding: '8px', background: C.bg, borderRadius: '8px', border: `1px solid ${C.border}` }}>
-                            <div style={{ fontSize: '9px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '3px' }}>{it.l}</div>
-                            <div style={{ fontSize: '15px', fontWeight: '700', color: C.text }}>{it.v}</div>
-                            <div style={{ fontSize: '9px', color: C.muted }}>{selectedMetric.unit}</div>
+                          <div key={it.l} className="text-center p-3 bg-surface-container-highest rounded-lg border border-outline-variant">
+                            <div className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">{it.l}</div>
+                            <div className="text-lg font-headline font-bold text-on-surface">{it.v}</div>
+                            <div className="text-[10px] text-on-surface-variant">{selectedMetric.unit}</div>
                           </div>
                         ))}
                       </div>
@@ -549,29 +579,28 @@ export default function CorpoSection() {
                 </div>
               )}
               {measurements.length === 0 && (
-                <div style={{ textAlign: 'center', marginTop: '8px' }}>
-                  <div style={{ ...ss.savBtn, maxWidth: '200px', margin: '0 auto' }} onClick={() => setSub('aggiungi')}>+ Prima misurazione</div>
+                <div className="text-center mt-4">
+                  <button
+                    className="px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-widest kinetic-gradient text-on-primary-fixed"
+                    style={{ boxShadow: '0 4px 16px rgba(198, 191, 255, 0.3)' }}
+                    onClick={() => setSub('aggiungi')}>
+                    + Prima Misurazione
+                  </button>
                 </div>
               )}
               {measurements.length > 0 && (
-                <div style={{ textAlign: 'center', marginTop: '4px' }}>
-                  <div style={{ fontSize: '11px', color: C.hint, cursor: 'pointer', padding: '8px' }} onClick={() => setSub('aggiungi')}>+ Aggiungi misurazione</div>
+                <div className="text-center mt-2">
+                  <button className="text-xs text-primary/80 hover:text-primary py-3" onClick={() => setSub('aggiungi')}>
+                    + Aggiungi misurazione
+                  </button>
                 </div>
               )}
-            </div>
+            </>
           )}
-          {sub === 'aggiungi' && (
-            <div style={ss.body}>
-              <AddMeasurementForm onSaved={() => { load(); setSub('overview') }} />
-            </div>
-          )}
-          {sub === 'storico' && (
-            <div style={ss.body}>
-              <StoricoTable measurements={measurements} onDeleted={load} />
-            </div>
-          )}
+          {sub === 'aggiungi' && <AddMeasurementForm onSaved={() => { load(); setSub('overview') }} />}
+          {sub === 'storico' && <StoricoTable measurements={measurements} onDeleted={load} />}
           {sub === 'hrv' && <HrvHistory />}
-        </>
+        </div>
       )}
     </div>
   )

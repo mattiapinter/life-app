@@ -1,5 +1,5 @@
 import React from 'react'
-import { C, ss, DAYS, INIT_OPTS } from './constants'
+import { DAYS, INIT_OPTS } from './constants'
 import {
   syncPlanToSupabase, loadPlanFromSupabase,
   syncFoodOptionsToSupabase, loadFoodOptionsFromSupabase,
@@ -14,22 +14,7 @@ import AllenamentoSection from './components/Allenamento'
 import ScalateSection     from './components/Scalate'
 import CorpoSection       from './components/Corpo'
 import LoginScreen        from './components/Login'
-import { IcoHome, IcoDiet, IcoTrain, IcoClimb } from './components/Icons'
-
-const IcoMenu = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <line x1="3" y1="6"  x2="17" y2="6"  stroke={C.muted} strokeWidth="1.6" strokeLinecap="round" />
-    <line x1="3" y1="10" x2="17" y2="10" stroke={C.muted} strokeWidth="1.6" strokeLinecap="round" />
-    <line x1="3" y1="14" x2="17" y2="14" stroke={C.muted} strokeWidth="1.6" strokeLinecap="round" />
-  </svg>
-)
-
-const MACRO = [
-  { id: 'home',        label: 'Home',        emoji: '🏠' },
-  { id: 'allenamento', label: 'Allenamento', emoji: '💪' },
-  { id: 'scalate',     label: 'Scalate',     emoji: '🧗' },
-  { id: 'dieta',       label: 'Dieta',       emoji: '🥗' },
-]
+import BottomNav          from './components/BottomNav'
 
 const SUB = {
   home:        [],
@@ -53,104 +38,37 @@ const SUB = {
     { id: 'misure',    l: 'Misure' },
     { id: 'opzioni',   l: 'Opzioni' },
   ],
+  corpo: []
 }
 
-function SidebarDrawer({ open, onClose, macro, setMacro, onLogout }) {
-  const startX = React.useRef(null)
-  const handleTouchStart = (e) => { startX.current = e.touches[0].clientX }
-  const handleTouchEnd   = (e) => {
-    if (startX.current === null) return
-    if (startX.current - e.changedTouches[0].clientX > 60) onClose()
-    startX.current = null
-  }
-
+function SubNav({ tabs, active, onChange }) {
+  if (tabs.length === 0) return null
   return (
-    <>
-      <div style={{ position:'fixed', inset:0, zIndex:100, background:'rgba(0,0,0,0.6)', opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none', transition:'opacity .25s', backdropFilter: open ? 'blur(2px)' : 'none' }} onClick={onClose} />
-      <div style={{ position:'fixed', top:0, left:0, bottom:0, width:'260px', zIndex:101, background:C.surface, borderRight:`1px solid ${C.border}`, transform: open ? 'translateX(0)' : 'translateX(-100%)', transition:'transform .28s cubic-bezier(.4,0,.2,1)', display:'flex', flexDirection:'column' }}
-        onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-
-        {/* FIX: padding-top usa safe area per non sovrapporsi alla Dynamic Island */}
-        <div style={{ padding:'calc(env(safe-area-inset-top, 44px) + 14px) 20px 18px', borderBottom:`1px solid ${C.border}`, background: C.primaryBgSolid }}>
-          <div style={{ fontSize:'12px', fontWeight:'700', color:C.primary, textTransform:'uppercase', letterSpacing:'.12em', marginBottom:'5px' }}>LIFE</div>
-          <div style={{ fontSize:'14px', color:C.textSoft, fontWeight:'500' }}>Pinter</div>
-        </div>
-
-        <div style={{ flex:1, padding:'10px 0', overflowY:'auto' }}>
-          {MACRO.map(sec => {
-            const isActive = macro === sec.id
-            return (
-              <div key={sec.id}
-                style={{
-                  display:'flex',
-                  alignItems:'center',
-                  gap:'14px',
-                  padding:'16px 20px',
-                  margin:'4px 12px',
-                  cursor:'pointer',
-                  background: isActive ? C.primaryBgSolid : 'transparent',
-                  borderRadius: '12px',
-                  border: isActive ? `1px solid ${C.primaryBorder}` : '1px solid transparent',
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-                onClick={() => { setMacro(sec.id); onClose() }}>
-                <div style={{ fontSize:'22px', lineHeight:1 }}>{sec.emoji}</div>
-                <div style={{ fontSize:'15px', fontWeight: isActive ? '700' : '500', color: isActive ? C.primaryLight : C.textSoft }}>{sec.label}</div>
-                {isActive && <div style={{ marginLeft:'auto', width:'8px', height:'8px', borderRadius:'50%', background:C.primary, boxShadow:`0 0 8px ${C.primaryGlow}` }} />}
-              </div>
-            )
-          })}
-        </div>
-
-        <div style={{ padding:'16px 20px', borderTop:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', opacity:0.7 }} onClick={onLogout}>
-            Esci →
-          </div>
-        </div>
-      </div>
-    </>
-  )
-}
-
-function BottomNav({ macro, sub, setSub }) {
-  const subTabs = SUB[macro] || []
-  if (subTabs.length === 0) return null
-  return (
-    <nav style={ss.bnav}>
-      <div style={{ ...ss.bnavInner, justifyContent: subTabs.length <= 3 ? 'center' : 'space-around', gap: subTabs.length <= 3 ? '32px' : '0' }}>
-        {subTabs.map(t => (
-          <div key={t.id} style={{
-            display:'flex',
-            flexDirection:'column',
-            alignItems:'center',
-            gap:'3px',
-            padding:'6px 14px',
-            cursor:'pointer',
-            transition: 'transform 0.15s',
-          }} onClick={() => setSub(t.id)}>
-            <div style={{
-              fontSize:'12px',
-              fontWeight: sub === t.id ? '700' : '600',
-              color: sub === t.id ? C.primaryLight : C.hint,
-              letterSpacing:'.02em',
-              borderBottom: sub === t.id ? `2.5px solid ${C.primary}` : '2.5px solid transparent',
-              paddingBottom:'3px',
-              transition: 'all 0.2s',
-            }}>
-              {t.l}
-            </div>
-            {sub === t.id && (
-              <div style={{
-                width:'6px',
-                height:'6px',
-                borderRadius:'50%',
-                background:C.primary,
-                boxShadow:`0 0 8px ${C.primaryGlow}`,
-                animation: 'pulse 2s infinite',
-              }} />
-            )}
-          </div>
-        ))}
+    <nav className="fixed top-0 w-full z-40 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10"
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex justify-around items-center h-14 px-4">
+        {tabs.map(t => {
+          const isActive = active === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => onChange(t.id)}
+              className="flex flex-col items-center gap-1 px-4 py-2 transition-all">
+              <span
+                className={`text-xs font-bold uppercase tracking-widest transition-colors ${
+                  isActive ? 'text-primary' : 'text-on-surface-variant'
+                }`}>
+                {t.l}
+              </span>
+              {isActive && (
+                <div
+                  className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
+                  style={{ boxShadow: '0 0 8px rgba(198, 191, 255, 0.6)' }}
+                />
+              )}
+            </button>
+          )
+        })}
       </div>
     </nav>
   )
@@ -160,7 +78,6 @@ export default function App() {
   const [user,       setUser]       = React.useState(undefined)
   const [macro,      setMacroRaw]   = React.useState('home')
   const [sub,        setSub]        = React.useState(null)
-  const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [syncing,    setSyncing]    = React.useState(false)
 
   const [fitSessions,  setFitSessions]  = React.useState([])
@@ -227,8 +144,12 @@ export default function App() {
 
   if (user === undefined) {
     return (
-      <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
-        <div style={{ fontSize:'11px', fontWeight:'700', color:C.violet, textTransform:'uppercase', letterSpacing:'.15em' }}>LIFE</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse">
+          <div className="text-2xl font-headline font-extrabold tracking-tighter text-primary uppercase">
+            LIFE
+          </div>
+        </div>
       </div>
     )
   }
@@ -237,35 +158,13 @@ export default function App() {
     return <LoginScreen onLogin={() => {}} />
   }
 
+  const subTabs = SUB[macro] || []
+
   return (
-    <div style={ss.app}>
-      <SidebarDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} macro={macro} setMacro={setMacro} onLogout={handleLogout} />
-      <div style={ss.main}>
+    <div className="min-h-screen bg-background">
+      {subTabs.length > 0 && <SubNav tabs={subTabs} active={activeSub} onChange={setSub} />}
 
-        {/* FIX: burger posizionato sotto la Dynamic Island usando safe-area-inset-top */}
-        <div style={{
-          position: 'fixed',
-          top: 'calc(env(safe-area-inset-top, 44px) + 10px)',
-          left: '14px',
-          zIndex: 50,
-          padding: '10px',
-          cursor: 'pointer',
-          background: C.surface,
-          borderRadius: '14px',
-          border: `1.5px solid ${C.border}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          transition: 'transform 0.2s, box-shadow 0.2s',
-        }}
-          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          onClick={() => setDrawerOpen(true)}>
-          <IcoMenu />
-        </div>
-
+      <main className={subTabs.length > 0 ? 'pt-14' : ''}>
         {macro === 'home' && (
           <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} setSub={setSub} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
         )}
@@ -278,9 +177,12 @@ export default function App() {
         {macro === 'dieta' && (
           <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} syncing={syncing} />
         )}
+        {macro === 'corpo' && (
+          <CorpoSection />
+        )}
+      </main>
 
-        <BottomNav macro={macro} sub={activeSub} setSub={setSub} />
-      </div>
+      <BottomNav active={macro} onChange={setMacro} />
     </div>
   )
 }
