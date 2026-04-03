@@ -3,10 +3,10 @@ import React from 'react'
 export default function BottomNav({ active, onChange }) {
   const tabs = [
     { id: 'home', icon: 'home', label: 'Home' },
-    { id: 'allenamento', icon: 'fitness_center', label: 'Train' },
-    { id: 'scalate', icon: 'landscape', label: 'Climb' },
-    { id: 'dieta', icon: 'restaurant', label: 'Diet' },
-    { id: 'metriche', icon: 'monitoring', label: 'Stats' },
+    { id: 'allenamento', icon: 'fitness_center', label: 'Allenamento' },
+    { id: 'scalate', icon: 'landscape', label: 'Scalate' },
+    { id: 'dieta', icon: 'restaurant', label: 'Dieta' },
+    { id: 'metriche', icon: 'monitoring', label: 'Metriche' },
   ]
 
   return (
