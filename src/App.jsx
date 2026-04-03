@@ -158,7 +158,7 @@ export default function App() {
     return <LoginScreen onLogin={() => {}} />
   }
 
-  const subTabs = SUB[macro] || []
+  const subTabs = macro === 'scalate' ? [] : (SUB[macro] || [])
 
   return (
     <div className="min-h-screen bg-background">

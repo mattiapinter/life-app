@@ -188,6 +188,7 @@ export const saveCrag = async (crag) => {
         notes: crag.notes, lat: crag.lat, lng: crag.lng,
         grade_min: crag.grade_min, grade_max: crag.grade_max,
         approach_min: crag.approach_min, styles: crag.styles, gps_url: crag.gps_url,
+        exposure: crag.exposure || null,
       }).eq('id', crag.id).eq('user_id', userId)
       if (error) throw error; return crag.id
     } else {
@@ -196,6 +197,7 @@ export const saveCrag = async (crag) => {
         notes: crag.notes, lat: crag.lat, lng: crag.lng,
         grade_min: crag.grade_min, grade_max: crag.grade_max,
         approach_min: crag.approach_min, styles: crag.styles, user_id: userId,
+        exposure: crag.exposure || null,
       }]).select('id').single()
       if (error) throw error; return data?.id
     }
@@ -220,16 +222,33 @@ export const saveClimbingSession = async (session) => {
       const { error } = await db.from('climbing_sessions').update({
         session_date: session.session_date, crag_id: session.crag_id,
         type: session.type || 'falesia', notes: session.notes,
+        weather_temp: session.weather_temp ?? null,
+        weather_code: session.weather_code ?? null,
       }).eq('id', session.id).eq('user_id', userId)
       if (error) throw error; return session.id
     } else {
       const { data, error } = await db.from('climbing_sessions').insert([{
         session_date: session.session_date, crag_id: session.crag_id,
         type: session.type || 'falesia', notes: session.notes, user_id: userId,
+        weather_temp: session.weather_temp ?? null,
+        weather_code: session.weather_code ?? null,
       }]).select('id').single()
       if (error) throw error; return data?.id
     }
   } catch(e) { return null }
+}
+
+export const fetchWeatherForSession = async (lat, lng, dateStr) => {
+  try {
+    const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lng}&start_date=${dateStr}&end_date=${dateStr}&daily=weathercode,temperature_2m_max&timezone=Europe%2FRome`
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const json = await res.json()
+    const temp = json?.daily?.temperature_2m_max?.[0]
+    const code = json?.daily?.weathercode?.[0]
+    if (temp == null || code == null) return null
+    return { weather_temp: Math.round(temp), weather_code: code }
+  } catch { return null }
 }
 export const deleteClimbingSession = async (id) => {
   const userId = await uid(); if (!userId) return false
@@ -248,8 +267,14 @@ export const loadAscents = async () => {
 }
 export const saveAscent = async (ascent) => {
   const userId = await uid(); if (!userId) return null
-  try { const { data, error } = await db.from('ascents').insert([{ ...ascent, user_id: userId }]).select('id').single(); if (error) throw error; return data?.id }
-  catch(e) { return null }
+  try {
+    const { data, error } = await db.from('ascents').insert([{
+      ...ascent,
+      quality_stars: ascent.quality_stars ?? null,
+      user_id: userId,
+    }]).select('id').single()
+    if (error) throw error; return data?.id
+  } catch(e) { return null }
 }
 export const deleteAscent = async (id) => {
   const userId = await uid(); if (!userId) return false

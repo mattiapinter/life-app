@@ -2,7 +2,7 @@ import React from 'react'
 import { C, ss, todayStr, fmtDateShort } from '../constants'
 import {
   loadCrags, saveCrag, deleteCrag,
-  loadClimbingSessions, saveClimbingSession, deleteClimbingSession,
+  loadClimbingSessions, saveClimbingSession, deleteClimbingSession, fetchWeatherForSession,
   loadAscents, saveAscent, deleteAscent,
   loadProjects, saveProject, updateProject,
   loadProjectAttempts, saveProjectAttempt,
@@ -34,6 +34,40 @@ const CRAG_STYLES = [
   { id: 'tetto',      label: 'Tetto' },
   { id: 'misto',      label: 'Misto' },
 ]
+
+const EXPOSURES = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'O', 'NO']
+
+const WMO_LABEL = (code) => {
+  if (code == null) return null
+  if (code === 0) return { label: 'Sole', icon: '☀️' }
+  if (code <= 3)  return { label: 'Parzialmente nuvoloso', icon: '⛅' }
+  if (code <= 49) return { label: 'Nebbia/foschia', icon: '🌫️' }
+  if (code <= 69) return { label: 'Pioggia', icon: '🌧️' }
+  if (code <= 79) return { label: 'Neve', icon: '❄️' }
+  if (code <= 99) return { label: 'Temporale', icon: '⛈️' }
+  return { label: 'Coperto', icon: '☁️' }
+}
+
+function StarRating({ value, onChange, size = 16 }) {
+  const [hover, setHover] = React.useState(0)
+  return (
+    <div style={{ display: 'flex', gap: '2px' }}>
+      {[1,2,3,4,5].map(n => {
+        const active = n <= (hover || value || 0)
+        const color = active ? (n <= 2 ? C.hint : n <= 3 ? C.amber : C.green) : C.border
+        return (
+          <div key={n}
+            style={{ fontSize: `${size}px`, cursor: 'pointer', color, transition: 'color 0.15s', lineHeight: 1 }}
+            onMouseEnter={() => setHover(n)}
+            onMouseLeave={() => setHover(0)}
+            onClick={() => onChange(n === value ? null : n)}>
+            {active ? '★' : '☆'}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 // ── GPS BUTTON ─────────────────────────────────────────────────────
 function GpsButton({ url, onUrlChange }) {
@@ -216,6 +250,7 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   const [gradeMax,   setGradeMax]   = React.useState(editCrag?.grade_max || '8a')
   const [approach,   setApproach]   = React.useState(editCrag?.approach_min || '')
   const [cragStyles, setCragStyles] = React.useState(editCrag?.styles || [])
+  const [exposure,   setExposure]   = React.useState(editCrag?.exposure || null)
   const [saving,     setSaving]     = React.useState(false)
 
   const toggleCragStyle = (id) => setCragStyles(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id])
@@ -231,6 +266,7 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
       grade_min: gradeMin, grade_max: gradeMax,
       approach_min: approach ? parseInt(approach) : null,
       styles: cragStyles,
+      exposure: exposure || null,
     })
     setSaving(false)
     onSaved()
@@ -291,6 +327,22 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
           </div>
         </div>
 
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ fontSize: '10px', color: C.hint, marginBottom: '6px' }}>Esposizione</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+            {EXPOSURES.map(e => {
+              const sel = exposure === e
+              return (
+                <div key={e}
+                  style={{ padding: '4px 11px', borderRadius: '999px', fontSize: '11px', fontWeight: '700', cursor: 'pointer', border: `1px solid ${sel ? C.blue : C.border}`, background: sel ? C.blueBg : 'transparent', color: sel ? C.blueLight : C.hint, fontFamily: 'monospace' }}
+                  onClick={() => setExposure(sel ? null : e)}>
+                  {e}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.6', marginBottom: '14px' }}
           rows={2} placeholder="Note, descrizione, info utili..." value={notes} onChange={e => setNotes(e.target.value)} />
 
@@ -313,25 +365,34 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
 }
 
 // ── SESSION FORM ───────────────────────────────────────────────────
-function SessionForm({ crags, onSaved, onClose }) {
+function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
   const [date,    setDate]    = React.useState(todayStr())
   const [cragId,  setCragId]  = React.useState(crags[0]?.id || '')
   const [notes,   setNotes]   = React.useState('')
   const [ascents, setAscents] = React.useState([])
   const [saving,  setSaving]  = React.useState(false)
 
-  const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '' }])
+  const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null }])
   const updateAscent = (i, field, val) => setAscents(p => p.map((a, idx) => idx === i ? { ...a, [field]: val } : a))
   const removeAscent = (i) => setAscents(p => p.filter((_, idx) => idx !== i))
 
   const handleSave = async () => {
     if (!date || !cragId) return
     setSaving(true)
-    const sessionId = await saveClimbingSession({ session_date: date, crag_id: parseInt(cragId), notes: notes.trim() })
+    const crag = crags.find(c => c.id === parseInt(cragId))
+    let weatherData = null
+    if (crag?.lat && crag?.lng) {
+      weatherData = await fetchWeatherForSession(crag.lat, crag.lng, date)
+    }
+    const sessionId = await saveClimbingSession({
+      session_date: date, crag_id: parseInt(cragId), notes: notes.trim(), type: sessionType,
+      weather_temp: weatherData?.weather_temp ?? null,
+      weather_code: weatherData?.weather_code ?? null,
+    })
     if (sessionId) {
       for (const a of ascents) {
         if (!a.route_name.trim() && !a.grade) continue
-        await saveAscent({ session_id: sessionId, route_name: a.route_name.trim(), grade: a.grade, style: a.style, completed: a.completed, attempts: parseInt(a.attempts) || 1, rpe: a.rpe ? parseInt(a.rpe) : null })
+        await saveAscent({ session_id: sessionId, route_name: a.route_name.trim(), grade: a.grade, style: a.style, completed: a.completed, attempts: parseInt(a.attempts) || 1, rpe: a.rpe ? parseInt(a.rpe) : null, quality_stars: a.quality_stars ?? null })
       }
     }
     setSaving(false)
@@ -395,9 +456,9 @@ function SessionForm({ crags, onSaved, onClose }) {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
               <div style={{ fontSize: '10px', color: C.hint }}>Completata:</div>
-              {[{ v: true, l: 'Sì' }, { v: false, l: 'No' }].map(o => (
+              {[{ v: true, l: 'Si' }, { v: false, l: 'No' }].map(o => (
                 <div key={o.l}
                   style={{ padding: '4px 10px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', border: `1px solid ${a.completed === o.v ? C.green : C.border}`, background: a.completed === o.v ? C.greenBg : 'transparent', color: a.completed === o.v ? C.greenLight : C.hint }}
                   onClick={() => updateAscent(i, 'completed', o.v)}>{o.l}</div>
@@ -409,6 +470,10 @@ function SessionForm({ crags, onSaved, onClose }) {
                   {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontSize: '10px', color: C.hint }}>Qualita':</div>
+              <StarRating value={a.quality_stars} onChange={v => updateAscent(i, 'quality_stars', v)} size={18} />
             </div>
           </div>
         ))}
@@ -540,7 +605,7 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
     setRows(p => p.map(r => r.id === id ? { ...r, _deleted: true } : r))
 
   const addNew = () =>
-    setNewTiri(p => [...p, { _key: Date.now(), route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '' }])
+    setNewTiri(p => [...p, { _key: Date.now(), route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null }])
   const updateNew = (key, field, val) =>
     setNewTiri(p => p.map(t => t._key === key ? { ...t, [field]: val } : t))
   const removeNew = (key) =>
@@ -575,6 +640,7 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
             completed: r.completed,
             attempts: parseInt(r.attempts) || 1,
             rpe: r.rpe ? parseInt(r.rpe) : null,
+            quality_stars: r.quality_stars ?? null,
           }).eq('id', r.id)
         })()
       )
@@ -590,6 +656,7 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
         completed: t.completed,
         attempts: parseInt(t.attempts) || 1,
         rpe: t.rpe ? parseInt(t.rpe) : null,
+        quality_stars: t.quality_stars ?? null,
       }))
     }
 
@@ -667,12 +734,16 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
                       </div>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
                     {[{ v: true, l: 'Completata' }, { v: false, l: 'Tentativo' }].map(o => (
                       <div key={o.l}
                         style={{ flex: 1, padding: '5px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', border: `1px solid ${r.completed === o.v ? C.green : C.border}`, background: r.completed === o.v ? C.greenBg : 'transparent', color: r.completed === o.v ? C.greenLight : C.hint }}
                         onClick={() => updateRow(r.id, 'completed', o.v)}>{o.l}</div>
                     ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ fontSize: '9px', color: C.hint }}>Qualita':</div>
+                    <StarRating value={r.quality_stars} onChange={v => updateRow(r.id, 'quality_stars', v)} size={16} />
                   </div>
                 </div>
               )
@@ -711,12 +782,16 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
               {[{ v: true, l: 'Completata' }, { v: false, l: 'Tentativo' }].map(o => (
                 <div key={o.l}
                   style={{ flex: 1, padding: '5px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', border: `1px solid ${t.completed === o.v ? C.green : C.border}`, background: t.completed === o.v ? C.greenBg : 'transparent', color: t.completed === o.v ? C.greenLight : C.hint }}
                   onClick={() => updateNew(t._key, 'completed', o.v)}>{o.l}</div>
               ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontSize: '9px', color: C.hint }}>Qualita':</div>
+              <StarRating value={t.quality_stars} onChange={v => updateNew(t._key, 'quality_stars', v)} size={16} />
             </div>
           </div>
         ))}
@@ -791,9 +866,9 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
               {crag.grade_min} → {crag.grade_max}
             </div>
           )}
-          {crag.approach_min && (
-            <div style={{ padding: '3px 10px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.greenBorder}`, borderRadius: '999px', fontSize: '10px', color: C.greenLight }}>
-              🥾 {crag.approach_min} min
+          {crag.exposure && (
+            <div style={{ padding: '3px 10px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.blueBorder}`, borderRadius: '999px', fontSize: '10px', color: C.blueLight, fontWeight: '700', fontFamily: 'monospace' }}>
+              {crag.exposure}
             </div>
           )}
           {(crag.styles || []).map(s => {
@@ -862,7 +937,17 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
               <div key={sess.id} style={{ ...ss.card, marginBottom: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>{fmtDateShort(sess.session_date)}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>{fmtDateShort(sess.session_date)}</div>
+                      {sess.weather_code != null && (() => {
+                        const w = WMO_LABEL(sess.weather_code)
+                        return w ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '999px', background: C.surface, border: `1px solid ${C.border}`, fontSize: '10px', color: C.muted }}>
+                            {w.icon} {sess.weather_temp != null ? `${sess.weather_temp}°` : ''}
+                          </div>
+                        ) : null
+                      })()}
+                    </div>
                     <div style={{ fontSize: '10px', color: C.muted, marginTop: '2px' }}>{sessAscents.length} tiri{maxG ? ` · max ${maxG}` : ''}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -881,6 +966,11 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
                           <span style={{ fontSize: '11px', fontWeight: '600', color: C.text }}>{a.grade}</span>
                           <span style={{ fontSize: '9px', color: styleInfo.color }}>{styleInfo.short}</span>
                           {a.route_name && <span style={{ fontSize: '10px', color: C.muted }}>· {a.route_name}</span>}
+                          {a.quality_stars && (
+                            <span style={{ fontSize: '9px', color: a.quality_stars >= 4 ? C.green : C.amber }}>
+                              {'★'.repeat(a.quality_stars)}
+                            </span>
+                          )}
                         </div>
                       )
                     })}
@@ -995,6 +1085,32 @@ function StatsSection({ sessions, ascents, crags }) {
   const sessIds          = new Set(filteredSessions.map(s => s.id))
   const filteredAscents  = ascents.filter(a => sessIds.has(a.session_id))
   const firstAscents     = filteredAscents.filter(a => IS_FIRST_ASCENT.includes(a.style) && a.completed)
+
+  const gradeProgression = (() => {
+    const byMonth = {}
+    firstAscents.forEach(a => {
+      const sess = sessions.find(s => s.id === a.session_id)
+      if (!sess) return
+      const month = sess.session_date.slice(0, 7)
+      const gradeIdx = GRADE_ORDER[a.grade] || 0
+      if (!byMonth[month] || gradeIdx > byMonth[month]) byMonth[month] = gradeIdx
+    })
+    return Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).map(([month, idx]) => ({ month, grade: GRADES[idx] }))
+  })()
+
+  const ratedAscents = filteredAscents.filter(a => a.quality_stars && a.completed)
+  const avgQuality   = ratedAscents.length ? (ratedAscents.reduce((s, a) => s + a.quality_stars, 0) / ratedAscents.length).toFixed(1) : null
+
+  const topQualityRoutes = [...filteredAscents.filter(a => a.quality_stars >= 4 && a.completed)]
+    .sort((a, b) => b.quality_stars - a.quality_stars)
+    .slice(0, 5)
+
+  const exposureCounts = {}
+  filteredSessions.forEach(sess => {
+    const crag = crags.find(c => c.id === sess.crag_id)
+    if (crag?.exposure) exposureCounts[crag.exposure] = (exposureCounts[crag.exposure] || 0) + 1
+  })
+  const maxExposureCount = Math.max(...Object.values(exposureCounts), 1)
 
   const gradeCounts = {}
   firstAscents.forEach(a => { gradeCounts[a.grade] = (gradeCounts[a.grade] || 0) + 1 })
@@ -1114,7 +1230,7 @@ function StatsSection({ sessions, ascents, crags }) {
 
       {topCrags.length > 0 && (
         <div style={ss.card}>
-          <div style={ss.secLbl}>Falesie più visitate</div>
+          <div style={ss.secLbl}>Falesie piu' visitate</div>
           {topCrags.map(([cragId, count], i) => {
             const crag = crags.find(c => c.id === parseInt(cragId))
             return (
@@ -1130,6 +1246,80 @@ function StatsSection({ sessions, ascents, crags }) {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {gradeProgression.length >= 2 && (
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Progressione grado massimo</div>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', height: '70px', marginBottom: '6px' }}>
+            {gradeProgression.map((pt, i) => {
+              const idx   = GRADE_ORDER[pt.grade] || 0
+              const maxIdx = Math.max(...gradeProgression.map(p => GRADE_ORDER[p.grade] || 0))
+              const minIdx = Math.min(...gradeProgression.map(p => GRADE_ORDER[p.grade] || 0))
+              const range = maxIdx - minIdx || 1
+              const h = 20 + ((idx - minIdx) / range) * 45
+              return (
+                <div key={pt.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                  <div style={{ fontSize: '8px', color: C.green, fontWeight: '700' }}>{pt.grade}</div>
+                  <div style={{ width: '100%', background: C.green, borderRadius: '3px 3px 0 0', height: `${h}px`, opacity: 0.7 + (i / gradeProgression.length) * 0.3 }} />
+                  <div style={{ fontSize: '7px', color: C.hint }}>{pt.month.slice(5)}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {avgQuality && (
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Qualita' vie</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '14px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '28px', fontWeight: '800', color: parseFloat(avgQuality) >= 4 ? C.green : C.amber }}>{avgQuality}</div>
+              <div style={{ fontSize: '9px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em' }}>media su {ratedAscents.length} vie</div>
+            </div>
+            <div style={{ display: 'flex', gap: '3px' }}>
+              {[1,2,3,4,5].map(n => (
+                <div key={n} style={{ fontSize: '18px', color: n <= Math.round(parseFloat(avgQuality)) ? (n >= 4 ? C.green : C.amber) : C.border }}>
+                  {n <= Math.round(parseFloat(avgQuality)) ? '★' : '☆'}
+                </div>
+              ))}
+            </div>
+          </div>
+          {topQualityRoutes.length > 0 && (
+            <>
+              <div style={{ fontSize: '9px', fontWeight: '600', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '8px' }}>Vie top</div>
+              {topQualityRoutes.map((a, i) => (
+                <div key={a.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: C.textSoft }}>{a.route_name || 'Via senza nome'}</div>
+                    <div style={{ fontSize: '10px', color: C.hint }}>{a.grade}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '2px' }}>
+                    {[1,2,3,4,5].map(n => (
+                      <span key={n} style={{ fontSize: '12px', color: n <= a.quality_stars ? (n >= 4 ? C.green : C.amber) : C.border }}>{n <= a.quality_stars ? '★' : '☆'}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {Object.keys(exposureCounts).length > 0 && (
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Esposizione falesie visitate</div>
+          {Object.entries(exposureCounts).sort((a, b) => b[1] - a[1]).map(([exp, count]) => (
+            <div key={exp} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+              <div style={{ width: '28px', fontSize: '10px', fontWeight: '700', color: C.blueLight, textAlign: 'center', fontFamily: 'monospace', flexShrink: 0, padding: '2px 4px', background: C.blueBg, borderRadius: '4px', border: `1px solid ${C.blueBorder}` }}>{exp}</div>
+              <div style={{ flex: 1, background: C.bg, borderRadius: '4px', height: '14px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: `linear-gradient(90deg, ${C.blue}, ${C.blueLight})`, width: `${(count / maxExposureCount) * 100}%`, borderRadius: '4px' }} />
+              </div>
+              <div style={{ fontSize: '10px', color: C.hint, flexShrink: 0, width: '20px', textAlign: 'right' }}>{count}</div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1244,6 +1434,7 @@ function ProjectsTab({ projects, attempts, crags, onAdded, onRefresh }) {
 // ── MAIN SCALATE ───────────────────────────────────────────────────
 export default function ScalateSection({ initialSub, onSubChange }) {
   const [sub,          setSub]          = React.useState(initialSub || 'falesie')
+  const [climbMode,    setClimbMode]    = React.useState('falesia')
   const [crags,        setCrags]        = React.useState([])
   const [sessions,     setSessions]     = React.useState([])
   const [ascents,      setAscents]      = React.useState([])
@@ -1354,11 +1545,11 @@ export default function ScalateSection({ initialSub, onSubChange }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '14px', fontWeight: '700', color: C.text, marginBottom: '3px' }}>{crag.name}</div>
-                  <div style={{ fontSize: '10px', color: C.muted, display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  <div style={{ fontSize: '10px', color: C.muted, display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                     {crag.region && <span>{crag.region}</span>}
                     {crag.rock_type && <span style={{ color: C.hint }}>· {crag.rock_type}</span>}
                     {crag.grade_min && crag.grade_max && <span style={{ color: C.hint }}>· {crag.grade_min}–{crag.grade_max}</span>}
-                    {crag.approach_min && <span style={{ color: C.hint }}>· 🥾 {crag.approach_min}′</span>}
+                    {crag.exposure && <span style={{ color: C.blueLight, fontWeight: '700', fontFamily: 'monospace', fontSize: '9px', padding: '1px 6px', background: C.blueBg, borderRadius: '999px', border: `1px solid ${C.blueBorder}` }}>{crag.exposure}</span>}
                   </div>
                   {(crag.styles || []).length > 0 && (
                     <div style={{ display: 'flex', gap: '4px', marginTop: '5px', flexWrap: 'wrap' }}>
@@ -1387,17 +1578,51 @@ export default function ScalateSection({ initialSub, onSubChange }) {
   return (
     <div style={{ paddingBottom: '160px' }}>
       <div style={ss.hdr}>
-        <div style={ss.eyebrow}>arrampicata · performance</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+          <div style={ss.eyebrow}>arrampicata · performance</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: '999px', padding: '3px 5px' }}>
+            {['falesia', 'multi pitch'].map(m => {
+              const active = climbMode === m
+              return (
+                <div key={m}
+                  style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', background: active ? C.primary : 'transparent', color: active ? '#0A0E12' : C.hint, transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                  onClick={() => setClimbMode(m)}>
+                  {m}
+                </div>
+              )
+            })}
+          </div>
+        </div>
         <div style={ss.title}>Scalate</div>
         <div style={ss.subtitle}>
           {sessions.length} sessioni · {ascents.filter(a => IS_FIRST_ASCENT.includes(a.style) && a.completed).length} prime salite
         </div>
       </div>
 
-      {sub === 'falesie'  && renderFalesie()}
-      {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} onRefresh={loadAll} />}
-      {sub === 'progetti' && <ProjectsTab projects={projects} attempts={attempts} crags={crags} onAdded={loadAll} onRefresh={loadAll} />}
-      {sub === 'stats'    && <StatsSection sessions={sessions} ascents={ascents} crags={crags} />}
+      {climbMode === 'multi pitch' ? (
+        <div style={{ ...ss.body, textAlign: 'center', paddingTop: '60px' }}>
+          <div style={{ fontSize: '32px', marginBottom: '16px' }}>🏔️</div>
+          <div style={{ fontSize: '15px', fontWeight: '600', color: C.text, marginBottom: '8px' }}>Multi pitch</div>
+          <div style={{ fontSize: '12px', color: C.muted, lineHeight: '1.6' }}>Sezione in sviluppo. Presto potrai tracciare le tue vie in montagna.</div>
+        </div>
+      ) : (
+        <>
+          <div style={ss.subBar}>
+            {[
+              { id: 'falesie',  l: 'Falesie' },
+              { id: 'tiri',     l: 'Tiri' },
+              { id: 'progetti', l: 'Progetti' },
+              { id: 'stats',    l: 'Stats' },
+            ].map(t => (
+              <div key={t.id} style={ss.subTab(sub === t.id)} onClick={() => changeSub(t.id)}>{t.l}</div>
+            ))}
+          </div>
+          {sub === 'falesie'  && renderFalesie()}
+          {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} onRefresh={loadAll} />}
+          {sub === 'progetti' && <ProjectsTab projects={projects} attempts={attempts} crags={crags} onAdded={loadAll} onRefresh={loadAll} />}
+          {sub === 'stats'    && <StatsSection sessions={sessions} ascents={ascents} crags={crags} />}
+        </>
+      )}
     </div>
   )
 }
