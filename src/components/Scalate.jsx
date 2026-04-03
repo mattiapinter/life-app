@@ -377,10 +377,24 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
         <div style={{ fontSize: '10px', fontWeight: '600', color: C.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '8px' }}>
           Posizione sulla mappa
         </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+          <div>
+            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Latitudine</div>
+            <input type="number" step="0.00001" style={ss.inp} placeholder="es. 46.12345"
+              value={lat || ''}
+              onChange={e => setLat(e.target.value ? parseFloat(e.target.value) : null)} />
+          </div>
+          <div>
+            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Longitudine</div>
+            <input type="number" step="0.00001" style={ss.inp} placeholder="es. 11.12345"
+              value={lng || ''}
+              onChange={e => setLng(e.target.value ? parseFloat(e.target.value) : null)} />
+          </div>
+        </div>
         <MapboxMap crags={previewCrag} height="200px" onMapClick={(la, ln) => { setLat(la); setLng(ln) }} />
         {lat && lng
-          ? <div style={{ fontSize: '10px', color: C.green, marginTop: '6px', textAlign: 'center' }}>📍 {lat.toFixed(5)}, {lng.toFixed(5)} · tocca di nuovo per spostare</div>
-          : <div style={{ fontSize: '10px', color: C.hint, marginTop: '6px', textAlign: 'center' }}>Tocca la mappa per posizionare la falesia (opzionale)</div>
+          ? <div style={{ fontSize: '10px', color: C.green, marginTop: '6px', textAlign: 'center' }}>📍 {lat.toFixed(5)}, {lng.toFixed(5)} · tocca la mappa o modifica i campi sopra</div>
+          : <div style={{ fontSize: '10px', color: C.hint, marginTop: '6px', textAlign: 'center' }}>Tocca la mappa o inserisci le coordinate manualmente (opzionale)</div>
         }
 
         <div style={{ ...ss.savBtn, marginTop: '16px', opacity: (!name.trim() || saving) ? 0.5 : 1, background: C.green }}
