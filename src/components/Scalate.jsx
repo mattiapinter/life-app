@@ -10,6 +10,25 @@ import {
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoibWF0dGlhcGludGVyIiwiYSI6ImNtbjhxbnE4YzAwb3oycnBiajh6MWVxbjcifQ.9speCzHwwbsAaqr2IcukHw'
 
+function Toast({ message, onDone }) {
+  const [exiting, setExiting] = React.useState(false)
+  React.useEffect(() => {
+    const t1 = setTimeout(() => setExiting(true), 1800)
+    const t2 = setTimeout(() => onDone(), 2100)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
+  return (
+    <div className={exiting ? 'toast-exit' : 'toast-enter'} style={{
+      position: 'fixed', bottom: '90px', left: '50%', transform: 'translateX(-50%)',
+      zIndex: 999, background: C.surface, border: `1px solid ${C.border}`,
+      borderRadius: '999px', padding: '8px 18px', fontSize: '12px', fontWeight: '600',
+      color: C.text, boxShadow: '0 4px 24px rgba(0,0,0,0.4)', whiteSpace: 'nowrap',
+    }}>
+      {message}
+    </div>
+  )
+}
+
 const GRADES = [
   '4','4+','5','5+','6a','6a+','6b','6b+','6c','6c+',
   '7a','7a+','7b','7b+','7c','7c+',
@@ -275,8 +294,8 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '90vh', overflowY: 'auto' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '90vh', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -402,8 +421,8 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuova sessione</div>
@@ -517,8 +536,8 @@ function ProjectForm({ crags, onSaved, onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuovo progetto</div>
@@ -568,8 +587,8 @@ function AttemptForm({ project, onSaved, onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuovo tentativo</div>
@@ -677,8 +696,8 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
   const visibleRows = rows.filter(r => !r._deleted)
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1058,7 +1077,7 @@ function TiriTab({ ascents, sessions, crags, onRefresh }) {
         const crag      = crags.find(c => c.id === sess?.crag_id)
         const styleInfo = STYLE_MAP[a.style] || STYLE_MAP.redpoint
         return (
-          <div key={a.id || i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px', background: C.surface, borderRadius: '12px', marginBottom: '6px', border: `1px solid ${C.border}` }}>
+          <div key={a.id || i} className="card-enter press-scale" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '11px 14px', background: C.surface, borderRadius: '12px', marginBottom: '6px', border: `1px solid ${C.border}` }}>
             <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${styleInfo.color}18`, border: `1px solid ${styleInfo.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <div style={{ fontSize: '13px', fontWeight: '800', color: styleInfo.color }}>{a.grade}</div>
             </div>
@@ -1467,6 +1486,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
   const [selectedCrag, setSelectedCrag] = React.useState(null)
   const [showCragForm, setShowCragForm] = React.useState(false)
   const [showSessForm, setShowSessForm] = React.useState(false)
+  const [toast,        setToast]        = React.useState(null)
 
   // Sync con App quando cambia dall'esterno
   React.useEffect(() => {
@@ -1488,8 +1508,12 @@ export default function ScalateSection({ initialSub, onSubChange }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-        <div style={{ fontSize: '12px', color: C.hint }}>Caricamento...</div>
+      <div style={{ padding: '20px 16px' }}>
+        <div className="skeleton" style={{ height: '24px', width: '40%', marginBottom: '8px' }} />
+        <div className="skeleton" style={{ height: '16px', width: '60%', marginBottom: '24px' }} />
+        {[1,2,3].map(n => (
+          <div key={n} className="skeleton" style={{ height: '72px', borderRadius: '12px', marginBottom: '8px' }} />
+        ))}
       </div>
     )
   }
@@ -1513,18 +1537,19 @@ export default function ScalateSection({ initialSub, onSubChange }) {
         {showSessForm && (
           <SessionForm
             crags={crags.filter(c => c.id === selectedCrag.id)}
-            onSaved={() => { setShowSessForm(false); loadAll() }}
+            onSaved={() => { setShowSessForm(false); loadAll(); setToast('Sessione salvata') }}
             onClose={() => setShowSessForm(false)}
           />
         )}
+        {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       </>
     )
   }
 
   const renderFalesie = () => (
     <div style={ss.body}>
-      {showCragForm && <CragForm onSaved={() => { setShowCragForm(false); loadAll() }} onClose={() => setShowCragForm(false)} />}
-      {showSessForm && <SessionForm crags={crags} onSaved={() => { setShowSessForm(false); loadAll() }} onClose={() => setShowSessForm(false)} />}
+      {showCragForm && <CragForm onSaved={() => { setShowCragForm(false); loadAll(); setToast('Falesia salvata') }} onClose={() => setShowCragForm(false)} />}
+      {showSessForm && <SessionForm crags={crags} onSaved={() => { setShowSessForm(false); loadAll(); setToast('Sessione salvata') }} onClose={() => setShowSessForm(false)} />}
 
       {crags.length > 0 && (
         <div style={{ marginBottom: '16px' }}>
@@ -1564,7 +1589,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
           const maxGrade         = firstAscentsHere.length ? firstAscentsHere.reduce((m, a) => (GRADE_ORDER[a.grade] || 0) > (GRADE_ORDER[m] || 0) ? a.grade : m, firstAscentsHere[0].grade) : null
 
           return (
-            <div key={crag.id} style={{ ...ss.card, cursor: 'pointer', marginBottom: '8px' }} onClick={() => setSelectedCrag(crag)}>
+            <div key={crag.id} className="card-enter press-scale" style={{ ...ss.card, cursor: 'pointer', marginBottom: '8px' }} onClick={() => setSelectedCrag(crag)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '14px', fontWeight: '700', color: C.text, marginBottom: '3px' }}>{crag.name}</div>
@@ -1646,6 +1671,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
           {sub === 'stats'    && <StatsSection sessions={sessions} ascents={ascents} crags={crags} />}
         </>
       )}
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </div>
   )
 }

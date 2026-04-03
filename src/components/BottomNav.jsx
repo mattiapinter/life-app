@@ -1,13 +1,21 @@
 import React from 'react'
 
 export default function BottomNav({ active, onChange }) {
+  const [bouncing, setBouncing] = React.useState(null)
+
   const tabs = [
-    { id: 'home', icon: 'home', label: 'Home' },
+    { id: 'home',        icon: 'home',          label: 'Home' },
     { id: 'allenamento', icon: 'fitness_center', label: 'Allenamento' },
-    { id: 'scalate', icon: 'landscape', label: 'Scalate' },
-    { id: 'dieta', icon: 'restaurant', label: 'Dieta' },
-    { id: 'metriche', icon: 'monitoring', label: 'Metriche' },
+    { id: 'scalate',     icon: 'landscape',      label: 'Scalate' },
+    { id: 'dieta',       icon: 'restaurant',     label: 'Dieta' },
+    { id: 'metriche',    icon: 'monitoring',     label: 'Metriche' },
   ]
+
+  const handleTap = (id) => {
+    onChange(id)
+    setBouncing(id)
+    setTimeout(() => setBouncing(null), 400)
+  }
 
   return (
     <nav className="fixed bottom-0 w-full rounded-t-3xl z-50 bg-[#1c1b1b]/80 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(198,191,255,0.08)]"
@@ -15,15 +23,17 @@ export default function BottomNav({ active, onChange }) {
       <div className="flex justify-around items-center h-14 px-4 w-full pt-1">
         {tabs.map(tab => {
           const isActive = active === tab.id
+          const isBouncing = bouncing === tab.id
           return (
             <button
               key={tab.id}
-              onClick={() => onChange(tab.id)}
+              onClick={() => handleTap(tab.id)}
+              style={{ position: 'relative', overflow: 'hidden' }}
               className={`flex flex-col items-center justify-center transition-all duration-300 ${
-                isActive ? 'bg-primary/10 rounded-xl px-4 py-1 scale-110' : 'opacity-60'
+                isActive ? 'bg-primary/10 rounded-xl px-4 py-1' : 'opacity-60'
               }`}>
               <span
-                className={`material-symbols-outlined mb-1 ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}
+                className={`material-symbols-outlined mb-1 ${isActive ? 'text-primary' : 'text-on-surface-variant'} ${isBouncing ? 'nav-bounce' : ''}`}
                 style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}>
                 {tab.icon}
               </span>

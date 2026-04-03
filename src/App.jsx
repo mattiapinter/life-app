@@ -62,8 +62,8 @@ function SubNav({ tabs, active, onChange }) {
               </span>
               {isActive && (
                 <div
-                  className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
-                  style={{ boxShadow: '0 0 8px rgba(198, 191, 255, 0.6)' }}
+                  className="tab-indicator rounded-full bg-primary"
+                  style={{ width: '6px', height: '6px', boxShadow: '0 0 8px rgba(198, 191, 255, 0.7)' }}
                 />
               )}
             </button>
@@ -166,19 +166,29 @@ export default function App() {
 
       <main className={subTabs.length > 0 ? 'pt-14' : ''}>
         {macro === 'home' && (
-          <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} setSub={setSub} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
+          <div key="home" className="page-enter">
+            <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} setSub={setSub} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
+          </div>
         )}
         {macro === 'allenamento' && (
-          <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} />
+          <div key="allenamento" className="page-enter">
+            <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} />
+          </div>
         )}
         {macro === 'scalate' && (
-          <ScalateSection initialSub={activeSub} onSubChange={setSub} />
+          <div key="scalate" className="page-enter">
+            <ScalateSection initialSub={activeSub} onSubChange={setSub} />
+          </div>
         )}
         {macro === 'dieta' && (
-          <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} syncing={syncing} />
+          <div key="dieta" className="page-enter">
+            <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} syncing={syncing} />
+          </div>
         )}
         {macro === 'metriche' && (
-          <MetricheSection />
+          <div key="metriche" className="page-enter">
+            <MetricheSection />
+          </div>
         )}
       </main>
 
