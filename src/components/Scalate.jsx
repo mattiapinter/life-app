@@ -53,8 +53,10 @@ function StarRating({ value, onChange, size = 16 }) {
   return (
     <div style={{ display: 'flex', gap: '2px' }}>
       {[1,2,3,4,5].map(n => {
-        const active = n <= (hover || value || 0)
-        const color = active ? (n <= 2 ? C.hint : n <= 3 ? C.amber : C.green) : C.border
+        const current = hover || value || 0
+        const active = n <= current
+        const starColor = current <= 2 ? C.hint : current === 3 ? C.amber : C.green
+        const color = active ? starColor : C.border
         return (
           <div key={n}
             style={{ fontSize: `${size}px`, cursor: 'pointer', color, transition: 'color 0.15s', lineHeight: 1 }}
@@ -1280,11 +1282,15 @@ function StatsSection({ sessions, ascents, crags }) {
               <div style={{ fontSize: '9px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em' }}>media su {ratedAscents.length} vie</div>
             </div>
             <div style={{ display: 'flex', gap: '3px' }}>
-              {[1,2,3,4,5].map(n => (
-                <div key={n} style={{ fontSize: '18px', color: n <= Math.round(parseFloat(avgQuality)) ? (n >= 4 ? C.green : C.amber) : C.border }}>
-                  {n <= Math.round(parseFloat(avgQuality)) ? '★' : '☆'}
-                </div>
-              ))}
+              {[1,2,3,4,5].map(n => {
+                const rounded = Math.round(parseFloat(avgQuality))
+                const sc = rounded <= 2 ? C.hint : rounded === 3 ? C.amber : C.green
+                return (
+                  <div key={n} style={{ fontSize: '18px', color: n <= rounded ? sc : C.border }}>
+                    {n <= rounded ? '★' : '☆'}
+                  </div>
+                )
+              })}
             </div>
           </div>
           {topQualityRoutes.length > 0 && (
@@ -1298,7 +1304,7 @@ function StatsSection({ sessions, ascents, crags }) {
                   </div>
                   <div style={{ display: 'flex', gap: '2px' }}>
                     {[1,2,3,4,5].map(n => (
-                      <span key={n} style={{ fontSize: '12px', color: n <= a.quality_stars ? (n >= 4 ? C.green : C.amber) : C.border }}>{n <= a.quality_stars ? '★' : '☆'}</span>
+                      <span key={n} style={{ fontSize: '12px', color: n <= a.quality_stars ? (a.quality_stars <= 2 ? C.hint : a.quality_stars === 3 ? C.amber : C.green) : C.border }}>{n <= a.quality_stars ? '★' : '☆'}</span>
                     ))}
                   </div>
                 </div>
