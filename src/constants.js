@@ -116,7 +116,7 @@ export const ss = {
   bnavInner: { maxWidth: '448px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', alignItems: 'center' },
   bnavItem: (a) => ({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '4px 16px', cursor: 'pointer', opacity: a ? 1 : 0.4 }),
   bnavLabel: (a) => ({ fontSize: '9px', fontWeight: '600', color: a ? C.primary : C.hint, letterSpacing: '.06em', textTransform: 'uppercase' }),
-  subBar: { display: 'flex', background: C.bg, borderBottom: `1px solid ${C.border}`, padding: '0 16px', overflowX: 'auto', justifyContent: 'center', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' },
+  subBar: { display: 'flex', background: C.bg, borderBottom: `1px solid ${C.border}`, padding: '0 16px', overflowX: 'auto', justifyContent: 'flex-start', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' },
   subTab: (a) => ({
     padding: '14px 16px',
     fontSize: '13px',

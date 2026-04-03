@@ -124,7 +124,7 @@ function GpsButton({ url, onUrlChange }) {
       )}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={() => setShowModal(false)}>
-          <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }} onClick={e => e.stopPropagation()}>
+          <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)' }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '4px' }}>Traccia GPS / Avvicinamento</div>
             <div style={{ fontSize: '11px', color: C.muted, marginBottom: '12px' }}>Incolla un link Komoot, Wikiloc, Google Maps ecc.</div>
             {url && <div style={{ fontSize: '10px', color: C.hint, marginBottom: '8px', padding: '6px', background: C.bg, borderRadius: '6px', wordBreak: 'break-all' }}>Attuale: {url}</div>}
@@ -272,6 +272,7 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   const [approach,   setApproach]   = React.useState(editCrag?.approach_min || '')
   const [cragStyles, setCragStyles] = React.useState(editCrag?.styles || [])
   const [exposure,   setExposure]   = React.useState(editCrag?.exposure || null)
+  const [gpsUrl,     setGpsUrl]     = React.useState(editCrag?.gps_url || null)
   const [saving,     setSaving]     = React.useState(false)
 
   const toggleCragStyle = (id) => setCragStyles(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id])
@@ -288,6 +289,7 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
       approach_min: approach ? parseInt(approach) : null,
       styles: cragStyles,
       exposure: exposure || null,
+      gps_url: gpsUrl,
     })
     setSaving(false)
     onSaved()
@@ -295,7 +297,7 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '90vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)', maxHeight: '90vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
         onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -367,6 +369,11 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
         <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.6', marginBottom: '14px' }}
           rows={2} placeholder="Note, descrizione, info utili..." value={notes} onChange={e => setNotes(e.target.value)} />
 
+        <div style={{ marginBottom: '14px' }}>
+          <div style={{ fontSize: '10px', color: C.hint, marginBottom: '6px' }}>Traccia GPS / Avvicinamento</div>
+          <GpsButton url={gpsUrl} onUrlChange={async (url) => setGpsUrl(url)} />
+        </div>
+
         <div style={{ fontSize: '10px', fontWeight: '600', color: C.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '8px' }}>
           Posizione sulla mappa
         </div>
@@ -422,7 +429,7 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)', maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuova sessione</div>
@@ -537,7 +544,7 @@ function ProjectForm({ crags, onSaved, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }}
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuovo progetto</div>
@@ -588,7 +595,7 @@ function AttemptForm({ project, onSaved, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px' }}
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuovo tentativo</div>
@@ -697,7 +704,7 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: '40px', maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
+      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)', maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
         onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
