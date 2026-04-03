@@ -10,9 +10,9 @@ export default function BottomNav({ active, onChange }) {
   ]
 
   return (
-    <nav className="fixed w-full rounded-t-3xl z-50 bg-[#1c1b1b]/80 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(198,191,255,0.08)]"
-      style={{ bottom: 'max(env(safe-area-inset-bottom, 0px), 24px)', paddingBottom: '12px' }}>
-      <div className="flex justify-around items-center h-16 px-4 w-full">
+    <nav className="fixed bottom-0 w-full rounded-t-3xl z-50 bg-[#1c1b1b]/80 backdrop-blur-2xl shadow-[0_-8px_32px_rgba(198,191,255,0.08)]"
+      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 32px)' }}>
+      <div className="flex justify-around items-center h-20 px-4 w-full">
         {tabs.map(tab => {
           const isActive = active === tab.id
           return (
