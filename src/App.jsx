@@ -71,21 +71,32 @@ function SidebarDrawer({ open, onClose, macro, setMacro, onLogout }) {
         onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
 
         {/* FIX: padding-top usa safe area per non sovrapporsi alla Dynamic Island */}
-        <div style={{ padding:'calc(env(safe-area-inset-top, 44px) + 12px) 20px 16px', borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ fontSize:'11px', fontWeight:'700', color:C.violet, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:'4px' }}>LIFE</div>
-          <div style={{ fontSize:'13px', color:C.muted }}>Pinter</div>
+        <div style={{ padding:'calc(env(safe-area-inset-top, 44px) + 14px) 20px 18px', borderBottom:`1px solid ${C.border}`, background: C.primaryBgSolid }}>
+          <div style={{ fontSize:'12px', fontWeight:'700', color:C.primary, textTransform:'uppercase', letterSpacing:'.12em', marginBottom:'5px' }}>LIFE</div>
+          <div style={{ fontSize:'14px', color:C.textSoft, fontWeight:'500' }}>Pinter</div>
         </div>
 
-        <div style={{ flex:1, padding:'8px 0', overflowY:'auto' }}>
+        <div style={{ flex:1, padding:'10px 0', overflowY:'auto' }}>
           {MACRO.map(sec => {
             const isActive = macro === sec.id
             return (
               <div key={sec.id}
-                style={{ display:'flex', alignItems:'center', gap:'14px', padding:'16px 20px', cursor:'pointer', background: isActive ? C.violetBg : 'transparent', borderRight: isActive ? `3px solid ${C.violet}` : '3px solid transparent' }}
+                style={{
+                  display:'flex',
+                  alignItems:'center',
+                  gap:'14px',
+                  padding:'16px 20px',
+                  margin:'4px 12px',
+                  cursor:'pointer',
+                  background: isActive ? C.primaryBgSolid : 'transparent',
+                  borderRadius: '12px',
+                  border: isActive ? `1px solid ${C.primaryBorder}` : '1px solid transparent',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
                 onClick={() => { setMacro(sec.id); onClose() }}>
-                <div style={{ fontSize:'20px', lineHeight:1 }}>{sec.emoji}</div>
-                <div style={{ fontSize:'14px', fontWeight: isActive ? '700' : '400', color: isActive ? C.violetLight : C.textSoft }}>{sec.label}</div>
-                {isActive && <div style={{ marginLeft:'auto', width:'6px', height:'6px', borderRadius:'50%', background:C.violet }} />}
+                <div style={{ fontSize:'22px', lineHeight:1 }}>{sec.emoji}</div>
+                <div style={{ fontSize:'15px', fontWeight: isActive ? '700' : '500', color: isActive ? C.primaryLight : C.textSoft }}>{sec.label}</div>
+                {isActive && <div style={{ marginLeft:'auto', width:'8px', height:'8px', borderRadius:'50%', background:C.primary, boxShadow:`0 0 8px ${C.primaryGlow}` }} />}
               </div>
             )
           })}
@@ -108,10 +119,36 @@ function BottomNav({ macro, sub, setSub }) {
     <nav style={ss.bnav}>
       <div style={{ ...ss.bnavInner, justifyContent: subTabs.length <= 3 ? 'center' : 'space-around', gap: subTabs.length <= 3 ? '32px' : '0' }}>
         {subTabs.map(t => (
-          <div key={t.id} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'2px', padding:'4px 12px', cursor:'pointer' }} onClick={() => setSub(t.id)}>
-            <div style={{ fontSize:'11px', fontWeight: sub === t.id ? '700' : '500', color: sub === t.id ? C.violetLight : C.hint, letterSpacing:'.02em', borderBottom: sub === t.id ? `2px solid ${C.violet}` : '2px solid transparent', paddingBottom:'2px' }}>
+          <div key={t.id} style={{
+            display:'flex',
+            flexDirection:'column',
+            alignItems:'center',
+            gap:'3px',
+            padding:'6px 14px',
+            cursor:'pointer',
+            transition: 'transform 0.15s',
+          }} onClick={() => setSub(t.id)}>
+            <div style={{
+              fontSize:'12px',
+              fontWeight: sub === t.id ? '700' : '600',
+              color: sub === t.id ? C.primaryLight : C.hint,
+              letterSpacing:'.02em',
+              borderBottom: sub === t.id ? `2.5px solid ${C.primary}` : '2.5px solid transparent',
+              paddingBottom:'3px',
+              transition: 'all 0.2s',
+            }}>
               {t.l}
             </div>
+            {sub === t.id && (
+              <div style={{
+                width:'6px',
+                height:'6px',
+                borderRadius:'50%',
+                background:C.primary,
+                boxShadow:`0 0 8px ${C.primaryGlow}`,
+                animation: 'pulse 2s infinite',
+              }} />
+            )}
           </div>
         ))}
       </div>
@@ -208,18 +245,23 @@ export default function App() {
         {/* FIX: burger posizionato sotto la Dynamic Island usando safe-area-inset-top */}
         <div style={{
           position: 'fixed',
-          top: 'calc(env(safe-area-inset-top, 44px) + 8px)',
-          left: '12px',
+          top: 'calc(env(safe-area-inset-top, 44px) + 10px)',
+          left: '14px',
           zIndex: 50,
-          padding: '7px',
+          padding: '10px',
           cursor: 'pointer',
           background: C.surface,
-          borderRadius: '10px',
-          border: `1px solid ${C.border}`,
+          borderRadius: '14px',
+          border: `1.5px solid ${C.border}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          transition: 'transform 0.2s, box-shadow 0.2s',
         }}
+          onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+          onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           onClick={() => setDrawerOpen(true)}>
           <IcoMenu />
         </div>

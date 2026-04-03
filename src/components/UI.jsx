@@ -6,14 +6,40 @@ import { saveExerciseVideo } from '../lib/supabase'
 // ── MODAL OVERLAY ─────────────────────────────────────────────────
 export function Modal({ onClose, title, subtitle, accentColor, children }) {
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'flex-end' }} onClick={onClose}>
-      <div style={{ width:'100%', maxWidth:'448px', margin:'0 auto', background:C.surface, borderRadius:'20px 20px 0 0', padding:'20px', paddingBottom:'40px', maxHeight:'85vh', overflowY:'auto' }} onClick={e => e.stopPropagation()}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px' }}>
+    <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(8px)', display:'flex', alignItems:'flex-end' }} onClick={onClose}>
+      <div style={{
+        width:'100%',
+        maxWidth:'448px',
+        margin:'0 auto',
+        background:C.surface,
+        borderRadius:'24px 24px 0 0',
+        padding:'24px',
+        paddingBottom:'calc(env(safe-area-inset-bottom, 20px) + 24px)',
+        maxHeight:'85vh',
+        overflowY:'auto',
+        boxShadow:'0 -4px 24px rgba(0, 0, 0, 0.3)',
+        border:`1px solid ${C.border}`,
+        borderBottom:'none',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'18px' }}>
           <div>
-            {subtitle && <div style={{ fontSize:'9px', fontWeight:'600', letterSpacing:'.08em', textTransform:'uppercase', color: accentColor || C.violet, marginBottom:'4px' }}>{subtitle}</div>}
-            <div style={{ fontSize:'16px', fontWeight:'700', color:C.text }}>{title}</div>
+            {subtitle && <div style={{ fontSize:'10px', fontWeight:'700', letterSpacing:'.1em', textTransform:'uppercase', color: accentColor || C.primary, marginBottom:'6px' }}>{subtitle}</div>}
+            <div style={{ fontSize:'18px', fontWeight:'700', color:C.text }}>{title}</div>
           </div>
-          <div style={{ cursor:'pointer', padding:'6px' }} onClick={onClose}><IcoClose /></div>
+          <div style={{
+            cursor:'pointer',
+            padding:'8px',
+            borderRadius:'10px',
+            background:C.bg,
+            border:`1px solid ${C.border}`,
+            transition:'transform 0.2s',
+          }}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            onClick={onClose}>
+            <IcoClose />
+          </div>
         </div>
         {children}
       </div>
@@ -74,15 +100,41 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
   return (
     <>
       {existing ? (
-        <div style={{ display:'flex', gap:'5px', flexShrink:0, whiteSpace:'nowrap' }}>
+        <div style={{ display:'flex', gap:'6px', flexShrink:0, whiteSpace:'nowrap' }}>
           <div
-            style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.violetLight, fontWeight:'600', whiteSpace:'nowrap' }}
+            style={{
+              display:'flex',
+              alignItems:'center',
+              gap:'5px',
+              padding:'6px 12px',
+              background:C.primaryBgSolid,
+              border:`1px solid ${C.primaryBorder}`,
+              borderRadius:'10px',
+              cursor:'pointer',
+              fontSize:'11px',
+              color:C.primaryLight,
+              fontWeight:'700',
+              whiteSpace:'nowrap',
+              transition:'all 0.2s',
+              boxShadow:`0 2px 8px ${C.primaryGlow}`,
+            }}
             onClick={handlePlay}
           >
-            <IcoPlay col={C.violet} /> Video
+            <IcoPlay col={C.primary} /> Video
           </div>
           <div
-            style={{ padding:'3px 6px', background:C.surface, border:`1px solid ${C.border}`, borderRadius:'6px', cursor:'pointer', flexShrink:0 }}
+            style={{
+              padding:'6px 8px',
+              background:C.surface,
+              border:`1px solid ${C.border}`,
+              borderRadius:'10px',
+              cursor:'pointer',
+              flexShrink:0,
+              transition:'transform 0.2s',
+            }}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             onClick={() => setShowModal(true)}
           >
             <IcoEdit />
@@ -90,7 +142,22 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
         </div>
       ) : (
         <div
-          style={{ display:'flex', alignItems:'center', gap:'4px', padding:'3px 8px', background:'transparent', border:`1px dashed ${C.hint}`, borderRadius:'6px', cursor:'pointer', fontSize:'10px', color:C.hint, whiteSpace:'nowrap', flexShrink:0 }}
+          style={{
+            display:'flex',
+            alignItems:'center',
+            gap:'5px',
+            padding:'6px 12px',
+            background:'transparent',
+            border:`1.5px dashed ${C.hint}`,
+            borderRadius:'10px',
+            cursor:'pointer',
+            fontSize:'11px',
+            color:C.hint,
+            whiteSpace:'nowrap',
+            flexShrink:0,
+            transition:'all 0.2s',
+            fontWeight:'600',
+          }}
           onClick={() => setShowModal(true)}
         >
           + video

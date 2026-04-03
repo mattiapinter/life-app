@@ -73,23 +73,47 @@ function HrvWidget({ hrvLogs, onHrvSaved }) {
   }
 
   return (
-    <div style={ss.card}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>HRV mattutino</div>
-        {avg7 && <div style={{ fontSize: '10px', color: C.hint }}>media 7gg: <span style={{ color: C.text, fontWeight: '600' }}>{avg7}</span></div>}
+    <div style={{ ...ss.card, background: C.primaryBgSolid, border: `1px solid ${C.primaryBorder}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <div style={{ fontSize: '14px', fontWeight: '700', color: C.text }}>HRV mattutino</div>
+        {avg7 && <div style={{ fontSize: '11px', color: C.primaryLight }}>media 7gg: <span style={{ color: C.primary, fontWeight: '700' }}>{avg7}</span></div>}
       </div>
 
       {/* Semaforo + coach */}
       {todayHrv && status && (
-        <div style={{ background: statusBg[status], border: `1px solid ${statusBorder[status]}`, borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: statusColor[status], flexShrink: 0, boxShadow: `0 0 8px ${statusColor[status]}` }} />
-            <div style={{ fontSize: '20px', fontWeight: '800', color: statusLight[status] }}>{todayHrv} ms</div>
-            <div style={{ fontSize: '10px', color: statusColor[status], fontWeight: '600', marginLeft: 'auto' }}>
+        <div style={{
+          background: statusBg[status],
+          border: `1.5px solid ${statusBorder[status]}`,
+          borderRadius: '16px',
+          padding: '16px',
+          marginBottom: '14px',
+          boxShadow: `0 4px 12px ${statusColor[status]}33`,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{
+              width: '16px',
+              height: '16px',
+              borderRadius: '50%',
+              background: statusColor[status],
+              flexShrink: 0,
+              boxShadow: `0 0 12px ${statusColor[status]}`,
+              animation: 'pulse 2s infinite',
+            }} />
+            <div style={{ fontSize: '24px', fontWeight: '800', color: statusLight[status] }}>{todayHrv} ms</div>
+            <div style={{
+              fontSize: '10px',
+              color: statusColor[status],
+              fontWeight: '700',
+              marginLeft: 'auto',
+              background: statusColor[status] + '22',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              letterSpacing: '.05em',
+            }}>
               {status === 'green' ? 'OTTIMO' : status === 'yellow' ? 'MODERATO' : 'RIPOSA'}
             </div>
           </div>
-          <div style={{ fontSize: '12px', color: statusLight[status], lineHeight: '1.5', opacity: 0.9 }}>
+          <div style={{ fontSize: '13px', color: statusLight[status], lineHeight: '1.6', opacity: 0.95, fontWeight: '500' }}>
             {getCoachMsg(status)}
           </div>
         </div>
@@ -97,22 +121,36 @@ function HrvWidget({ hrvLogs, onHrvSaved }) {
 
       {/* Input */}
       {!alreadyLogged ? (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <input
             type="number" inputMode="numeric"
-            style={{ ...ss.inp, flex: 1, fontSize: '18px', fontWeight: '700', textAlign: 'center' }}
+            style={{ ...ss.inp, flex: 1, fontSize: '20px', fontWeight: '700', textAlign: 'center', border: `1.5px solid ${C.primaryBorder}` }}
             placeholder="HRV (ms)"
             value={inputVal}
             onChange={e => setInputVal(e.target.value)}
           />
           <div
-            style={{ padding: '10px 16px', background: saved ? C.greenBg : C.violetBg, border: `1px solid ${saved ? C.greenBorder : C.violetBorder}`, borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', color: saved ? C.greenLight : C.violetLight, whiteSpace: 'nowrap', opacity: saving ? 0.6 : 1, flexShrink: 0 }}
+            style={{
+              padding: '12px 18px',
+              background: saved ? C.greenBg : C.primary,
+              border: `1px solid ${saved ? C.greenBorder : C.primary}`,
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '700',
+              color: saved ? C.greenLight : '#0A0E12',
+              whiteSpace: 'nowrap',
+              opacity: saving ? 0.6 : 1,
+              flexShrink: 0,
+              transition: 'all 0.2s',
+              boxShadow: saved ? `0 4px 12px ${C.green}44` : `0 4px 12px ${C.primaryGlow}`,
+            }}
             onClick={!saving ? handleSave : undefined}>
             {saving ? '...' : saved ? '✓' : 'Salva'}
           </div>
         </div>
       ) : (
-        <div style={{ fontSize: '11px', color: C.hint, textAlign: 'center' }}>✓ Già registrato oggi</div>
+        <div style={{ fontSize: '12px', color: C.primary, textAlign: 'center', fontWeight: '600' }}>✓ Già registrato oggi</div>
       )}
 
       {/* Mini sparkline testuale ultimi giorni */}
@@ -182,24 +220,54 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab, setSub, s
           const scOrig = SESSION_COLORS[todayEntry.session_type] || SESSION_COLORS.REST
           const isChanged = !!todayChange
           return (
-            <div style={{ background: sc.bg, border: `1px solid ${isChanged ? C.amberBorder : sc.border}`, borderRadius: '16px', padding: '18px', marginBottom: '12px', cursor: 'pointer' }}
+            <div style={{
+              background: sc.bg,
+              border: `1.5px solid ${isChanged ? C.amberBorder : sc.border}`,
+              borderRadius: '20px',
+              padding: '20px',
+              marginBottom: '14px',
+              cursor: 'pointer',
+              boxShadow: `0 4px 16px ${sc.text}22`,
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               onClick={() => setTab('allenamento')}>
-              <div style={{ fontSize: '9px', fontWeight: '600', letterSpacing: '.08em', textTransform: 'uppercase', color: sc.text, marginBottom: '6px', display:'flex', alignItems:'center', gap:'6px' }}>
+              <div style={{
+                fontSize: '10px',
+                fontWeight: '700',
+                letterSpacing: '.1em',
+                textTransform: 'uppercase',
+                color: sc.text,
+                marginBottom: '8px',
+                display:'flex',
+                alignItems:'center',
+                gap:'8px'
+              }}>
                 Allenamento di oggi · Settimana {todayEntry.week}{todayEntry.scarico ? ' · Scarico' : ''}
-                {isChanged && <span style={{ width:'6px', height:'6px', borderRadius:'50%', background:C.amber, display:'inline-block' }} />}
+                {isChanged && <span style={{ width:'8px', height:'8px', borderRadius:'50%', background:C.amber, display:'inline-block', boxShadow:`0 0 8px ${C.amber}` }} />}
               </div>
-              <div style={{ fontSize: '22px', fontWeight: '700', color: C.text }}>{sc.label}</div>
+              <div style={{ fontSize: '26px', fontWeight: '800', color: C.text, letterSpacing:'-.02em' }}>{sc.label}</div>
               {isChanged && (
-                <div style={{ fontSize: '10px', color: C.amber, marginTop: '3px', opacity: 0.8 }}>
+                <div style={{ fontSize: '11px', color: C.amber, marginTop: '4px', opacity: 0.85, fontWeight:'600' }}>
                   modificato · pianificato: {scOrig.label}
                 </div>
               )}
               {!isChanged && todayEntry.also && (
-                <div style={{ fontSize: '11px', color: sc.text, opacity: 0.8, marginTop: '3px' }}>
+                <div style={{ fontSize: '12px', color: sc.text, opacity: 0.85, marginTop: '4px', fontWeight:'600' }}>
                   + {SESSION_COLORS[todayEntry.also]?.label}
                 </div>
               )}
-              <div style={{ marginTop: '12px', fontSize: '10px', fontWeight: '600', color: sc.text }}>Apri sessione →</div>
+              <div style={{
+                marginTop: '14px',
+                fontSize: '11px',
+                fontWeight: '700',
+                color: sc.text,
+                display:'flex',
+                alignItems:'center',
+                gap:'4px'
+              }}>Apri sessione →</div>
             </div>
           )
         })()}
@@ -213,9 +281,19 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab, setSub, s
 
         {/* ── PASTI OGGI ── */}
         <div style={ss.card}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
-            <div style={{ fontSize:'13px', fontWeight:'600', color:C.text }}>Pasti di oggi</div>
-            <div style={{ fontSize:'11px', color:C.violet, cursor:'pointer', fontWeight:'500' }} onClick={() => setTab('dieta')}>apri →</div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
+            <div style={{ fontSize:'14px', fontWeight:'700', color:C.text }}>Pasti di oggi</div>
+            <div style={{
+              fontSize:'12px',
+              color:C.primary,
+              cursor:'pointer',
+              fontWeight:'700',
+              transition:'transform 0.2s'
+            }}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onClick={() => setTab('dieta')}>apri →</div>
           </div>
           {mealNames.map(meal => {
             const items = Object.values(meals[meal] || {}).filter(Boolean)
@@ -228,11 +306,18 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab, setSub, s
               </div>
             )
           })}
-          <div style={{ marginTop:'10px' }}>
-            <div style={{ background:C.borderMid, borderRadius:'999px', height:'3px', overflow:'hidden' }}>
-              <div style={{ background:C.violet, height:'100%', width:`${pct}%`, borderRadius:'999px' }} />
+          <div style={{ marginTop:'12px' }}>
+            <div style={{ background:C.borderMid, borderRadius:'999px', height:'4px', overflow:'hidden' }}>
+              <div style={{
+                background: `linear-gradient(90deg, ${C.primary} 0%, ${C.primaryLight} 100%)`,
+                height:'100%',
+                width:`${pct}%`,
+                borderRadius:'999px',
+                transition:'width 0.3s ease',
+                boxShadow:`0 0 8px ${C.primaryGlow}`,
+              }} />
             </div>
-            <div style={{ fontSize:'10px', color:C.muted, marginTop:'5px' }}>{filled.length}/{mealNames.length} pasti pianificati</div>
+            <div style={{ fontSize:'11px', color:C.muted, marginTop:'6px', fontWeight:'600' }}>{filled.length}/{mealNames.length} pasti pianificati</div>
           </div>
         </div>
 
