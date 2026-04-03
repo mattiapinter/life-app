@@ -45,16 +45,17 @@ function SubNav({ tabs, active, onChange }) {
   return (
     <nav className="fixed top-0 w-full z-40 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <div className="flex justify-around items-center h-14 px-4">
+      <div className="flex items-center h-14 px-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <style>{`.flex::-webkit-scrollbar { display: none; }`}</style>
         {tabs.map(t => {
           const isActive = active === t.id
           return (
             <button
               key={t.id}
               onClick={() => onChange(t.id)}
-              className="flex flex-col items-center gap-1 px-4 py-2 transition-all">
+              className="flex flex-col items-center gap-1 px-3 py-2 transition-all flex-shrink-0">
               <span
-                className={`text-xs font-bold uppercase tracking-widest transition-colors ${
+                className={`text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap ${
                   isActive ? 'text-primary' : 'text-on-surface-variant'
                 }`}>
                 {t.l}
