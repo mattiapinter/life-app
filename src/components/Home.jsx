@@ -188,7 +188,7 @@ export default function HomeSection({ weeklyPlan, fitSessions, setTab, setSub, s
     .slice(0, 7)
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-40">
       <div className="px-6 pb-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 32px)' }}>
         <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">
           {fmtDate()}

@@ -388,7 +388,7 @@ function HrvHistory() {
   const last   = sorted[sorted.length - 1]
 
   return (
-    <div className="px-6 pb-32">
+    <div className="px-6 pb-40">
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
           { l: 'Ultimo', v: last.hrv_value + ' ms', c: statusColor[getStatus(last.hrv_value, avg7)] },
@@ -545,7 +545,7 @@ function BodyComposition({ measurements, userProfile }) {
   ]
 
   return (
-    <div className="px-6 pb-32">
+    <div className="px-6 pb-40">
       <div className="bg-surface-container-low rounded-xl p-5 mb-4 border border-outline-variant/20">
         <div className="text-xs text-on-surface-variant mb-3">
           ⓘ Stima basata su Navy Method (circonferenze + altezza). Margine errore ±3-4%.
@@ -613,7 +613,7 @@ export default function MetricheSection() {
   ]
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-40">
       <div className="px-6 pt-6 pb-8">
         <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
           Salute · Biometria

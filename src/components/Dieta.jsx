@@ -186,7 +186,7 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
   )
 
   return (
-    <div>
+    <div style={{ paddingBottom: '160px' }}>
       <div style={ss.hdr}>
         <div style={ss.eyebrow}>{fmtDate()}{syncing ? ' · sync...' : ' · sincronizzato'}</div>
         <div style={ss.title}>Dieta</div>

@@ -1451,7 +1451,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
   )
 
   return (
-    <div>
+    <div style={{ paddingBottom: '160px' }}>
       <div style={ss.hdr}>
         <div style={ss.eyebrow}>Piano · {TRAINING_PLAN.meta.goal}</div>
         <div style={ss.title}>Allenamento</div>

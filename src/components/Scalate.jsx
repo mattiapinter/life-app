@@ -1371,7 +1371,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
   )
 
   return (
-    <div>
+    <div style={{ paddingBottom: '160px' }}>
       <div style={ss.hdr}>
         <div style={ss.eyebrow}>arrampicata · performance</div>
         <div style={ss.title}>Scalate</div>
