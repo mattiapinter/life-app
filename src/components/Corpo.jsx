@@ -136,7 +136,7 @@ function AddMeasurementForm({ onSaved }) {
       <button
         onClick={handleSave}
         disabled={!hasAny || saving}
-        className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-all disabled:opacity-40"
+        className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-40"
         style={{
           background: saved ? '#4ae176' : 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
           color: saved ? '#003915' : '#160066',
@@ -633,7 +633,7 @@ export default function MetricheSection() {
           <button
             key={t.id}
             onClick={() => setSub(t.id)}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
               sub === t.id
                 ? 'bg-primary/10 text-primary border-2 border-primary/20'
                 : 'bg-surface-container-low text-on-surface-variant border-2 border-outline-variant/10'
@@ -687,7 +687,7 @@ export default function MetricheSection() {
               {measurements.length === 0 && (
                 <div className="text-center mt-4">
                   <button
-                    className="px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-widest kinetic-gradient text-on-primary-fixed"
+                    className="px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-wider kinetic-gradient text-on-primary-fixed"
                     style={{ boxShadow: '0 4px 16px rgba(198, 191, 255, 0.3)' }}
                     onClick={() => setSub('aggiungi')}>
                     + Prima Misurazione

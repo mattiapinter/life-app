@@ -28,7 +28,7 @@ export default function BottomNav({ active, onChange }) {
                 {tab.icon}
               </span>
               <span
-                className={`font-label text-[10px] font-bold uppercase tracking-widest ${
+                className={`font-label text-[10px] font-bold uppercase tracking-wider ${
                   isActive ? 'text-primary' : 'text-on-surface-variant'
                 }`}>
                 {tab.label}

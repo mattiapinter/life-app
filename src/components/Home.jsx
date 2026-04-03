@@ -127,7 +127,7 @@ function HrvWidget({ hrvLogs, onHrvSaved }) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-6 rounded-xl font-bold text-sm uppercase tracking-widest transition-all disabled:opacity-50"
+            className="px-5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-50 whitespace-nowrap flex-shrink-0"
             style={{
               background: saved ? '#4ae176' : 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
               color: saved ? '#003915' : '#160066',
