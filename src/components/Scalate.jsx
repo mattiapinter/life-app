@@ -901,8 +901,9 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
 }
 
 // ── TIRI TAB ───────────────────────────────────────────────────────
-function TiriTab({ ascents, sessions, crags }) {
+function TiriTab({ ascents, sessions, crags, onRefresh }) {
   const [filter, setFilter] = React.useState('tutti')
+  const [editSession, setEditSession] = React.useState(null)
 
   const filtered = ascents.filter(a => {
     if (filter === 'prime')       return IS_FIRST_ASCENT.includes(a.style) && a.completed
@@ -928,6 +929,15 @@ function TiriTab({ ascents, sessions, crags }) {
 
   return (
     <div style={ss.body}>
+      {editSession && (
+        <EditSessionDrawer
+          session={editSession}
+          ascents={ascents.filter(a => a.session_id === editSession.id)}
+          onClose={() => setEditSession(null)}
+          onSaved={() => { setEditSession(null); onRefresh() }}
+        />
+      )}
+
       <div style={{ display: 'flex', background: C.surface, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '3px', marginBottom: '16px' }}>
         {[{ id: 'tutti', l: 'Tutti' }, { id: 'prime', l: 'Prime salite' }, { id: 'ripetizioni', l: 'Ripetizioni' }].map(f => (
           <div key={f.id} style={ss.pill(filter === f.id)} onClick={() => setFilter(f.id)}>{f.l}</div>
@@ -961,6 +971,10 @@ function TiriTab({ ascents, sessions, crags }) {
               <div style={{ fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '999px', background: a.rpe <= 6 ? C.greenBg : a.rpe <= 8 ? C.amberBg : C.redBg, color: a.rpe <= 6 ? C.greenLight : a.rpe <= 8 ? C.amberLight : C.redLight, flexShrink: 0 }}>
                 RPE {a.rpe}
               </div>
+            )}
+            {sess && (
+              <div style={{ fontSize: '11px', color: C.violet, cursor: 'pointer', padding: '4px 8px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '8px', fontWeight: '600', flexShrink: 0 }}
+                onClick={() => setEditSession(sess)}>✎</div>
             )}
           </div>
         )
@@ -1381,7 +1395,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
       </div>
 
       {sub === 'falesie'  && renderFalesie()}
-      {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} />}
+      {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} onRefresh={loadAll} />}
       {sub === 'progetti' && <ProjectsTab projects={projects} attempts={attempts} crags={crags} onAdded={loadAll} onRefresh={loadAll} />}
       {sub === 'stats'    && <StatsSection sessions={sessions} ascents={ascents} crags={crags} />}
     </div>
