@@ -2,13 +2,14 @@ import React from 'react'
 import { Chart, LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import {
-  C, ss, SESSION_COLORS, ALL_TESTS, MOB_TESTS, STR_TESTS,
-  USER_HEIGHT, USER_LEG, todayStr, fmtDate, fmtDateShort, fmtDayName,
+  C, ss, SESSION_COLORS,
+  todayStr, fmtDate, fmtDateShort, fmtDayName,
 } from '../constants'
 import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
-import { saveTrainingLog, loadTrainingLogs, saveFitnessSession, loadFitnessSessions, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData, saveRunningLog, loadRunningLogs, loadClimbingSessions, loadAscents, loadCrags } from '../lib/supabase'
+import { saveTrainingLog, loadTrainingLogs, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData, saveRunningLog, loadRunningLogs, loadClimbingSessions, loadAscents, loadCrags } from '../lib/supabase'
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
+import { BenchmarkWidget, MetricsDetail } from './FitnessBenchmark'
 import PesiRow from './PesiRow'
 
 // ── SESSION DETAIL ─────────────────────────────────────────────────
@@ -501,200 +502,6 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
             </div>
           </div>
         </div>
-    </div>
-  )
-}
-
-// ── METRICS DETAIL SCREEN ─────────────────────────────────────────
-function MetricsDetail({ fitSessions, onBack, onGoToTest }) {
-  const [selIdx, setSelIdx] = React.useState(0)
-  const canvasRef = React.useRef(null)
-  const chartRef  = React.useRef(null)
-
-  const displayTests = [...MOB_TESTS, ...STR_TESTS]
-  const test  = displayTests[selIdx]
-  const first = fitSessions[0]
-  const last  = fitSessions[fitSessions.length - 1]
-  const pts   = fitSessions.map(s => ({ x: s.session_date, y: s[test.id] })).filter(p => p.y != null)
-
-  const improvement = (first && last && first[test.id] != null && last[test.id] != null && first !== last)
-    ? ((last[test.id] - first[test.id]) / Math.abs(first[test.id]) * 100).toFixed(1) : null
-
-  React.useEffect(() => {
-    if (!canvasRef.current) return
-    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
-    if (pts.length < 2) return
-    chartRef.current = new Chart(canvasRef.current, {
-      type:'line',
-      data:{ labels: pts.map(p => p.x), datasets:[{ data: pts.map(p => p.y), borderColor:'#7B6FE8', backgroundColor:'rgba(123,111,232,0.12)', pointBackgroundColor:'#7B6FE8', tension:0.35, fill:true, pointRadius:5 }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } }, y:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } } } },
-    })
-  }, [selIdx, fitSessions])
-
-  if (!fitSessions.length) {
-    return (
-      <div>
-        <div style={ss.hdr}>
-          <div style={{ fontSize:'12px', color:C.muted, cursor:'pointer', marginBottom:'12px' }} onClick={onBack}>← Oggi</div>
-          <div style={ss.title}>Metriche</div>
-        </div>
-        <div style={{ textAlign:'center', padding:'48px 20px', color:C.hint, fontSize:'13px' }}>
-          Nessun test registrato ancora.
-          <div style={{ marginTop:'16px' }}>
-            <div style={{ ...ss.savBtn, maxWidth:'200px', margin:'0 auto' }} onClick={onGoToTest}>Registra primo test</div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      <div style={ss.hdr}>
-        <div style={{ fontSize:'12px', color:C.muted, cursor:'pointer', marginBottom:'12px' }} onClick={onBack}>← Oggi</div>
-        <div style={ss.eyebrow}>Performance · {fitSessions.length} test registrati</div>
-        <div style={ss.title}>Metriche</div>
-        <div style={ss.subtitle}>dal {first?.session_date} · ultimo {last?.session_date}</div>
-      </div>
-      <div style={ss.body}>
-
-        {(last?.spaccata_piedi || last?.spaccata_seduti) && (
-          <div style={ss.card}>
-            <div style={ss.secLbl}>Spaccata vs altezza ({USER_HEIGHT} cm)</div>
-            <div style={{ display:'flex', gap:'8px', marginBottom:'8px' }}>
-              <div style={{ flex:1, background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:'12px', padding:'14px' }}>
-                <div style={{ fontSize:'9px', fontWeight:'600', color:C.green, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'4px' }}>In piedi</div>
-                <div style={{ fontSize:'28px', fontWeight:'700', color:C.greenLight }}>{last.spaccata_piedi ? Math.round((last.spaccata_piedi / USER_HEIGHT) * 100) + '%' : '—'}</div>
-                <div style={{ fontSize:'10px', color:C.green, opacity:.8, marginTop:'2px' }}>{last.spaccata_piedi ? last.spaccata_piedi + ' cm' : ''}</div>
-              </div>
-              <div style={{ flex:1, background:C.amberBg, border:`1px solid ${C.amberBorder}`, borderRadius:'12px', padding:'14px' }}>
-                <div style={{ fontSize:'9px', fontWeight:'600', color:C.amber, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'4px' }}>Da seduti</div>
-                <div style={{ fontSize:'28px', fontWeight:'700', color:C.amberLight }}>{last.spaccata_seduti ? Math.round((last.spaccata_seduti / USER_HEIGHT) * 100) + '%' : '—'}</div>
-                <div style={{ fontSize:'10px', color:C.amber, opacity:.8, marginTop:'2px' }}>{last.spaccata_seduti ? last.spaccata_seduti + ' cm' : ''}</div>
-              </div>
-            </div>
-            <div style={{ fontSize:'10px', color:C.hint }}>100% = apertura uguale all'altezza · sopra 100% ottima mobilità</div>
-          </div>
-        )}
-
-        <a href="https://drive.google.com/drive/folders/1Sghs3pDiQkl2wMUqiGVb0auGAZzru21s?usp=sharing"
-          target="_blank" rel="noopener noreferrer"
-          style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', padding:'12px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'12px', fontSize:'12px', fontWeight:'600', color:C.violetLight, textDecoration:'none', marginBottom:'12px' }}>
-          📁 Cartella Foto test →
-        </a>
-
-        <div style={ss.card}>
-          <div style={ss.secLbl}>Andamento nel tempo</div>
-          <div style={{ display:'flex', flexWrap:'wrap', gap:'5px', marginBottom:'14px' }}>
-            {displayTests.map((t, i) => (
-              <div key={t.id} onClick={() => setSelIdx(i)}
-                style={{ padding:'4px 9px', fontSize:'10px', fontWeight:'500', borderRadius:'999px', cursor:'pointer', userSelect:'none', background: selIdx === i ? C.violet : C.surface, color: selIdx === i ? '#fff' : C.muted, border:`1px solid ${selIdx === i ? C.violetBorder : C.border}` }}>
-                {t.label.replace('Forza ','').replace(' frontale','').replace('massimale trazione','traz. max').replace('Resistenza tacca 20mm','Resist.').trim()}
-              </div>
-            ))}
-          </div>
-          {last?.[test.id] != null && (
-            <div style={{ display:'flex', alignItems:'baseline', gap:'10px', marginBottom:'12px' }}>
-              <div style={{ fontSize:'32px', fontWeight:'700', color:C.text }}>{last[test.id]}</div>
-              <div style={{ fontSize:'13px', color:C.muted }}>{test.unit}</div>
-              {improvement !== null && (
-                <div style={{ fontSize:'11px', fontWeight:'600', padding:'3px 10px', borderRadius:'999px', background: parseFloat(improvement) >= 0 ? C.greenBg : C.redBg, color: parseFloat(improvement) >= 0 ? C.greenLight : C.redLight }}>
-                  {parseFloat(improvement) >= 0 ? '+' : ''}{improvement}% dall'inizio
-                </div>
-              )}
-            </div>
-          )}
-          {pts.length >= 2
-            ? <div style={{ position:'relative', height:'160px' }}><canvas ref={canvasRef} /></div>
-            : <div style={{ textAlign:'center', padding:'20px', fontSize:'11px', color:C.hint }}>{pts.length === 1 ? 'Serve un secondo test per il grafico' : 'Nessun dato per questa metrica'}</div>
-          }
-        </div>
-
-        <div style={ss.card}>
-          <div style={ss.secLbl}>Ultimo test · {last?.session_date}{last?.body_weight_kg ? ` · ${last.body_weight_kg} kg` : ''}</div>
-          {[...MOB_TESTS, ...STR_TESTS].map(t => {
-            const val  = last?.[t.id]
-            const fval = first?.[t.id]
-            const d    = (val != null && fval != null && first !== last) ? (val - fval).toFixed(1) : null
-            return (
-              <div key={t.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 0', borderBottom:`1px solid ${C.border}` }}>
-                <div style={{ fontSize:'12px', color:C.textSoft, flex:1 }}>{t.label}</div>
-                <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                  {d !== null && <div style={{ fontSize:'10px', fontWeight:'600', padding:'2px 7px', borderRadius:'999px', background: parseFloat(d) >= 0 ? C.greenBg : C.redBg, color: parseFloat(d) >= 0 ? C.greenLight : C.redLight }}>{parseFloat(d) >= 0 ? '+' : ''}{d}</div>}
-                  <div style={{ fontSize:'14px', fontWeight:'700', color: val != null ? C.text : C.hint }}>
-                    {val != null ? val : '—'}{val != null && <span style={{ fontSize:'10px', color:C.muted, marginLeft:'2px' }}>{t.unit}</span>}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div style={{ textAlign:'center', paddingTop:'4px' }}>
-          <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={onGoToTest}>+ Registra nuovo test</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── BENCHMARK CHART WIDGET ─────────────────────────────────────────
-function BenchmarkWidget({ fitSessions, onOpenMetrics }) {
-  const [idx, setIdx] = React.useState(0)
-  const canvasRef = React.useRef(null)
-  const chartRef  = React.useRef(null)
-
-  const displayTests = [...MOB_TESTS.slice(0,3), ...STR_TESTS]
-  const test = displayTests[idx]
-
-  const pts = fitSessions
-    .map(s => ({ x: s.session_date, y: s[test.id] }))
-    .filter(p => p.y != null)
-
-  React.useEffect(() => {
-    if (!canvasRef.current) return
-    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
-    if (!pts.length) return
-    chartRef.current = new Chart(canvasRef.current, {
-      type:'line',
-      data:{ labels: pts.map(p => p.x), datasets:[{ data: pts.map(p => p.y), borderColor:'#7B6FE8', backgroundColor:'rgba(123,111,232,0.1)', pointBackgroundColor:'#7B6FE8', tension:0.35, fill:true, pointRadius:4 }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } }, y:{ ticks:{ color:'#888', font:{ size:9 } }, grid:{ color:'#1E1E1E' } } } },
-    })
-  }, [idx, fitSessions])
-
-  const last  = fitSessions.length ? fitSessions[fitSessions.length - 1] : null
-  const prev  = fitSessions.length > 1 ? fitSessions[fitSessions.length - 2] : null
-  const delta = last && prev && last[test.id] != null && prev[test.id] != null
-    ? (last[test.id] - prev[test.id]).toFixed(1) : null
-
-  return (
-    <div style={{ ...ss.card, cursor:'pointer' }} onClick={onOpenMetrics}>
-      <div style={ss.secLbl}>Benchmark · tocca per il dettaglio</div>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
-        <div style={{ padding:'6px 12px', color:C.muted, fontSize:'20px' }}
-          onClick={e => { e.stopPropagation(); setIdx((idx - 1 + displayTests.length) % displayTests.length) }}>‹</div>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:'12px', fontWeight:'600', color:C.text }}>{test.label}</div>
-          <div style={{ fontSize:'10px', color:C.hint, marginTop:'2px' }}>{test.unit}</div>
-        </div>
-        <div style={{ padding:'6px 12px', color:C.muted, fontSize:'20px' }}
-          onClick={e => { e.stopPropagation(); setIdx((idx + 1) % displayTests.length) }}>›</div>
-      </div>
-      {last && last[test.id] != null && (
-        <div style={{ display:'flex', alignItems:'baseline', gap:'8px', marginBottom:'10px', justifyContent:'center' }}>
-          <div style={{ fontSize:'28px', fontWeight:'700', color:C.text }}>{last[test.id]}</div>
-          <div style={{ fontSize:'12px', color:C.muted }}>{test.unit}</div>
-          {delta && (
-            <div style={{ fontSize:'11px', fontWeight:'600', padding:'2px 8px', borderRadius:'999px', background: parseFloat(delta) >= 0 ? C.greenBg : C.redBg, color: parseFloat(delta) >= 0 ? C.greenLight : C.redLight }}>
-              {parseFloat(delta) >= 0 ? '+' : ''}{delta}
-            </div>
-          )}
-        </div>
-      )}
-      {pts.length > 1
-        ? <div style={{ position:'relative', height:'100px' }}><canvas ref={canvasRef} /></div>
-        : <div style={{ textAlign:'center', padding:'16px', fontSize:'11px', color:C.hint }}>{pts.length === 1 ? 'Serve un secondo test per il grafico' : 'Nessun dato — registra il primo test'}</div>
-      }
     </div>
   )
 }
@@ -1192,95 +999,8 @@ function CorsaSection({ runningLogs, onRefresh }) {
   )
 }
 
-// ── TEST FORM ──────────────────────────────────────────────────────
-function TestForm({ fitSessions, onSaved }) {
-  const [formDate, setFormDate] = React.useState(todayStr())
-  const [formPeso, setFormPeso] = React.useState('')
-  const [fv,       setFv]       = React.useState({})
-  const [saving,   setSaving]   = React.useState(false)
-  const [savedMsg, setSavedMsg] = React.useState(false)
-
-  const sv = (id, v) => setFv(p => ({ ...p, [id]: v }))
-  const relPct    = () => { const p = parseFloat(formPeso), k = parseFloat(fv['trazione_kg']); return (p > 0 && !isNaN(k)) ? Math.round((k / p) * 100) : null }
-  const resistSec = () => { const r = parseFloat(fv['resist_reps']); return !isNaN(r) ? Math.round(r * 10) : null }
-
-  const salva = async () => {
-    if (!formDate) return
-    setSaving(true)
-    const session = {
-      session_date: formDate,
-      height_cm: USER_HEIGHT, leg_length_cm: USER_LEG,
-      body_weight_kg: formPeso ? parseFloat(formPeso) : null,
-      ...Object.fromEntries(ALL_TESTS.map(t => [t.id, fv[t.id] ? parseFloat(fv[t.id]) : null])),
-      trazione_pct: relPct(),
-      resist_time_sec: resistSec(),
-    }
-    const ok = await saveFitnessSession(session)
-    if (ok) { setSavedMsg(true); setFv({}); setFormPeso(''); onSaved(); setTimeout(() => setSavedMsg(false), 2500) }
-    setSaving(false)
-  }
-
-  const inp = (test) => (
-    <div key={test.id} style={{ marginBottom:'12px' }}>
-      <div style={{ fontSize:'12px', fontWeight:'500', color:C.text, marginBottom:'2px' }}>{test.label}</div>
-      <div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>{test.desc} · {test.unit}</div>
-      <input type="number" step="0.1" style={ss.inp} value={fv[test.id] || ''} onChange={e => sv(test.id, e.target.value)} placeholder={`— ${test.unit}`} />
-    </div>
-  )
-
-  return (
-    <div style={ss.body}>
-      <div style={ss.card}>
-        <div style={ss.secLbl}>Info sessione</div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
-          <div><div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>Data</div><input type="date" style={ss.inp} value={formDate} onChange={e => setFormDate(e.target.value)} /></div>
-          <div><div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>Peso (kg)</div><input type="number" step="0.1" style={ss.inp} value={formPeso} onChange={e => setFormPeso(e.target.value)} placeholder="es. 72" /></div>
-        </div>
-      </div>
-      <div style={ss.card}>
-        <div style={ss.secLbl}>Mobilità</div>
-        {MOB_TESTS.map(t => inp(t))}
-      </div>
-      <div style={ss.card}>
-        <div style={ss.secLbl}>Forza</div>
-        {STR_TESTS.slice(0, 4).map(t => inp(t))}
-        <div style={{ marginBottom:'12px' }}>
-          <div style={{ fontSize:'12px', fontWeight:'500', color:C.text, marginBottom:'2px' }}>Forza massimale trazione</div>
-          <div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>Carico aggiuntivo singola trazione · kg extra</div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
-            <input type="number" step="0.5" style={ss.inp} value={fv['trazione_kg'] || ''} onChange={e => sv('trazione_kg', e.target.value)} placeholder="kg extra" />
-            <div style={{ ...ss.inp, background:C.surface, color:C.muted, display:'flex', alignItems:'center' }}>{relPct() != null ? `${relPct()}% BW` : '% BW'}</div>
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize:'12px', fontWeight:'500', color:C.text, marginBottom:'2px' }}>Resistenza tacca 20mm</div>
-          <div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>7"/3" off a cedimento — Beast</div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
-            <input type="number" style={ss.inp} value={fv['resist_reps'] || ''} onChange={e => sv('resist_reps', e.target.value)} placeholder="n° reps" />
-            <div style={{ ...ss.inp, background:C.surface, color:C.muted, display:'flex', alignItems:'center' }}>{resistSec() != null ? `${resistSec()} sec` : 'sec totali'}</div>
-          </div>
-        </div>
-      </div>
-      <div style={ss.card}>
-        <div style={ss.secLbl}>Test Fotografici</div>
-        <div style={{ fontSize:'11px', color:C.muted, lineHeight:'1.6', marginBottom:'14px' }}>
-          Flessione braccia · Extrarotazione/Intrarotazione femore. Tracciamento tramite foto — nessun inserimento numerico necessario.
-        </div>
-        <a href="https://drive.google.com/drive/folders/1Sghs3pDiQkl2wMUqiGVb0auGAZzru21s?usp=sharing" target="_blank" rel="noopener noreferrer"
-          style={{ display:'block', textAlign:'center', padding:'10px', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'10px', fontSize:'12px', fontWeight:'600', color:C.violetLight, textDecoration:'none' }}>
-          📁 Cartella Foto →
-        </a>
-      </div>
-      <div style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1 }} onClick={!saving ? salva : undefined}>
-        {saving ? 'Salvataggio...' : 'Salva test'}
-      </div>
-      {savedMsg && <div style={{ textAlign:'center', fontSize:'12px', color:C.greenLight, marginTop:'8px' }}>✓ Test salvato!</div>}
-    </div>
-  )
-}
-
 // ── MAIN ALLENAMENTO ───────────────────────────────────────────────
-export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange }) {
+export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange, onOpenFitnessTests }) {
   const [sub, setSub]                     = React.useState(initialSub || 'oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
   const [showMetrics,   setShowMetrics]   = React.useState(false)
@@ -1304,8 +1024,6 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
     setTrainingLogs(logs)
     setSessionNotes(notes)
   }
-  const onFitSaved = async () => { const sessions = await loadFitnessSessions(); setFitSessions(sessions) }
-
   React.useEffect(() => {
     loadSessionNotes().then(setSessionNotes)
     loadRunningLogs().then(setRunningLogs)
@@ -1318,7 +1036,9 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
     return <MetricsDetail
       fitSessions={fitSessions}
       onBack={() => setShowMetrics(false)}
-      onGoToTest={() => { setShowMetrics(false); changeSub('test') }}
+      onGoToTest={() => { setShowMetrics(false); onOpenFitnessTests?.() }}
+      backLabel="← Oggi"
+      title="Benchmark"
     />
   }
 
@@ -1400,7 +1120,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
         <BenchmarkWidget fitSessions={fitSessions} onOpenMetrics={() => setShowMetrics(true)} />
 
         <div style={{ textAlign:'center', marginTop:'-4px', marginBottom:'8px' }}>
-          <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={() => changeSub('test')}>
+          <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={() => onOpenFitnessTests?.()}>
             + Registra nuovo test
           </div>
         </div>
@@ -1467,7 +1187,6 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
       {sub === 'storico'  && <StoricoAllenamenti trainingLogs={trainingLogs} sessionNotes={sessionNotes} onDataChanged={onLogsChanged} />}
       {sub === 'esercizi' && <ExercisesTable trainingLogs={trainingLogs} onDataChanged={onLogsChanged} />}
       {sub === 'corsa'    && <CorsaSection runningLogs={runningLogs} onRefresh={() => loadRunningLogs().then(setRunningLogs)} />}
-      {sub === 'test'     && <TestForm fitSessions={fitSessions} onSaved={onFitSaved} />}
     </div>
   )
 }

@@ -24,7 +24,6 @@ const SUB = {
     { id: 'storico',   l: 'Storico' },
     { id: 'esercizi',  l: 'Esercizi' },
     { id: 'corsa',     l: 'Corsa' },
-    { id: 'test',      l: 'Test' },
   ],
   scalate: [
     { id: 'falesie',   l: 'Falesie' },
@@ -37,35 +36,38 @@ const SUB = {
     { id: 'spesa',     l: 'Spesa' },
     { id: 'opzioni',   l: 'Opzioni' },
   ],
-  metriche: []
+  metriche: [
+    { id: 'biometria',  l: 'Biometria' },
+    { id: 'hrv',       l: 'HRV' },
+    { id: 'testfisici', l: 'Test fisici' },
+  ],
 }
 
 function SubNav({ tabs, active, onChange }) {
   if (tabs.length === 0) return null
   return (
-    <nav className="fixed top-0 w-full z-40 bg-background/60 backdrop-blur-xl border-b border-outline-variant/10"
+    <nav
+      className="fixed top-0 left-0 right-0 z-40 rounded-b-3xl bg-[#1c1b1b]/88 backdrop-blur-2xl border-b border-outline-variant/15 shadow-[0_8px_32px_rgba(0,0,0,0.35)]"
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <div className="flex items-center h-14 px-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', justifyContent: 'center', WebkitOverflowScrolling: 'touch' }}>
-        <style>{`.flex::-webkit-scrollbar { display: none; }`}</style>
+      <div
+        className="subnav-scroll flex flex-nowrap items-center justify-start gap-1 min-h-[52px] w-full max-w-lg mx-auto px-3 py-2 overflow-x-auto overscroll-x-contain touch-pan-x"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}>
+        <style>{`.subnav-scroll::-webkit-scrollbar { display: none; }`}</style>
         {tabs.map(t => {
           const isActive = active === t.id
           return (
             <button
               key={t.id}
+              type="button"
               onClick={() => onChange(t.id)}
-              className="flex flex-col items-center gap-1 px-3 py-2 transition-all flex-shrink-0">
-              <span
-                className={`text-xs font-bold uppercase tracking-widest transition-colors whitespace-nowrap ${
-                  isActive ? 'text-primary' : 'text-on-surface-variant'
-                }`}>
+              className={`flex-shrink-0 rounded-xl px-3.5 py-2.5 transition-all duration-200 active:scale-[0.97] ${
+                isActive
+                  ? 'bg-primary/12 text-primary shadow-[0_0_20px_rgba(198,191,255,0.12)]'
+                  : 'text-on-surface-variant/75 hover:text-on-surface-variant'
+              }`}>
+              <span className="font-label text-[11px] font-bold uppercase tracking-widest whitespace-nowrap">
                 {t.l}
               </span>
-              {isActive && (
-                <div
-                  className="tab-indicator rounded-full bg-primary"
-                  style={{ width: '6px', height: '6px', boxShadow: '0 0 8px rgba(198, 191, 255, 0.7)' }}
-                />
-              )}
             </button>
           )
         })}
@@ -138,6 +140,10 @@ export default function App() {
   }, [foodOptions, user])
 
   const setMacro = (m) => { setMacroRaw(m); setSub(SUB[m]?.[0]?.id || null) }
+  const goToMetricheTab = (tabId) => {
+    setMacroRaw('metriche')
+    setSub(tabId)
+  }
   const activeSub = sub || SUB[macro]?.[0]?.id || null
   const handleVideosChange = (name, url) => setVideos(p => ({ ...p, [name]: url }))
   const handleLogout = async () => { await db.auth.signOut(); setUser(null) }
@@ -158,13 +164,13 @@ export default function App() {
     return <LoginScreen onLogin={() => {}} />
   }
 
-  const subTabs = macro === 'scalate' ? [] : (SUB[macro] || [])
+  const subTabs = SUB[macro] || []
 
   return (
     <div className="min-h-screen bg-background">
       {subTabs.length > 0 && <SubNav tabs={subTabs} active={activeSub} onChange={setSub} />}
 
-      <main className={subTabs.length > 0 ? 'pt-14' : ''}>
+      <main className={subTabs.length > 0 ? 'pt-[calc(64px+env(safe-area-inset-top,0px))]' : ''}>
         {macro === 'home' && (
           <div key="home" className="page-enter">
             <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} setSub={setSub} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
@@ -172,7 +178,7 @@ export default function App() {
         )}
         {macro === 'allenamento' && (
           <div key="allenamento" className="page-enter">
-            <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} />
+            <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} onOpenFitnessTests={() => goToMetricheTab('testfisici')} />
           </div>
         )}
         {macro === 'scalate' && (
@@ -187,7 +193,13 @@ export default function App() {
         )}
         {macro === 'metriche' && (
           <div key="metriche" className="page-enter">
-            <MetricheSection />
+            <MetricheSection
+              initialSub={activeSub}
+              onSubChange={setSub}
+              fitSessions={fitSessions}
+              setFitSessions={setFitSessions}
+              onHrvSaved={() => loadHrvLogs().then(setHrvLogs)}
+            />
           </div>
         )}
       </main>

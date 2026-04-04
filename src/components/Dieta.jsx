@@ -80,100 +80,148 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
   }, [weeklyPlan])
 
   const renderPiano = () => (
-    <div>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 20px', borderBottom:`1px solid ${C.border}` }}>
-        <div style={{ fontSize:'22px', color:C.muted, padding:'4px 8px', cursor:'pointer', userSelect:'none', fontWeight:'300' }} onClick={() => setDayIdx((dayIdx - 1 + 7) % 7)}>‹</div>
-        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-          <div style={{ fontSize:'15px', fontWeight:'600', color:C.text }}>{dayName}</div>
-          <div style={{ display:'flex', alignItems:'center', gap:'6px', cursor:'pointer' }} onClick={toggleSki}>
-            <div style={{ width:'30px', height:'17px', borderRadius:'9px', background: dayData.isSkiDay ? C.violet : C.border, position:'relative', transition:'background .2s', border:`1px solid ${dayData.isSkiDay ? C.violetBorder : '#333'}` }}>
-              <div style={{ position:'absolute', top:'1.5px', left: dayData.isSkiDay ? '13px' : '1.5px', width:'12px', height:'12px', borderRadius:'50%', background: dayData.isSkiDay ? '#fff' : C.muted, transition:'left .18s' }} />
+    <div style={ss.body} className="space-y-5 pt-1">
+      <div className="bg-surface-container-low rounded-xl p-4 flex items-center justify-between border border-outline-variant/20">
+        <button type="button" className="text-2xl text-on-surface-variant w-10 h-10 flex items-center justify-center rounded-xl bg-transparent border-0 cursor-pointer hover:bg-surface-container-highest/50 transition-colors font-light" onClick={() => setDayIdx((dayIdx - 1 + 7) % 7)} aria-label="Giorno precedente">‹</button>
+        <div className="flex items-center gap-3">
+          <span className="font-headline text-lg font-extrabold text-on-surface">{dayName}</span>
+          <button type="button" className="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0" onClick={toggleSki}>
+            <div
+              className="relative w-[30px] h-[17px] rounded-full transition-colors border"
+              style={{
+                background: dayData.isSkiDay ? 'rgba(198, 191, 255, 0.35)' : C.border,
+                borderColor: dayData.isSkiDay ? C.primaryBorder : C.border,
+              }}>
+              <div
+                className="absolute top-[1.5px] w-3 h-3 rounded-full transition-all"
+                style={{
+                  left: dayData.isSkiDay ? '13px' : '1.5px',
+                  background: dayData.isSkiDay ? '#fff' : C.muted,
+                }}
+              />
             </div>
-            <div style={{ fontSize:'9px', fontWeight:'600', letterSpacing:'.06em', color: dayData.isSkiDay ? C.violetLight : C.hint, textTransform:'uppercase' }}>Endurance</div>
-          </div>
+            <span className={`font-label text-[9px] font-bold uppercase tracking-wider ${dayData.isSkiDay ? 'text-primary' : 'text-on-surface-variant'}`}>Endurance</span>
+          </button>
         </div>
-        <div style={{ fontSize:'22px', color:C.muted, padding:'4px 8px', cursor:'pointer', userSelect:'none', fontWeight:'300' }} onClick={() => setDayIdx((dayIdx + 1) % 7)}>›</div>
+        <button type="button" className="text-2xl text-on-surface-variant w-10 h-10 flex items-center justify-center rounded-xl bg-transparent border-0 cursor-pointer hover:bg-surface-container-highest/50 transition-colors font-light" onClick={() => setDayIdx((dayIdx + 1) % 7)} aria-label="Giorno successivo">›</button>
       </div>
-      <div style={ss.body}>
-        {Object.entries(MEALS_CATS).map(([meal, cats]) => {
-          const vis = cats.filter(cat => getOpts(meal, cat, dayData.isSkiDay).length > 0)
-          if (!vis.length) return null
-          return (
-            <div key={meal} style={{ marginBottom:'22px' }}>
-              <div style={{ fontSize:'11px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px', paddingBottom:'8px', borderBottom:`1px solid ${C.border}` }}>{meal}</div>
+
+      {Object.entries(MEALS_CATS).map(([meal, cats]) => {
+        const vis = cats.filter(cat => getOpts(meal, cat, dayData.isSkiDay).length > 0)
+        if (!vis.length) return null
+        return (
+          <div key={meal} className="bg-surface-container-low rounded-xl p-5 border border-outline-variant/15">
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-outline-variant/15">
+              <span className="material-symbols-outlined text-tertiary text-xl">restaurant</span>
+              <span className="font-label text-xs font-bold uppercase tracking-widest text-on-surface">{meal}</span>
+            </div>
+            <div className="space-y-3">
               {vis.map(cat => {
                 const opts = getOpts(meal, cat, dayData.isSkiDay)
                 const val  = dayData.meals?.[meal]?.[cat] || ''
                 return (
-                  <div key={cat} style={{ marginBottom:'10px' }}>
-                    <div style={{ fontSize:'10px', color:C.hint, fontWeight:'500', marginBottom:'5px', letterSpacing:'.03em' }}>{cat}</div>
-                    <div style={{ position:'relative' }}>
-                      <select style={{ width:'100%', background: val ? C.violetBg : C.surface, border:`1px solid ${val ? C.violetBorder : C.border}`, borderRadius:'10px', padding:'11px 32px 11px 13px', fontSize:'13px', color: val ? C.violetLight : C.muted, fontWeight: val ? '500' : '400', cursor:'pointer', appearance:'none', outline:'none', lineHeight:'1.3' }}
+                  <div key={cat}>
+                    <div className="text-[11px] font-semibold text-on-surface-variant mb-1.5 tracking-wide">{cat}</div>
+                    <div className="relative">
+                      <select
+                        className={`w-full rounded-xl py-3 pl-3.5 pr-10 text-sm cursor-pointer appearance-none outline-none transition-all border-2 ${
+                          val
+                            ? 'bg-primary/10 border-primary/40 text-on-surface font-semibold'
+                            : 'bg-surface-container-highest border-outline-variant text-on-surface-variant font-medium'
+                        }`}
                         value={val} onChange={e => setSel(meal, cat, e.target.value)}>
                         <option value="">Seleziona...</option>
                         {opts.map((o, i) => <option key={i} value={o}>{o}</option>)}
                       </select>
-                      <div style={{ position:'absolute', right:'10px', top:'50%', transform:'translateY(-50%)', fontSize:'10px', color: val ? C.violet : C.hint, pointerEvents:'none' }}>▾</div>
+                      <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs pointer-events-none ${val ? 'text-primary' : 'text-on-surface-variant'}`}>▾</span>
                     </div>
                   </div>
                 )
               })}
             </div>
-          )
-        })}
-        <div style={{ width:'100%', background:C.violetBg, border:`1px solid ${C.violetBorder}`, borderRadius:'12px', padding:'13px', fontSize:'13px', fontWeight:'600', color:C.violetLight, textAlign:'center', cursor:'pointer', userSelect:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }} onClick={randomize}>
-          <IcoRandom /> Random
-        </div>
-        <div style={{ marginTop:'8px', padding:'10px', textAlign:'center', borderRadius:'10px', cursor:'pointer', fontSize:'11px', fontWeight:'600', color:C.hint, background:C.surface, border:`1px solid ${C.border}`, userSelect:'none' }}
-          onClick={resetWeek}>
-          Azzera settimana
-        </div>
-      </div>
+          </div>
+        )
+      })}
+      <button
+        type="button"
+        className="w-full rounded-xl py-3.5 px-4 font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer border-0"
+        style={{
+          background: 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
+          color: '#160066',
+          boxShadow: '0 4px 16px rgba(198, 191, 255, 0.3)',
+        }}
+        onClick={randomize}>
+        <IcoRandom col="#160066" /> Random
+      </button>
+      <button
+        type="button"
+        className="w-full py-3 text-center rounded-xl text-xs font-bold uppercase tracking-widest text-on-surface-variant cursor-pointer border border-outline-variant/30 bg-surface-container-low hover:border-outline-variant/50 transition-colors"
+        onClick={resetWeek}>
+        Azzera settimana
+      </button>
     </div>
   )
 
   const renderSpesa = () => (
-    <div style={ss.body}>
-      <div style={{ fontSize:'12px', color:C.muted, marginBottom:'16px' }}>{shoppingList.length} articoli · {cart.length} spuntati</div>
+    <div style={ss.body} className="space-y-4 pt-1">
+      <p className="text-sm font-medium text-on-surface-variant">{shoppingList.length} articoli · {cart.length} spuntati</p>
       {shoppingList.length === 0 ? (
-        <div style={{ textAlign:'center', padding:'48px 20px' }}>
-          <div style={{ fontSize:'14px', color:C.muted }}>Nessun articolo.</div>
-          <div style={{ fontSize:'11px', color:C.hint, marginTop:'8px' }}>Pianifica i pasti per generare la lista.</div>
+        <div className="text-center py-12 px-5">
+          <span className="material-symbols-outlined text-4xl text-on-surface-variant/40 mb-3 block">shopping_bag</span>
+          <p className="text-sm font-semibold text-on-surface">Nessun articolo.</p>
+          <p className="text-xs text-on-surface-variant mt-2">Pianifica i pasti per generare la lista.</p>
         </div>
       ) : (
         <>
           {shoppingList.map(({ id, name, qty }) => {
             const checked = cart.includes(id)
             return (
-              <div key={id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'13px 16px', background: checked ? C.surfaceHover : C.surface, borderRadius:'12px', marginBottom:'6px', cursor:'pointer', border:`1px solid ${C.border}` }}
+              <button
+                type="button"
+                key={id}
+                className={`w-full flex items-center gap-3 p-4 rounded-xl border text-left transition-all active:scale-[0.99] ${
+                  checked ? 'bg-surface-container-highest/60 border-outline-variant/20' : 'bg-surface-container-low border-outline-variant/20'
+                }`}
                 onClick={() => setCart(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id])}>
-                <div style={{ width:'22px', height:'22px', borderRadius:'50%', flexShrink:0, border:`2px solid ${checked ? C.violet : C.hint}`, background: checked ? C.violet : 'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div
+                  className="w-[22px] h-[22px] rounded-full flex-shrink-0 flex items-center justify-center border-2"
+                  style={{
+                    borderColor: checked ? '#8c81fb' : C.hint,
+                    background: checked ? '#8c81fb' : 'transparent',
+                  }}>
                   {checked && <IcoCheck />}
                 </div>
-                <div style={{ flex:1, fontSize:'13px', fontWeight:'500', color: checked ? C.hint : C.text, textDecoration: checked ? 'line-through' : 'none' }}>{name}</div>
-                <div style={{ fontSize:'11px', fontWeight:'600', padding:'3px 9px', borderRadius:'6px', background: checked ? C.surface : C.violetDim, color: checked ? C.hint : C.violetLight }}>{qty}</div>
-              </div>
+                <span className={`flex-1 text-sm font-medium ${checked ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>{name}</span>
+                <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${checked ? 'text-on-surface-variant bg-surface-container-highest' : 'text-on-primary bg-primary/20'}`}>{qty}</span>
+              </button>
             )
           })}
-          {cart.length > 0 && <div style={{ textAlign:'center', marginTop:'16px' }}><div style={{ fontSize:'10px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={() => setCart([])}>svuota spuntati</div></div>}
+          {cart.length > 0 && (
+            <div className="text-center pt-2">
+              <button type="button" className="text-xs font-bold uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors bg-transparent border-0 cursor-pointer py-2" onClick={() => setCart([])}>svuota spuntati</button>
+            </div>
+          )}
         </>
       )}
     </div>
   )
 
   const renderOpzioni = () => (
-    <div style={ss.body}>
-      <div style={{ display:'flex', background:C.surface, border:`1px solid ${C.border}`, borderRadius:'24px', padding:'4px', marginBottom:'20px' }}>
+    <div style={ss.body} className="space-y-5 pt-1">
+      <div className="flex p-1 rounded-2xl bg-surface-container-low border border-outline-variant/20">
         <div style={ss.pill(settingsMode === 'normal')} onClick={() => setSettingsMode('normal')}>Normale</div>
         <div style={ss.pill(settingsMode === 'ski')}    onClick={() => setSettingsMode('ski')}>Endurance</div>
       </div>
       {Object.entries(MEALS_CATS).map(([meal, cats]) => (
         <div key={meal} style={ss.card}>
-          <div style={{ fontSize:'14px', fontWeight:'600', color:C.text, marginBottom:'12px' }}>{meal}</div>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="material-symbols-outlined text-secondary text-lg">tune</span>
+            <span className="font-headline text-base font-bold text-on-surface">{meal}</span>
+          </div>
           {cats.map(cat => (
-            <div key={cat} style={{ marginBottom:'10px' }}>
-              <div style={{ fontSize:'10px', color:C.hint, fontWeight:'500', marginBottom:'5px', letterSpacing:'.03em' }}>{cat}</div>
-              <textarea style={{ width:'100%', background:C.bg, border:`1px solid ${C.border}`, borderRadius:'8px', padding:'10px 12px', fontSize:'12px', color:C.text, resize:'vertical', outline:'none', lineHeight:'1.6' }}
+            <div key={cat} className="mb-3 last:mb-0">
+              <div className="text-[11px] font-semibold text-on-surface-variant mb-1.5">{cat}</div>
+              <textarea style={{ ...ss.inp, resize:'vertical', lineHeight:1.6, minHeight:'72px' }}
                 rows={3}
                 value={foodOptions[settingsMode]?.[meal]?.[cat] || ''}
                 onChange={e => setFoodOptions(p => ({ ...p, [settingsMode]: { ...p[settingsMode], [meal]: { ...p[settingsMode][meal], [cat]: e.target.value } } }))}
@@ -186,11 +234,15 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
   )
 
   return (
-    <div style={{ paddingBottom: '160px' }}>
-      <div style={ss.hdr}>
-        <div style={ss.eyebrow}>{fmtDate()}{syncing ? ' · sync...' : ' · sincronizzato'}</div>
-        <div style={ss.title}>Dieta</div>
-        <div style={ss.subtitle}>{dayData.isSkiDay ? 'modalità endurance' : 'piano nutrizionista'}</div>
+    <div className="min-h-screen bg-background pb-40">
+      <div className="px-6 pb-2 pt-1">
+        <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
+          {fmtDate()}{syncing ? ' · sync…' : ' · sincronizzato'}
+        </p>
+        <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface mb-1">Dieta</h1>
+        <p className="text-sm font-medium text-on-surface-variant">
+          {dayData.isSkiDay ? 'Modalità endurance' : 'Piano nutrizionista'}
+        </p>
       </div>
 
       {sub === 'piano'   && renderPiano()}

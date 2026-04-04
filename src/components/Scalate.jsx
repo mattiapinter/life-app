@@ -1796,7 +1796,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
               const active = climbMode === m
               return (
                 <div key={m}
-                  style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', background: active ? C.primary : 'transparent', color: active ? '#0A0E12' : C.hint, transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+                  style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', background: active ? C.primary : 'transparent', color: active ? '#160066' : C.hint, transition: 'all 0.2s', whiteSpace: 'nowrap' }}
                   onClick={() => setClimbMode(m)}>
                   {m}
                 </div>
@@ -1810,7 +1810,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
         </div>
       </div>
 
-      {climbMode === 'multi pitch' ? (
+      {sub === 'falesie' && climbMode === 'multi pitch' ? (
         <div style={{ ...ss.body, textAlign: 'center', paddingTop: '60px' }}>
           <div style={{ fontSize: '32px', marginBottom: '16px' }}>🏔️</div>
           <div style={{ fontSize: '15px', fontWeight: '600', color: C.text, marginBottom: '8px' }}>Multi pitch</div>
@@ -1818,17 +1818,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
         </div>
       ) : (
         <>
-          <div style={ss.subBar}>
-            {[
-              { id: 'falesie',  l: 'Falesie' },
-              { id: 'tiri',     l: 'Tiri' },
-              { id: 'progetti', l: 'Progetti' },
-              { id: 'stats',    l: 'Stats' },
-            ].map(t => (
-              <div key={t.id} style={ss.subTab(sub === t.id)} onClick={() => changeSub(t.id)}>{t.l}</div>
-            ))}
-          </div>
-          {sub === 'falesie'  && renderFalesie()}
+          {sub === 'falesie'  && climbMode === 'falesia' && renderFalesie()}
           {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} onRefresh={loadAll} />}
           {sub === 'progetti' && <ProjectsTab projects={projects} attempts={attempts} crags={crags} onAdded={loadAll} onRefresh={loadAll} />}
           {sub === 'stats'    && <StatsSection sessions={sessions} ascents={ascents} crags={crags} />}

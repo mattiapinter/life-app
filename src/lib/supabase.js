@@ -107,6 +107,26 @@ export const loadFitnessSessions = async () => {
   catch(e) { return [] }
 }
 
+export const deleteFitnessSession = async (id) => {
+  const userId = await uid(); if (!userId || id == null) return false
+  try {
+    const { error } = await db.from('fitness_sessions').delete().eq('id', id).eq('user_id', userId)
+    if (error) throw error
+    return true
+  } catch (e) { return false }
+}
+
+/** Aggiorna una sessione esistente (stessi campi dell'insert, senza mutare user_id). */
+export const updateFitnessSession = async (id, session) => {
+  const userId = await uid(); if (!userId || id == null) return false
+  try {
+    const { id: _i, user_id: _u, ...rest } = session
+    const { error } = await db.from('fitness_sessions').update(rest).eq('id', id).eq('user_id', userId)
+    if (error) throw error
+    return true
+  } catch (e) { return false }
+}
+
 // ── TRAINING LOGS ──────────────────────────────────────────────────
 export const saveTrainingLog = async (log) => {
   const userId = await uid(); if (!userId) return false
@@ -357,6 +377,16 @@ export const deleteBodyMeasurement = async (id) => {
   const userId = await uid(); if (!userId) return false
   try { const { error } = await db.from('body_measurements').delete().eq('id', id).eq('user_id', userId); if (error) throw error; return true }
   catch(e) { return false }
+}
+
+export const updateBodyMeasurement = async (id, entry) => {
+  const userId = await uid(); if (!userId || id == null) return false
+  try {
+    const { id: _rid, user_id: _u, ...rest } = entry
+    const { error } = await db.from('body_measurements').update(rest).eq('id', id).eq('user_id', userId)
+    if (error) throw error
+    return true
+  } catch (e) { return false }
 }
 
 // ── USER PROFILE ────────────────────────────────────────────────────

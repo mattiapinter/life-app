@@ -2,7 +2,9 @@ import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import { todayStr, fmtDateShort } from '../constants'
-import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement, loadUserProfile } from '../lib/supabase'
+import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement, updateBodyMeasurement, loadUserProfile, loadFitnessSessions } from '../lib/supabase'
+import { FitnessTestForm, MetricsDetail, FitnessSessionHistory } from './FitnessBenchmark'
+import { MetricheTabHeader, CollapsibleHistory, MetricheFormModal } from './MetricGroupLayout'
 
 export { loadBodyMeasurements }
 
@@ -87,11 +89,26 @@ function MetricChart({ measurements, metric }) {
   return <div className="relative h-40"><canvas ref={canvasRef} /></div>
 }
 
-function AddMeasurementForm({ onSaved }) {
+function AddMeasurementForm({ onSaved, editingEntry = null, onClose }) {
   const [date,   setDate]   = React.useState(todayStr())
   const [vals,   setVals]   = React.useState({})
   const [saving, setSaving] = React.useState(false)
   const [saved,  setSaved]  = React.useState(false)
+
+  React.useEffect(() => {
+    if (!editingEntry) {
+      setDate(todayStr())
+      setVals({})
+      return
+    }
+    setDate(editingEntry.measured_at?.slice(0, 10) || todayStr())
+    const next = {}
+    METRICS.forEach(m => {
+      const v = editingEntry[m.id]
+      next[m.id] = v != null && v !== '' ? String(v) : ''
+    })
+    setVals(next)
+  }, [editingEntry?.id])
 
   const sv = (id, v) => setVals(p => ({ ...p, [id]: v }))
   const hasAny = Object.values(vals).some(v => v !== '' && v != null)
@@ -103,14 +120,26 @@ function AddMeasurementForm({ onSaved }) {
       measured_at: date,
       ...Object.fromEntries(METRICS.map(m => [m.id, vals[m.id] ? parseFloat(vals[m.id]) : null]))
     }
-    const ok = await saveBodyMeasurement(entry)
+    let ok = false
+    if (editingEntry?.id) {
+      ok = await updateBodyMeasurement(editingEntry.id, entry)
+    } else {
+      ok = await saveBodyMeasurement(entry)
+    }
     setSaving(false)
-    if (ok) { setSaved(true); setVals({}); onSaved(); setTimeout(() => setSaved(false), 2000) }
+    if (ok) {
+      setSaved(true)
+      setVals({})
+      onSaved()
+      setTimeout(() => setSaved(false), 2000)
+    }
   }
 
   return (
     <div className="bg-surface-container-low rounded-xl p-6">
-      <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface mb-5">Nuova Misurazione</h3>
+      <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface mb-5">
+        {editingEntry ? 'Modifica misurazione' : 'Nuova misurazione'}
+      </h3>
       <div className="mb-5">
         <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Data</label>
         <input type="date" className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-on-surface" value={date} onChange={e => setDate(e.target.value)} />
@@ -142,8 +171,16 @@ function AddMeasurementForm({ onSaved }) {
           color: saved ? '#003915' : '#160066',
           boxShadow: saved ? '0 4px 16px rgba(74, 225, 118, 0.3)' : '0 4px 16px rgba(198, 191, 255, 0.3)'
         }}>
-        {saving ? 'Salvataggio...' : saved ? '✓ Salvato!' : 'Salva Misurazione'}
+        {saving ? 'Salvataggio...' : saved ? '✓ Salvato!' : editingEntry ? 'Aggiorna' : 'Salva misurazione'}
       </button>
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full mt-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant border border-outline-variant bg-transparent">
+          Annulla
+        </button>
+      )}
     </div>
   )
 }
@@ -233,19 +270,19 @@ function OverviewCards({ measurements, onSelectMetric, selectedMetric }) {
   )
 }
 
-function StoricoTable({ measurements, onDeleted }) {
+function BodyStoricoList({ measurements, onDeleted, onEdit }) {
   const [confirmDel, setConfirmDel] = React.useState(null)
   const [deleting,   setDeleting]   = React.useState(false)
   const sorted = [...measurements].reverse()
 
   if (sorted.length === 0) {
-    return <div className="text-center py-12 text-sm text-on-surface-variant">Nessuna misurazione ancora.</div>
+    return <div className="text-center py-10 text-sm text-on-surface-variant">Nessuna misurazione ancora.</div>
   }
 
   return (
     <div>
       {confirmDel && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6" onClick={() => setConfirmDel(null)}>
+        <div className="fixed inset-0 z-[80] bg-black/85 flex items-center justify-center p-6" onClick={() => setConfirmDel(null)}>
           <div className="bg-surface-container rounded-xl p-6 w-full max-w-sm border border-error/20" onClick={e => e.stopPropagation()}>
             <div className="text-base font-bold text-on-surface mb-2">Elimina misurazione</div>
             <div className="text-sm text-on-surface-variant mb-5">del {fmtDateShort(confirmDel.measured_at?.slice(0,10))}?</div>
@@ -268,45 +305,121 @@ function StoricoTable({ measurements, onDeleted }) {
           </div>
         </div>
       )}
-      {sorted.map((m, i) => (
-        <div key={m.id || i} className="bg-surface-container-low rounded-xl p-4 mb-3">
-          <div className="flex justify-between items-center mb-3">
-            <div className="text-sm font-bold text-on-surface">{fmtDateShort(m.measured_at?.slice(0,10))}</div>
-            <button className="text-xs text-error/60 hover:text-error" onClick={() => setConfirmDel(m)}>
-              Elimina
-            </button>
+      <div className="space-y-3">
+        {sorted.map((m, i) => (
+          <div key={m.id || i} className="bg-surface-container-highest/80 rounded-xl p-4 border border-outline-variant/10">
+            <div className="flex justify-between items-center gap-2 mb-2">
+              <div className="text-sm font-bold text-on-surface">{fmtDateShort(m.measured_at?.slice(0,10))}</div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-label="Modifica"
+                  onClick={() => onEdit?.(m)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-primary hover:bg-primary/10 border border-primary/20">
+                  <span className="material-symbols-outlined text-[20px]">edit</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Elimina"
+                  onClick={() => setConfirmDel(m)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-error/80 hover:bg-error/10 border border-error/20">
+                  <span className="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {METRICS.map(met => {
+                const val = m[met.id]
+                if (val == null) return null
+                return (
+                  <div key={met.id} className="flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-lg border border-outline-variant">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: met.color }} />
+                    <span className="text-xs text-on-surface-variant">{met.label}</span>
+                    <span className="text-sm font-bold text-on-surface">{val}</span>
+                    <span className="text-[10px] text-on-surface-variant/60">{met.unit}</span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {METRICS.map(met => {
-              const val = m[met.id]
-              if (val == null) return null
-              return (
-                <div key={met.id} className="flex items-center gap-2 px-3 py-1.5 bg-surface-container-highest rounded-lg border border-outline-variant">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: met.color }} />
-                  <span className="text-xs text-on-surface-variant">{met.label}</span>
-                  <span className="text-sm font-bold text-on-surface">{val}</span>
-                  <span className="text-[10px] text-on-surface-variant/60">{met.unit}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
 
-function HrvHistory() {
+function HrvQuickForm({ editingRow = null, onSaved, onClose }) {
+  const [date, setDate] = React.useState(editingRow?.log_date || todayStr())
+  const [val, setVal] = React.useState(editingRow ? String(editingRow.hrv_value) : '')
+  const [saving, setSaving] = React.useState(false)
+
+  React.useEffect(() => {
+    setDate(editingRow?.log_date || todayStr())
+    setVal(editingRow ? String(editingRow.hrv_value) : '')
+  }, [editingRow?.id, editingRow?.log_date])
+
+  const submit = async () => {
+    const n = parseInt(val, 10)
+    if (!n || n < 10 || n > 300) return
+    setSaving(true)
+    const ok = await saveHrvLog({ log_date: date.slice(0, 10), hrv_value: n })
+    setSaving(false)
+    if (ok) onSaved?.()
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Data</label>
+        <input
+          type="date"
+          disabled={!!editingRow}
+          className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-on-surface disabled:opacity-60"
+          value={date.slice(0, 10)}
+          onChange={e => setDate(e.target.value)}
+        />
+        {editingRow && <p className="text-[11px] text-on-surface-variant mt-1">In modifica non puoi cambiare la data del log.</p>}
+      </div>
+      <div>
+        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">HRV (ms)</label>
+        <input
+          type="number"
+          inputMode="numeric"
+          className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-xl font-bold text-on-surface"
+          placeholder="es. 45"
+          value={val}
+          onChange={e => setVal(e.target.value)}
+        />
+      </div>
+      <button
+        type="button"
+        disabled={saving}
+        onClick={submit}
+        className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider disabled:opacity-40"
+        style={{
+          background: 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
+          color: '#160066',
+          boxShadow: '0 4px 16px rgba(198, 191, 255, 0.3)',
+        }}>
+        {saving ? 'Salvataggio...' : editingRow ? 'Aggiorna' : 'Salva'}
+      </button>
+      <button type="button" onClick={onClose} className="w-full py-3 rounded-xl text-sm font-semibold text-on-surface-variant border border-outline-variant">
+        Annulla
+      </button>
+    </div>
+  )
+}
+
+function HrvMetricheTab({ onHrvSaved }) {
   const [hrvLogs, setHrvLogs] = React.useState([])
   const [loading, setLoading] = React.useState(true)
-  const [editingId,  setEditingId]  = React.useState(null)
-  const [editVal,    setEditVal]    = React.useState('')
-  const [savingEdit, setSavingEdit] = React.useState(false)
+  const [modalOpen, setModalOpen] = React.useState(false)
+  const [editingRow, setEditingRow] = React.useState(null)
 
   const canvasRef = React.useRef(null)
   const chartRef  = React.useRef(null)
 
-  const load = () => loadHrvLogs().then(data => { setHrvLogs(data); setLoading(false) })
+  const load = () => loadHrvLogs().then(data => { setHrvLogs(data || []); setLoading(false) })
   React.useEffect(() => { load() }, [])
 
   const sorted = [...hrvLogs].sort((a, b) => a.log_date.localeCompare(b.log_date))
@@ -360,124 +473,106 @@ function HrvHistory() {
     return () => { if (chartRef.current) chartRef.current.destroy() }
   }, [hrvLogs])
 
-  const handleSaveEdit = async (row) => {
-    const v = parseInt(editVal)
-    if (!v || v < 10 || v > 300) return
-    setSavingEdit(true)
-    await saveHrvLog({ log_date: row.log_date, hrv_value: v })
-    await load()
-    setSavingEdit(false)
-    setEditingId(null)
-    setEditVal('')
-  }
+  const openNew = () => { setEditingRow(null); setModalOpen(true) }
+  const openEdit = (row) => { setEditingRow(row); setModalOpen(true) }
+  const closeModal = () => { setModalOpen(false); setEditingRow(null) }
 
-  if (loading) return <div className="text-center py-12 text-sm text-on-surface-variant">Caricamento...</div>
+  const last = sorted.length ? sorted[sorted.length - 1] : null
+  const subtitle = last
+    ? `Ultimo ${fmtDateShort(last.log_date)} · ${last.hrv_value} ms`
+    : 'Variabilità cardiaca — anche dalla Home'
 
-  if (sorted.length === 0) {
+  if (loading) {
     return (
-      <div className="text-center py-16">
-        <div className="text-5xl mb-4">💓</div>
-        <div className="text-base text-on-surface mb-2">Nessun dato HRV ancora.</div>
-        <div className="text-sm text-on-surface-variant">Registra ogni mattina dalla Home.</div>
+      <div className="px-6 pb-6">
+        <div className="text-center py-12 text-sm text-on-surface-variant">Caricamento...</div>
       </div>
     )
   }
 
-  const maxHrv = Math.max(...sorted.map(r => r.hrv_value))
-  const minHrv = Math.min(...sorted.map(r => r.hrv_value))
-  const last   = sorted[sorted.length - 1]
-
   return (
-    <div className="px-6 pb-20">
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          { l: 'Ultimo', v: last.hrv_value + ' ms', c: statusColor[getStatus(last.hrv_value, avg7)] },
-          { l: 'Media 7gg', v: avg7 + ' ms', c: '#c6bfff' },
-          { l: 'Misurazioni', v: sorted.length, c: '#928f9f' },
-        ].map(it => (
-          <div key={it.l} className="bg-surface-container-low rounded-xl p-4 text-center">
-            <div className="text-xl font-headline font-extrabold tracking-tight" style={{ color: it.c }}>{it.v}</div>
-            <div className="text-[10px] uppercase tracking-wider text-on-surface-variant mt-1">{it.l}</div>
-          </div>
-        ))}
-      </div>
+    <div className="px-6 space-y-5 pb-6">
+      <MetricheTabHeader subtitle={subtitle} onFabClick={openNew} fabAriaLabel="Nuova misurazione HRV" />
 
-      {sorted.length >= 2 && (
-        <div className="bg-surface-container-low rounded-xl p-6 mb-6">
-          <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/10">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface">Andamento HRV</h3>
-            <div className="text-xs text-on-surface-variant">
-              <span style={{ color: '#c6bfff' }}>━</span> valore &nbsp;
-              <span style={{ color: '#928f9f' }}>╌</span> media 7gg
-            </div>
-          </div>
-          <div className="relative h-40"><canvas ref={canvasRef} /></div>
-          <div className="flex justify-between mt-3 text-xs text-on-surface-variant">
-            <span>Min: <strong className="text-on-surface">{minHrv}</strong></span>
-            <span>Max: <strong className="text-on-surface">{maxHrv}</strong></span>
-            <span>Range: <strong className="text-on-surface">{maxHrv - minHrv}</strong></span>
-          </div>
+      {sorted.length === 0 ? (
+        <div className="text-center py-12 rounded-xl border border-outline-variant/15 bg-surface-container-low">
+          <div className="text-4xl mb-3">💓</div>
+          <div className="text-sm text-on-surface-variant px-4">Nessun dato ancora. Tocca + per aggiungere o registra dalla Home.</div>
         </div>
-      )}
+      ) : (
+        <>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { l: 'Ultimo', v: last.hrv_value + ' ms', c: statusColor[getStatus(last.hrv_value, avg7)] },
+              { l: 'Media 7gg', v: avg7 + ' ms', c: '#c6bfff' },
+              { l: 'Misurazioni', v: sorted.length, c: '#928f9f' },
+            ].map(it => (
+              <div key={it.l} className="bg-surface-container-low rounded-xl p-4 text-center border border-outline-variant/10">
+                <div className="text-xl font-headline font-extrabold tracking-tight" style={{ color: it.c }}>{it.v}</div>
+                <div className="text-[10px] uppercase tracking-wider text-on-surface-variant mt-1">{it.l}</div>
+              </div>
+            ))}
+          </div>
 
-      <div className="bg-surface-container-low rounded-xl p-6">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface mb-4">Storico</h3>
-        {[...sorted].reverse().map((r, i) => {
-          const s = getStatus(r.hrv_value, avg7)
-          const isEditing = editingId === r.id
-
-          return (
-            <div key={r.id || i} className="py-3 border-b border-outline-variant/10">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full" style={{ background: statusColor[s] }} />
-                  <div className="text-sm text-on-surface-variant">{fmtDateShort(r.log_date)}</div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {!isEditing && (
-                    <>
-                      <div className="text-base font-bold text-on-surface">
-                        {r.hrv_value} <span className="text-xs text-on-surface-variant font-normal">ms</span>
-                      </div>
-                      <button
-                        className="text-xs text-on-surface-variant/60 hover:text-on-surface px-3 py-1 rounded-lg border border-outline-variant bg-surface-container"
-                        onClick={() => { setEditingId(r.id); setEditVal(String(r.hrv_value)) }}>
-                        ✎
-                      </button>
-                    </>
-                  )}
-
-                  {isEditing && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        autoFocus
-                        className="w-20 bg-surface-container-highest border-2 border-outline-variant rounded-lg px-3 py-1 text-sm font-bold text-center text-on-surface"
-                        value={editVal}
-                        onChange={e => setEditVal(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(r) }}
-                      />
-                      <button
-                        className="px-3 py-1 rounded-lg text-xs font-bold bg-tertiary/10 text-tertiary border border-tertiary/20 disabled:opacity-50"
-                        disabled={savingEdit}
-                        onClick={() => !savingEdit && handleSaveEdit(r)}>
-                        {savingEdit ? '...' : '✓'}
-                      </button>
-                      <button
-                        className="px-2 py-1 rounded-lg text-xs text-on-surface-variant bg-surface-container border border-outline-variant"
-                        onClick={() => { setEditingId(null); setEditVal('') }}>
-                        ✕
-                      </button>
-                    </div>
-                  )}
+          {sorted.length >= 2 && (
+            <div className="bg-surface-container-low rounded-xl p-5 border border-outline-variant/15">
+              <div className="flex justify-between items-center mb-3 pb-3 border-b border-outline-variant/10">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface">Andamento</h3>
+                <div className="text-xs text-on-surface-variant">
+                  <span style={{ color: '#c6bfff' }}>━</span> valore &nbsp;
+                  <span style={{ color: '#928f9f' }}>╌</span> media 7gg
                 </div>
               </div>
+              <div className="relative h-40"><canvas ref={canvasRef} /></div>
+              <div className="flex justify-between mt-3 text-xs text-on-surface-variant">
+                <span>Min: <strong className="text-on-surface">{Math.min(...sorted.map(r => r.hrv_value))}</strong></span>
+                <span>Max: <strong className="text-on-surface">{Math.max(...sorted.map(r => r.hrv_value))}</strong></span>
+              </div>
             </div>
-          )
-        })}
-      </div>
+          )}
+
+          <CollapsibleHistory title="Storico" badge={sorted.length} defaultOpen>
+            <div className="space-y-2 pt-2">
+              {[...sorted].reverse().map((r, i) => {
+                const s = getStatus(r.hrv_value, avg7)
+                return (
+                  <div
+                    key={r.id || i}
+                    className="flex items-center justify-between gap-2 py-3 px-1 border-b border-outline-variant/10 last:border-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: statusColor[s] }} />
+                      <span className="text-sm text-on-surface-variant">{fmtDateShort(r.log_date)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-base font-bold text-on-surface tabular-nums">
+                        {r.hrv_value} <span className="text-xs text-on-surface-variant font-normal">ms</span>
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Modifica"
+                        onClick={() => openEdit(r)}
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-primary hover:bg-primary/10 border border-primary/20">
+                        <span className="material-symbols-outlined text-[20px]">edit</span>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CollapsibleHistory>
+        </>
+      )}
+
+      {modalOpen && (
+        <MetricheFormModal title={editingRow ? 'Modifica HRV' : 'Nuova misurazione HRV'} onClose={closeModal}>
+          <HrvQuickForm
+            key={editingRow?.id || editingRow?.log_date || 'new'}
+            editingRow={editingRow}
+            onClose={closeModal}
+            onSaved={() => { load(); onHrvSaved?.(); closeModal() }}
+          />
+        </MetricheFormModal>
+      )}
     </div>
   )
 }
@@ -545,8 +640,8 @@ function BodyComposition({ measurements, userProfile }) {
   ]
 
   return (
-    <div className="px-6 pb-20">
-      <div className="bg-surface-container-low rounded-xl p-5 mb-4 border border-outline-variant/20">
+    <div className="space-y-4">
+      <div className="bg-surface-container-low rounded-xl p-5 border border-outline-variant/20">
         <div className="text-xs text-on-surface-variant mb-3">
           ⓘ Stima basata su Navy Method (circonferenze + altezza). Margine errore ±3-4%.
         </div>
@@ -581,19 +676,43 @@ function BodyComposition({ measurements, userProfile }) {
   )
 }
 
-export default function MetricheSection() {
-  const [sub,            setSub]            = React.useState('overview')
-  const [measurements,   setMeasurements]   = React.useState([])
-  const [loading,        setLoading]        = React.useState(true)
+function normalizeMetricheTab(id) {
+  if (id === 'hrv' || id === 'testfisici' || id === 'biometria') return id
+  return 'biometria'
+}
+
+export default function MetricheSection({ initialSub, onSubChange, fitSessions = [], setFitSessions, onHrvSaved }) {
+  const [sub, setSub] = React.useState(() => normalizeMetricheTab(initialSub || 'biometria'))
+  const [measurements, setMeasurements] = React.useState([])
+  const [loading, setLoading] = React.useState(true)
   const [selectedMetric, setSelectedMetric] = React.useState(null)
-  const [userProfile,    setUserProfile]    = React.useState(null)
+  const [userProfile, setUserProfile] = React.useState(null)
+  const [editingFitSession, setEditingFitSession] = React.useState(null)
+  const [bodyModalOpen, setBodyModalOpen] = React.useState(false)
+  const [editingMeasurement, setEditingMeasurement] = React.useState(null)
+  const [fitnessModalOpen, setFitnessModalOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    if (initialSub == null) return
+    const n = normalizeMetricheTab(initialSub)
+    if (n !== sub) setSub(n)
+  }, [initialSub])
+
+  React.useEffect(() => {
+    if (sub !== 'testfisici') {
+      setEditingFitSession(null)
+      setFitnessModalOpen(false)
+    }
+  }, [sub])
+
+  const refreshFitnessSessions = async () => {
+    const data = await loadFitnessSessions()
+    setFitSessions?.(data)
+  }
 
   const load = async () => {
     setLoading(true)
-    const [data, profile] = await Promise.all([
-      loadBodyMeasurements(),
-      loadUserProfile()
-    ])
+    const [data, profile] = await Promise.all([loadBodyMeasurements(), loadUserProfile()])
     setMeasurements(data)
     setUserProfile(profile)
     setLoading(false)
@@ -603,155 +722,155 @@ export default function MetricheSection() {
 
   const last = measurements.length > 0 ? measurements[measurements.length - 1] : null
 
-  const tabs = [
-    { id: 'overview', l: 'Overview' },
-    { id: 'hrv',      l: 'HRV' },
-    { id: 'misure',   l: 'Misure' },
-    { id: 'composizione', l: 'Composizione' },
-    { id: 'aggiungi', l: 'Aggiungi' },
-    { id: 'storico',  l: 'Storico' },
-  ]
+  const openBodyForm = (row) => {
+    setEditingMeasurement(row ?? null)
+    setBodyModalOpen(true)
+  }
+  const closeBodyForm = () => {
+    setBodyModalOpen(false)
+    setEditingMeasurement(null)
+  }
+
+  const openFitnessForm = (session) => {
+    setEditingFitSession(session ?? null)
+    setFitnessModalOpen(true)
+  }
+  const closeFitnessForm = () => {
+    setFitnessModalOpen(false)
+    setEditingFitSession(null)
+  }
+
+  const biometriaSubtitle = last
+    ? `Ultimo: ${fmtDateShort(last.measured_at?.slice(0, 10))}${last.weight_kg != null ? ` · ${last.weight_kg} kg` : ''}`
+    : 'Misure corporee, grafici e composizione stimata'
+
+  const selectedMetricPanel = selectedMetric && (
+    <div className="bg-surface-container-low rounded-xl p-6 border border-outline-variant/15">
+      <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/10">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: selectedMetric.color }}>
+            {selectedMetric.label}
+          </div>
+          <div className="text-xs text-on-surface-variant">{selectedMetric.desc}</div>
+        </div>
+        <button type="button" className="text-2xl text-on-surface-variant/60 hover:text-on-surface px-2" onClick={() => setSelectedMetric(null)}>
+          ✕
+        </button>
+      </div>
+      <MetricChart measurements={measurements} metric={selectedMetric} />
+      {(() => {
+        const vals = measurements.map(m => m[selectedMetric.id]).filter(v => v != null)
+        if (vals.length < 2) return null
+        const min = Math.min(...vals).toFixed(1)
+        const max = Math.max(...vals).toFixed(1)
+        const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1)
+        return (
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            {[{ l: 'Min', v: min }, { l: 'Media', v: avg }, { l: 'Max', v: max }].map(it => (
+              <div key={it.l} className="text-center p-3 bg-surface-container-highest rounded-lg border border-outline-variant">
+                <div className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">{it.l}</div>
+                <div className="text-lg font-headline font-bold text-on-surface">{it.v}</div>
+                <div className="text-[10px] text-on-surface-variant">{selectedMetric.unit}</div>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-background pb-20" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 24px)' }}>
-      <div className="px-6 pb-8">
+    <div className="min-h-screen bg-background pb-40">
+      <div className="px-6 pb-2 pt-1">
         <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
-          Salute · Biometria
+          Salute
         </p>
-        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-1">
-          Metriche
-        </h1>
-        <p className="text-on-surface-variant font-medium">
-          {last
-            ? `ultimo aggiornamento: ${fmtDateShort(last.measured_at?.slice(0,10))}${last.weight_kg ? ` · ${last.weight_kg} kg` : ''}`
-            : 'nessuna misurazione ancora'}
-        </p>
+        <div className="flex items-center gap-3 mb-1">
+          <span className="material-symbols-outlined text-secondary text-2xl">monitoring</span>
+          <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
+            Metriche
+          </h1>
+        </div>
       </div>
 
-      <div className="flex gap-2 px-6 mb-6 overflow-x-auto hide-scrollbar">
-        {tabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setSub(t.id)}
-            className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap ${
-              sub === t.id
-                ? 'bg-primary/10 text-primary border-2 border-primary/20'
-                : 'bg-surface-container-low text-on-surface-variant border-2 border-outline-variant/10'
-            }`}>
-            {t.l}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
+      {loading && sub === 'biometria' ? (
         <div className="text-center py-16 text-sm text-on-surface-variant">Caricamento...</div>
       ) : (
         <div>
-          {sub === 'overview' && (
-            <div className="px-6">
+          {sub === 'biometria' && (
+            <div className="px-6 space-y-5 pb-6">
+              <MetricheTabHeader
+                subtitle={biometriaSubtitle}
+                onFabClick={() => openBodyForm(null)}
+                fabAriaLabel="Nuova misurazione"
+              />
               <OverviewCards measurements={measurements} selectedMetric={selectedMetric} onSelectMetric={setSelectedMetric} />
-              {selectedMetric && (
-                <div className="bg-surface-container-low rounded-xl p-6 mb-4">
-                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/10">
-                    <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: selectedMetric.color }}>
-                        {selectedMetric.label}
-                      </div>
-                      <div className="text-xs text-on-surface-variant">{selectedMetric.desc}</div>
-                    </div>
-                    <button className="text-2xl text-on-surface-variant/60 hover:text-on-surface px-2" onClick={() => setSelectedMetric(null)}>
-                      ✕
-                    </button>
-                  </div>
-                  <MetricChart measurements={measurements} metric={selectedMetric} />
-                  {(() => {
-                    const vals = measurements.map(m => m[selectedMetric.id]).filter(v => v != null)
-                    if (vals.length < 2) return null
-                    const min = Math.min(...vals).toFixed(1)
-                    const max = Math.max(...vals).toFixed(1)
-                    const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1)
-                    return (
-                      <div className="grid grid-cols-3 gap-3 mt-4">
-                        {[{ l: 'Min', v: min }, { l: 'Media', v: avg }, { l: 'Max', v: max }].map(it => (
-                          <div key={it.l} className="text-center p-3 bg-surface-container-highest rounded-lg border border-outline-variant">
-                            <div className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">{it.l}</div>
-                            <div className="text-lg font-headline font-bold text-on-surface">{it.v}</div>
-                            <div className="text-[10px] text-on-surface-variant">{selectedMetric.unit}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })()}
-                </div>
-              )}
-              {measurements.length === 0 && (
-                <div className="text-center mt-4">
-                  <button
-                    className="px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-wider kinetic-gradient text-on-primary-fixed"
-                    style={{ boxShadow: '0 4px 16px rgba(198, 191, 255, 0.3)' }}
-                    onClick={() => setSub('aggiungi')}>
-                    + Prima Misurazione
-                  </button>
-                </div>
-              )}
-              {measurements.length > 0 && (
-                <div className="text-center mt-2">
-                  <button className="text-xs text-primary/80 hover:text-primary py-3" onClick={() => setSub('aggiungi')}>
-                    + Aggiungi misurazione
-                  </button>
-                </div>
+              {selectedMetricPanel}
+              <BodyComposition measurements={measurements} userProfile={userProfile} />
+              <CollapsibleHistory title="Storico misurazioni" badge={measurements.length} defaultOpen>
+                <BodyStoricoList
+                  measurements={measurements}
+                  onDeleted={load}
+                  onEdit={row => openBodyForm(row)}
+                />
+              </CollapsibleHistory>
+              {bodyModalOpen && (
+                <MetricheFormModal
+                  title={editingMeasurement ? 'Modifica misurazione' : 'Nuova misurazione'}
+                  onClose={closeBodyForm}>
+                  <AddMeasurementForm
+                    editingEntry={editingMeasurement}
+                    onSaved={() => { load(); closeBodyForm() }}
+                    onClose={closeBodyForm}
+                  />
+                </MetricheFormModal>
               )}
             </div>
           )}
-          {sub === 'hrv' && <HrvHistory />}
-          {sub === 'misure' && (
-            <div className="px-6">
-              <OverviewCards measurements={measurements} selectedMetric={selectedMetric} onSelectMetric={setSelectedMetric} />
-              {selectedMetric && (
-                <div className="bg-surface-container-low rounded-xl p-6 mb-4">
-                  <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/10">
-                    <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: selectedMetric.color }}>
-                        {selectedMetric.label}
-                      </div>
-                      <div className="text-xs text-on-surface-variant">{selectedMetric.desc}</div>
-                    </div>
-                    <button className="text-2xl text-on-surface-variant/60 hover:text-on-surface px-2" onClick={() => setSelectedMetric(null)}>
-                      ✕
-                    </button>
-                  </div>
-                  <MetricChart measurements={measurements} metric={selectedMetric} />
-                  {(() => {
-                    const vals = measurements.map(m => m[selectedMetric.id]).filter(v => v != null)
-                    if (vals.length < 2) return null
-                    const min = Math.min(...vals).toFixed(1)
-                    const max = Math.max(...vals).toFixed(1)
-                    const avg = (vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1)
-                    return (
-                      <div className="grid grid-cols-3 gap-3 mt-4">
-                        {[{ l: 'Min', v: min }, { l: 'Media', v: avg }, { l: 'Max', v: max }].map(it => (
-                          <div key={it.l} className="text-center p-3 bg-surface-container-highest rounded-lg border border-outline-variant">
-                            <div className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">{it.l}</div>
-                            <div className="text-lg font-headline font-bold text-on-surface">{it.v}</div>
-                            <div className="text-[10px] text-on-surface-variant">{selectedMetric.unit}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })()}
-                </div>
+
+          {sub === 'hrv' && <HrvMetricheTab onHrvSaved={onHrvSaved} />}
+
+          {sub === 'testfisici' && (
+            <div className="px-6 space-y-5 pb-6">
+              <MetricheTabHeader
+                subtitle={
+                  fitSessions.length
+                    ? `${fitSessions.length} sessioni · ultimo ${fmtDateShort(fitSessions[fitSessions.length - 1]?.session_date)}`
+                    : 'Mobilità, forza e resistenza — benchmark e storico qui sotto'
+                }
+                onFabClick={() => openFitnessForm(null)}
+                fabAriaLabel="Nuovo test"
+              />
+              <MetricsDetail
+                variant="embedded"
+                fitSessions={fitSessions}
+                onBack={() => {}}
+                onGoToTest={() => openFitnessForm(null)}
+                title="Benchmark"
+              />
+              <CollapsibleHistory title="Storico sessioni" badge={fitSessions.length} defaultOpen>
+                <FitnessSessionHistory
+                  bare
+                  fitSessions={fitSessions}
+                  onChanged={refreshFitnessSessions}
+                  onEditSession={s => openFitnessForm(s)}
+                />
+              </CollapsibleHistory>
+              {fitnessModalOpen && (
+                <MetricheFormModal
+                  title={editingFitSession ? 'Modifica test' : 'Nuovo test'}
+                  onClose={closeFitnessForm}>
+                  <FitnessTestForm
+                    compact
+                    editingSession={editingFitSession}
+                    onCancelEdit={() => setEditingFitSession(null)}
+                    onSaved={async () => {
+                      await refreshFitnessSessions()
+                      closeFitnessForm()
+                    }}
+                  />
+                </MetricheFormModal>
               )}
-            </div>
-          )}
-          {sub === 'composizione' && <BodyComposition measurements={measurements} userProfile={userProfile} />}
-          {sub === 'aggiungi' && (
-            <div className="px-6">
-              <AddMeasurementForm onSaved={() => { load(); setSub('overview') }} />
-            </div>
-          )}
-          {sub === 'storico' && (
-            <div className="px-6">
-              <StoricoTable measurements={measurements} onDeleted={load} />
             </div>
           )}
         </div>
