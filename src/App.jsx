@@ -80,7 +80,6 @@ export default function App() {
   const [user,       setUser]       = React.useState(undefined)
   const [macro,      setMacroRaw]   = React.useState('home')
   const [sub,        setSub]        = React.useState(null)
-  const [syncing,    setSyncing]    = React.useState(false)
 
   const [fitSessions,  setFitSessions]  = React.useState([])
   const [trainingLogs, setTrainingLogs] = React.useState([])
@@ -129,7 +128,7 @@ export default function App() {
   React.useEffect(() => {
     if (!user) return
     clearTimeout(syncPlanTimer.current)
-    syncPlanTimer.current = setTimeout(() => { setSyncing(true); syncPlanToSupabase(weeklyPlan).finally(() => setSyncing(false)) }, 1500)
+    syncPlanTimer.current = setTimeout(() => { syncPlanToSupabase(weeklyPlan) }, 1500)
   }, [weeklyPlan, user])
 
   const syncOptsTimer = React.useRef(null)
@@ -188,7 +187,7 @@ export default function App() {
         )}
         {macro === 'dieta' && (
           <div key="dieta" className="page-enter">
-            <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} syncing={syncing} />
+            <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} />
           </div>
         )}
         {macro === 'metriche' && (

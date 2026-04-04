@@ -1,8 +1,8 @@
 import React from 'react'
-import { C, ss, DAYS, MEALS_CATS, todayIdx, fmtDate } from '../constants'
+import { C, ss, DAYS, MEALS_CATS, todayIdx } from '../constants'
 import { IcoCheck, IcoRandom } from './Icons'
 
-export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setWeeklyPlan, foodOptions, setFoodOptions, syncing }) {
+export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setWeeklyPlan, foodOptions, setFoodOptions }) {
   const [sub, setSub] = React.useState(initialSub || 'piano')
 
   // Sync sub con App quando cambia dall'esterno (cambio macro)
@@ -237,9 +237,12 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
     <div className="min-h-screen bg-background pb-40">
       <div className="px-6 pb-2 pt-1">
         <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
-          {fmtDate()}{syncing ? ' · sync…' : ' · sincronizzato'}
+          Nutrizione
         </p>
-        <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface mb-1">Dieta</h1>
+        <div className="flex items-center gap-3 mb-1">
+          <span className="material-symbols-outlined text-secondary text-2xl">restaurant_menu</span>
+          <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Dieta</h1>
+        </div>
         <p className="text-sm font-medium text-on-surface-variant">
           {dayData.isSkiDay ? 'Modalità endurance' : 'Piano nutrizionista'}
         </p>
