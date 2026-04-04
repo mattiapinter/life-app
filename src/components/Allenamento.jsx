@@ -149,7 +149,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const renderPESI = () => (
     <div>
       <div style={ss.card}>
-        <div style={ss.secLbl}>Circuito 1 — Mobilità / Attivazione</div>
+        <div style={ss.secLbl}>Circuito 1 · Mobilità e attivazione</div>
         <div style={{ fontSize:'10px', color:C.hint, marginBottom:'10px' }}>Uguale per tutte le settimane</div>
         {TRAINING_PLAN.sessions.PESI.circuit_1.map((ex, i) => (
           <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
@@ -243,7 +243,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
             <div>
               <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Distanza km</div>
-              <input type="number" inputMode="decimal" step="0.1" style={inpStyle} placeholder="—" value={runDist} onChange={e => setRunDist(e.target.value)} />
+              <input type="number" inputMode="decimal" step="0.1" style={inpStyle} placeholder="" value={runDist} onChange={e => setRunDist(e.target.value)} />
             </div>
             <div>
               <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Passo medio</div>
@@ -251,11 +251,11 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
             </div>
             <div>
               <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>FC media bpm</div>
-              <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runHr} onChange={e => setRunHr(e.target.value)} />
+              <input type="number" inputMode="numeric" style={inpStyle} placeholder="" value={runHr} onChange={e => setRunHr(e.target.value)} />
             </div>
             <div>
               <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Dislivello m</div>
-              <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runElev} onChange={e => setRunElev(e.target.value)} />
+              <input type="number" inputMode="numeric" style={inpStyle} placeholder="" value={runElev} onChange={e => setRunElev(e.target.value)} />
             </div>
           </div>
           {runDist && runPace && runHr && (
@@ -386,7 +386,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       {showWarmup && (
         <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'16px' }}>
           <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px' }}>
-            {needsWarmup2 ? 'Riscaldamento 2 — Falesia (23 min)' : 'Riscaldamento 1 — Casa/Palestra (20 min)'}
+            {needsWarmup2 ? 'Riscaldamento 2 · Falesia (23 min)' : 'Riscaldamento 1 · Casa e palestra (20 min)'}
           </div>
           {warmupData.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)}
           {!needsWarmup2 && (
@@ -484,7 +484,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
               <textarea
                 style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom:'12px', fontSize:'14px' }}
                 rows={3}
-                placeholder="Note libere — sensazioni, imprevisti, cosa hai saltato..."
+                placeholder="Note libere: sensazioni, imprevisti, cosa hai saltato..."
                 value={sessionNote}
                 onChange={e => setSessionNote(e.target.value)}
               />
@@ -949,7 +949,7 @@ function CorsaSection({ runningLogs, onRefresh }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
         {[
           { l: 'Km totali', v: totalKm.toFixed(1), c: C.violet },
-          { l: 'FC media',  v: avgHr ? Math.round(avgHr) + ' bpm' : '—', c: C.red },
+          { l: 'FC media',  v: avgHr ? Math.round(avgHr) + ' bpm' : 'n.d.', c: C.red },
           { l: 'Uscite',    v: sorted.length, c: C.orange },
         ].map(it => (
           <div key={it.l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
@@ -960,7 +960,7 @@ function CorsaSection({ runningLogs, onRefresh }) {
       </div>
       {withPaceHr.length >= 2 && (
         <div style={ss.card}>
-          <div style={ss.secLbl}>Passo Medio vs FC — correlazione</div>
+          <div style={ss.secLbl}>Passo medio vs FC, correlazione</div>
           <div style={{ position: 'relative', height: '160px' }}><canvas ref={canvasPaceRef} /></div>
           <div style={{ fontSize: '10px', color: C.hint, marginTop: '8px' }}>Passo che cala con FC stabile = miglioramento aerobico 📈</div>
         </div>
@@ -1105,7 +1105,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
                   <div style={{ position:'relative', width:'36px', height:'36px' }}>
                     <div style={{ width:'36px', height:'36px', borderRadius:'9px', background: isToday ? sc.bg : '#161616', border:`1px solid ${isToday ? sc.border : C.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
                       <div style={{ fontSize:'7px', fontWeight:'700', color: sc.text, textAlign:'center', lineHeight:'1.3', padding:'2px' }}>
-                        {displayType === 'REST' ? '—' : sc.label.slice(0, 6)}
+                        {displayType === 'REST' ? 'Rip' : sc.label.slice(0, 6)}
                       </div>
                     </div>
                     {changed && <div style={{ position:'absolute', top:'-2px', right:'-2px', width:'8px', height:'8px', borderRadius:'50%', background:C.amber, border:`1px solid ${C.bg}` }} />}
@@ -1138,7 +1138,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
         return (
           <div key={w} style={{ marginBottom:'20px' }}>
             <div style={{ fontSize:'11px', fontWeight:'700', color: w === 4 ? C.amber : C.violetLight, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'8px' }}>
-              Settimana {w}{w === 4 ? ' — Scarico' : ''}
+              Settimana {w}{w === 4 ? ' · Scarico' : ''}
             </div>
             {entries.map((entry, i) => {
               const changedNote = sessionNotes.find(n =>

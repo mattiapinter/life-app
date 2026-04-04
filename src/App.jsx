@@ -4,7 +4,8 @@ import {
   syncPlanToSupabase, loadPlanFromSupabase,
   syncFoodOptionsToSupabase, loadFoodOptionsFromSupabase,
   loadFitnessSessions, loadTrainingLogs, loadExerciseVideos,
-  loadSessionNotes, loadHrvLogs, saveHrvLog, getUser, onAuthChange,
+  loadSessionNotes, loadHrvLogs, getUser, onAuthChange,
+  loadHealthLogs, loadHealthLogToday, loadAscents, loadClimbingSessions,
 } from './lib/supabase'
 import { db } from './lib/supabase'
 
@@ -36,10 +37,11 @@ const SUB = {
     { id: 'spesa',     l: 'Spesa' },
     { id: 'opzioni',   l: 'Opzioni' },
   ],
-  metriche: [
+  dati: [
     { id: 'biometria',  l: 'Biometria' },
     { id: 'hrv',       l: 'HRV' },
     { id: 'testfisici', l: 'Test fisici' },
+    { id: 'insights',  l: 'Insights' },
   ],
 }
 
@@ -86,6 +88,10 @@ export default function App() {
   const [sessionNotes, setSessionNotes] = React.useState([])
   const [videos,       setVideos]       = React.useState({})
   const [hrvLogs,      setHrvLogs]      = React.useState([])
+  const [healthLogs,   setHealthLogs]   = React.useState([])
+  const [healthLogToday, setHealthLogToday] = React.useState(null)
+  const [ascents,      setAscents]      = React.useState([])
+  const [climbingSessions, setClimbingSessions] = React.useState([])
 
   const [foodOptions, setFoodOptions] = React.useState(() => {
     if (localStorage.getItem('life_v') !== '2') {
@@ -116,6 +122,10 @@ export default function App() {
     loadTrainingLogs().then(setTrainingLogs)
     loadSessionNotes().then(setSessionNotes)
     loadHrvLogs().then(setHrvLogs)
+    loadHealthLogs().then(setHealthLogs)
+    loadHealthLogToday().then(setHealthLogToday)
+    loadAscents().then(setAscents)
+    loadClimbingSessions().then(setClimbingSessions)
     loadExerciseVideos().then(rows => {
       const map = {}; rows.forEach(r => { map[r.exercise_name] = r.video_url }); setVideos(map)
     })
@@ -139,9 +149,15 @@ export default function App() {
   }, [foodOptions, user])
 
   const setMacro = (m) => { setMacroRaw(m); setSub(SUB[m]?.[0]?.id || null) }
-  const goToMetricheTab = (tabId) => {
-    setMacroRaw('metriche')
+  const goToDatiTab = (tabId) => {
+    setMacroRaw('dati')
     setSub(tabId)
+  }
+
+  const refreshWellnessData = () => {
+    loadHrvLogs().then(setHrvLogs)
+    loadHealthLogs().then(setHealthLogs)
+    loadHealthLogToday().then(setHealthLogToday)
   }
   const activeSub = sub || SUB[macro]?.[0]?.id || null
   const handleVideosChange = (name, url) => setVideos(p => ({ ...p, [name]: url }))
@@ -172,12 +188,22 @@ export default function App() {
       <main className={subTabs.length > 0 ? 'pt-[calc(64px+env(safe-area-inset-top,0px))]' : ''}>
         {macro === 'home' && (
           <div key="home" className="page-enter">
-            <HomeSection weeklyPlan={weeklyPlan} fitSessions={fitSessions} setTab={setMacro} setSub={setSub} sessionNotes={sessionNotes} hrvLogs={hrvLogs} onHrvSaved={() => loadHrvLogs().then(setHrvLogs)} />
+            <HomeSection
+              weeklyPlan={weeklyPlan}
+              fitSessions={fitSessions}
+              setTab={setMacro}
+              setSub={setSub}
+              sessionNotes={sessionNotes}
+              hrvLogs={hrvLogs}
+              healthLogs={healthLogs}
+              healthLogToday={healthLogToday}
+              onHrvSaved={refreshWellnessData}
+            />
           </div>
         )}
         {macro === 'allenamento' && (
           <div key="allenamento" className="page-enter">
-            <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} onOpenFitnessTests={() => goToMetricheTab('testfisici')} />
+            <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} onOpenFitnessTests={() => goToDatiTab('testfisici')} />
           </div>
         )}
         {macro === 'scalate' && (
@@ -190,14 +216,20 @@ export default function App() {
             <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} />
           </div>
         )}
-        {macro === 'metriche' && (
-          <div key="metriche" className="page-enter">
+        {macro === 'dati' && (
+          <div key="dati" className="page-enter">
             <MetricheSection
               initialSub={activeSub}
               onSubChange={setSub}
               fitSessions={fitSessions}
               setFitSessions={setFitSessions}
-              onHrvSaved={() => loadHrvLogs().then(setHrvLogs)}
+              hrvLogs={hrvLogs}
+              healthLogs={healthLogs}
+              healthLogToday={healthLogToday}
+              trainingLogs={trainingLogs}
+              ascents={ascents}
+              climbingSessions={climbingSessions}
+              onHrvSaved={refreshWellnessData}
             />
           </div>
         )}

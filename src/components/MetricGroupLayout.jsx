@@ -32,10 +32,10 @@ export function MetricheTabHeader({ title, subtitle, onFabClick, fabAriaLabel = 
 }
 
 /** Storico espandibile/collassabile (stesso pattern su tutte le tab Metriche). */
-export function CollapsibleHistory({ title, badge, defaultOpen = true, children }) {
+export function CollapsibleHistory({ title, badge, defaultOpen = true, children, className = '' }) {
   const [open, setOpen] = React.useState(defaultOpen)
   return (
-    <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low overflow-hidden">
+    <div className={`rounded-xl border border-outline-variant/15 bg-surface-container-low overflow-hidden ${className}`}>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}

@@ -164,7 +164,7 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
         </div>
       )}
 
-      {/* Embed a schermo intero — solo in browser, non in PWA */}
+      {/* Embed a schermo intero: solo in browser, non in PWA */}
       {showEmbed && embedUrl && (
         <div style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column' }}
           onClick={() => setShowEmbed(false)}>
@@ -274,7 +274,7 @@ export function ChangeSessionDrawer({ currentEntry, onClose, onChanged }) {
       <textarea
         style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom:'12px' }}
         rows={3}
-        placeholder="Note (opzionale) — es. ero stanco, impegno improvviso..."
+        placeholder="Note (opzionale). Es. ero stanco, impegno improvviso..."
         value={note}
         onChange={e => setNote(e.target.value)}
       />

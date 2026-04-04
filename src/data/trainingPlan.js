@@ -7,13 +7,13 @@ export const TRAINING_PLAN = {
   },
 
   coach_notes: {
-    general: "Fase di adattamento anatomico: prepara il corpo agli stimoli futuri. Il 90% dell'arrampicata sarà sotto il limite per costruire volume e base. Niente sospensione o fingerboard per ora — massimo tempo sulla roccia.",
+    general: "Fase di adattamento anatomico: prepara il corpo agli stimoli futuri. Il 90% dell'arrampicata sarà sotto il limite per costruire volume e base. Niente sospensione o fingerboard per ora: massimo tempo sulla roccia.",
     sessions: {
-      PALESTRA: "Blocchi singoli di riscaldamento (RPE 4→8, recupero completo). Poi blocchi ripetuti: trova un blocco che chiudi flash con media fatica, ripetilo 4 volte — devi cadere alla 4a. Se arrivi facile era troppo facile, se cadi al 2° era troppo difficile. Finisci con EMOM trazioni e via semplice di defaticamento RPE 5-6.",
-      PESI: "Due circuiti. Circuito 1: mobilità/attivazione, uguale per tutte le settimane. Circuito 2: adattamento anatomico con progressione — sett. 1→2 aumentano le reps a parità di carico, sett. 2→3 aumenta il carico. Recupero 20s tra esercizi, 3 min a fine giro. Tempi 3-2-2: fase negativa / fermo / fase positiva. La fase negativa è quella in cui allunghi il muscolo (es. discesa nello squat). RPE target: 8.",
-      CORSA: "Easy run Z2/Z3 bassa. Test della chiacchiera: devi poter parlare senza affanno durante tutta la corsa. Quando finisci devi sentirti rinvigorito, quasi fresco — non stanco.",
-      PLACCA_VERTICALE: "Vie doppie: scala da primo senza fermarti fino in catena, fatti calare, rifai subito da secondo. Al 2° giro devi cadere nella seconda metà o chiudere con fatica estrema (RPE 9-10). Recupero ~15 min tra le vie. Per vie nuove: 1-1.5 gradi sotto il tuo limite a vista. Per vie già conosciute puoi salire fino al limite.",
-      STRAPIOMBO: "Stessa struttura delle vie doppie in placca. I gradi sono ancora più indicativi — hai poca esperienza su strapiombo. Regolati sull'intensità richiesta (cadere nella seconda metà al 2° giro), non sul numero del grado.",
+      PALESTRA: "Blocchi singoli di riscaldamento (RPE 4→8, recupero completo). Poi blocchi ripetuti: trova un blocco che chiudi flash con media fatica, ripetilo 4 volte: devi cadere alla 4a. Se arrivi facile era troppo facile, se cadi al 2° era troppo difficile. Finisci con EMOM trazioni e via semplice di defaticamento RPE tra 5 e 6.",
+      PESI: "Due circuiti. Circuito 1: mobilità/attivazione, uguale per tutte le settimane. Circuito 2: adattamento anatomico con progressione tra settimane: da 1 a 2 aumentano le reps a parità di carico, da 2 a 3 aumenta il carico. Recupero 20s tra esercizi, 3 min a fine giro. Tempi 3, 2, 2: fase negativa, fermo, fase positiva. La fase negativa è quella in cui allunghi il muscolo (es. discesa nello squat). RPE target: 8.",
+      CORSA: "Easy run Z2/Z3 bassa. Test della chiacchiera: devi poter parlare senza affanno durante tutta la corsa. Quando finisci devi sentirti rinvigorito, quasi fresco, non stanco.",
+      PLACCA_VERTICALE: "Vie doppie: scala da primo senza fermarti fino in catena, fatti calare, rifai subito da secondo. Al 2° giro devi cadere nella seconda metà o chiudere con fatica estrema (RPE 9 e 10). Recupero ~15 min tra le vie. Per vie nuove: circa 1 o 1.5 gradi sotto il tuo limite a vista. Per vie già conosciute puoi salire fino al limite.",
+      STRAPIOMBO: "Stessa struttura delle vie doppie in placca. I gradi sono ancora più indicativi: hai poca esperienza su strapiombo. Regolati sull'intensità richiesta (cadere nella seconda metà al 2° giro), non sul numero del grado.",
       STRAPIOMBO_TRAZIONI_SETT4: "Settimana 4 speciale: usa la struttura della tabella BLU (blocchi palestra) poi aggiungi l'EMOM trazioni come da tabella settimana 4.",
       DAY_PROJECT: "Solo settimana 2 e 3. Una via che credi di chiudere in giornata, max 3 giri completi con recupero completo. Prima: via di scaldo + via di attivazione RPE 8. Dopo: via di defaticamento. Gradi super indicativi. Solo sett. 2: aggiungi EMOM trazioni a casa.",
       REST: "Giorno di riposo. Nessuna attività fisica. Il recupero è parte dell'allenamento.",
@@ -21,7 +21,7 @@ export const TRAINING_PLAN = {
   },
 
   calendar: [
-    // SETTIMANA 1 — inizia mercoledì 25/03
+    // SETTIMANA 1: inizia mercoledì 25/03
     { week:1, day_date:'2026-03-25', session_type:'PESI' },
     { week:1, day_date:'2026-03-26', session_type:'PALESTRA' },
     { week:1, day_date:'2026-03-27', session_type:'CORSA' },
@@ -31,7 +31,7 @@ export const TRAINING_PLAN = {
     { week:1, day_date:'2026-03-31', session_type:'REST' },
     { week:1, day_date:'2026-04-01', session_type:'PLACCA_VERTICALE' },
 
-    // SETTIMANA 2 — inizia giovedì 02/04
+    // SETTIMANA 2: inizia giovedì 02/04
     { week:2, day_date:'2026-04-02', session_type:'PALESTRA' },
     { week:2, day_date:'2026-04-03', session_type:'PESI' },
     { week:2, day_date:'2026-04-04', session_type:'STRAPIOMBO' },
@@ -41,7 +41,7 @@ export const TRAINING_PLAN = {
     { week:2, day_date:'2026-04-08', session_type:'PLACCA_VERTICALE', also:'PESI' },
     { week:2, day_date:'2026-04-09', session_type:'CORSA' },
 
-    // SETTIMANA 3 — inizia venerdì 10/04
+    // SETTIMANA 3: inizia venerdì 10/04
     { week:3, day_date:'2026-04-10', session_type:'PALESTRA' },
     { week:3, day_date:'2026-04-11', session_type:'REST' },
     { week:3, day_date:'2026-04-12', session_type:'STRAPIOMBO' },
@@ -51,7 +51,7 @@ export const TRAINING_PLAN = {
     { week:3, day_date:'2026-04-16', session_type:'PLACCA_VERTICALE', also:'PESI' },
     { week:3, day_date:'2026-04-17', session_type:'CORSA' },
 
-    // SETTIMANA 4 SCARICO — inizia sabato 18/04
+    // SETTIMANA 4 SCARICO: inizia sabato 18/04
     { week:4, day_date:'2026-04-18', session_type:'STRAPIOMBO',              scarico:true },
     { week:4, day_date:'2026-04-19', session_type:'REST',                    scarico:true },
     { week:4, day_date:'2026-04-20', session_type:'PLACCA_VERTICALE', also:'PESI', scarico:true },

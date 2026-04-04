@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
+import { todayStr } from '../constants'
 
-// FIX: chiavi spostate in variabili d'ambiente — non più hardcoded nel sorgente
+// FIX: chiavi spostate in variabili d'ambiente, non più hardcoded nel sorgente
 // In locale: crea .env con VITE_SUPABASE_URL e VITE_SUPABASE_KEY
 // Su GitHub Actions: aggiungi le due vars nelle Repository Variables (Settings → Secrets and variables → Actions → Variables)
 const SUPA_URL = import.meta.env.VITE_SUPABASE_URL
@@ -360,6 +361,38 @@ export const loadHrvLogs = async () => {
   const userId = await uid(); if (!userId) return []
   try { const { data, error } = await db.from('hrv_logs').select('*').eq('user_id', userId).order('log_date', { ascending: true }); if (error) throw error; return data || [] }
   catch(e) { return [] }
+}
+
+// ── HEALTH LOGS (sonno, caffeina, readiness raw) ───────────────────
+export const loadHealthLogs = async () => {
+  const userId = await uid()
+  if (!userId) return []
+  try {
+    const { data, error } = await db
+      .from('health_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('log_date', { ascending: false })
+      .limit(30)
+    if (error) throw error
+    return data || []
+  } catch (e) { return [] }
+}
+
+export const loadHealthLogToday = async () => {
+  const userId = await uid()
+  if (!userId) return null
+  try {
+    const today = todayStr()
+    const { data, error } = await db
+      .from('health_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('log_date', today)
+      .maybeSingle()
+    if (error) throw error
+    return data || null
+  } catch (e) { return null }
 }
 
 // ── BODY MEASUREMENTS ──────────────────────────────────────────────

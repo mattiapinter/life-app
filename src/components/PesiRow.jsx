@@ -134,7 +134,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
           <input
             type="number" inputMode="numeric" pattern="[0-9]*"
             style={inputStyle('reps')}
-            placeholder="—"
+            placeholder=""
             value={current.reps}
             onChange={e => handleChange('reps', e.target.value)}
             onBlur={() => handleBlur('reps')}
@@ -147,7 +147,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
             <input
               type="number" inputMode="decimal" pattern="[0-9]*"
               style={inputStyle('kg')}
-              placeholder={lastLog ? `${lastLog.weight_kg}` : '—'}
+              placeholder={lastLog ? `${lastLog.weight_kg}` : ''}
               value={current.kg}
               onChange={e => handleChange('kg', e.target.value)}
               onBlur={() => handleBlur('kg')}
@@ -158,7 +158,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
             <input
               type="number" inputMode="numeric" pattern="[0-9]*"
               style={inputStyle('reps')}
-              placeholder={lastLog ? `${lastLog.reps_done}` : '—'}
+              placeholder={lastLog ? `${lastLog.reps_done}` : ''}
               value={current.reps}
               onChange={e => handleChange('reps', e.target.value)}
               onBlur={() => handleBlur('reps')}
@@ -167,7 +167,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
         </div>
       )}
 
-      {/* FIX: banner di conferma propagazione — appare sotto l'input per 600ms */}
+      {/* FIX: banner di conferma propagazione, appare sotto l'input per 600ms */}
       {flashedSets.size > 0 && (
         <div style={{
           marginTop: '6px',

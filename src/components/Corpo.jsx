@@ -5,6 +5,7 @@ import { todayStr, fmtDateShort } from '../constants'
 import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement, updateBodyMeasurement, loadUserProfile, loadFitnessSessions } from '../lib/supabase'
 import { FitnessTestForm, MetricsDetail, FitnessSessionHistory } from './FitnessBenchmark'
 import { MetricheTabHeader, CollapsibleHistory, MetricheFormModal } from './MetricGroupLayout'
+import InsightsSection from './Insights'
 
 export { loadBodyMeasurements }
 
@@ -155,7 +156,7 @@ function AddMeasurementForm({ onSaved, editingEntry = null, onClose }) {
             <input
               type="number" step="0.1"
               className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-base font-bold text-on-surface"
-              placeholder="—"
+              placeholder=""
               value={vals[m.id] || ''}
               onChange={e => sv(m.id, e.target.value)}
             />
@@ -240,7 +241,7 @@ function OverviewCards({ measurements, onSelectMetric, selectedMetric }) {
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <div className="text-2xl font-headline font-extrabold tracking-tight text-on-surface">
-                    {val != null ? val : '—'}
+                    {val != null ? val : 'n.d.'}
                   </div>
                   <div className="text-xs text-on-surface-variant">{m.unit}</div>
                 </div>
@@ -480,7 +481,7 @@ function HrvMetricheTab({ onHrvSaved }) {
   const last = sorted.length ? sorted[sorted.length - 1] : null
   const subtitle = last
     ? `Ultimo ${fmtDateShort(last.log_date)} · ${last.hrv_value} ms`
-    : 'Variabilità cardiaca — anche dalla Home'
+    : 'Variabilità cardiaca. Anche dalla Home'
 
   if (loading) {
     return (
@@ -676,13 +677,25 @@ function BodyComposition({ measurements, userProfile }) {
   )
 }
 
-function normalizeMetricheTab(id) {
-  if (id === 'hrv' || id === 'testfisici' || id === 'biometria') return id
+function normalizeDatiTab(id) {
+  if (id === 'hrv' || id === 'testfisici' || id === 'biometria' || id === 'insights') return id
   return 'biometria'
 }
 
-export default function MetricheSection({ initialSub, onSubChange, fitSessions = [], setFitSessions, onHrvSaved }) {
-  const [sub, setSub] = React.useState(() => normalizeMetricheTab(initialSub || 'biometria'))
+export default function MetricheSection({
+  initialSub,
+  onSubChange,
+  fitSessions = [],
+  setFitSessions,
+  onHrvSaved,
+  hrvLogs = [],
+  healthLogs = [],
+  healthLogToday = null,
+  trainingLogs = [],
+  ascents = [],
+  climbingSessions = [],
+}) {
+  const [sub, setSub] = React.useState(() => normalizeDatiTab(initialSub || 'biometria'))
   const [measurements, setMeasurements] = React.useState([])
   const [loading, setLoading] = React.useState(true)
   const [selectedMetric, setSelectedMetric] = React.useState(null)
@@ -694,7 +707,7 @@ export default function MetricheSection({ initialSub, onSubChange, fitSessions =
 
   React.useEffect(() => {
     if (initialSub == null) return
-    const n = normalizeMetricheTab(initialSub)
+    const n = normalizeDatiTab(initialSub)
     if (n !== sub) setSub(n)
   }, [initialSub])
 
@@ -780,15 +793,15 @@ export default function MetricheSection({ initialSub, onSubChange, fitSessions =
   )
 
   return (
-    <div className="min-h-screen bg-background pb-40">
+    <div className="min-h-screen bg-background pb-44">
       <div className="px-6 pb-2 pt-1">
         <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
           Salute
         </p>
         <div className="flex items-center gap-3 mb-1">
-          <span className="material-symbols-outlined text-secondary text-2xl">monitoring</span>
+          <span className="material-symbols-outlined text-secondary text-2xl">science</span>
           <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
-            Metriche
+            Dati
           </h1>
         </div>
       </div>
@@ -830,13 +843,27 @@ export default function MetricheSection({ initialSub, onSubChange, fitSessions =
 
           {sub === 'hrv' && <HrvMetricheTab onHrvSaved={onHrvSaved} />}
 
+          {sub === 'insights' && (
+            <div className="px-6 pb-6">
+              <InsightsSection
+                hrvLogs={hrvLogs}
+                healthLogs={healthLogs}
+                healthLogToday={healthLogToday}
+                fitSessions={fitSessions}
+                trainingLogs={trainingLogs}
+                ascents={ascents}
+                sessions={climbingSessions}
+              />
+            </div>
+          )}
+
           {sub === 'testfisici' && (
             <div className="px-6 space-y-5 pb-6">
               <MetricheTabHeader
                 subtitle={
                   fitSessions.length
                     ? `${fitSessions.length} sessioni · ultimo ${fmtDateShort(fitSessions[fitSessions.length - 1]?.session_date)}`
-                    : 'Mobilità, forza e resistenza — benchmark e storico qui sotto'
+                    : 'Mobilità, forza e resistenza. Benchmark e storico qui sotto'
                 }
                 onFabClick={() => openFitnessForm(null)}
                 fabAriaLabel="Nuovo test"
