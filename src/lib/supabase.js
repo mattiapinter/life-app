@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { todayStr } from '../constants'
 
-// FIX: chiavi spostate in variabili d'ambiente, non più hardcoded nel sorgente
+// FIX: chiavi spostate in variabili d'ambiente — non più hardcoded nel sorgente
 // In locale: crea .env con VITE_SUPABASE_URL e VITE_SUPABASE_KEY
 // Su GitHub Actions: aggiungi le due vars nelle Repository Variables (Settings → Secrets and variables → Actions → Variables)
 const SUPA_URL = import.meta.env.VITE_SUPABASE_URL

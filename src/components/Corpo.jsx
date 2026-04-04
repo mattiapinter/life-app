@@ -156,7 +156,7 @@ function AddMeasurementForm({ onSaved, editingEntry = null, onClose }) {
             <input
               type="number" step="0.1"
               className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-base font-bold text-on-surface"
-              placeholder=""
+              placeholder="—"
               value={vals[m.id] || ''}
               onChange={e => sv(m.id, e.target.value)}
             />
@@ -241,7 +241,7 @@ function OverviewCards({ measurements, onSelectMetric, selectedMetric }) {
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <div className="text-2xl font-headline font-extrabold tracking-tight text-on-surface">
-                    {val != null ? val : 'n.d.'}
+                    {val != null ? val : '—'}
                   </div>
                   <div className="text-xs text-on-surface-variant">{m.unit}</div>
                 </div>
@@ -863,7 +863,7 @@ export default function MetricheSection({
                 subtitle={
                   fitSessions.length
                     ? `${fitSessions.length} sessioni · ultimo ${fmtDateShort(fitSessions[fitSessions.length - 1]?.session_date)}`
-                    : 'Mobilità, forza e resistenza. Benchmark e storico qui sotto'
+                    : 'Mobilità, forza e resistenza — benchmark e storico qui sotto'
                 }
                 onFabClick={() => openFitnessForm(null)}
                 fabAriaLabel="Nuovo test"

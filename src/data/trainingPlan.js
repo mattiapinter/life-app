@@ -21,7 +21,7 @@ export const TRAINING_PLAN = {
   },
 
   calendar: [
-    // SETTIMANA 1: inizia mercoledì 25/03
+    // SETTIMANA 1 — inizia mercoledì 25/03
     { week:1, day_date:'2026-03-25', session_type:'PESI' },
     { week:1, day_date:'2026-03-26', session_type:'PALESTRA' },
     { week:1, day_date:'2026-03-27', session_type:'CORSA' },
@@ -31,7 +31,7 @@ export const TRAINING_PLAN = {
     { week:1, day_date:'2026-03-31', session_type:'REST' },
     { week:1, day_date:'2026-04-01', session_type:'PLACCA_VERTICALE' },
 
-    // SETTIMANA 2: inizia giovedì 02/04
+    // SETTIMANA 2 — inizia giovedì 02/04
     { week:2, day_date:'2026-04-02', session_type:'PALESTRA' },
     { week:2, day_date:'2026-04-03', session_type:'PESI' },
     { week:2, day_date:'2026-04-04', session_type:'STRAPIOMBO' },
@@ -41,7 +41,7 @@ export const TRAINING_PLAN = {
     { week:2, day_date:'2026-04-08', session_type:'PLACCA_VERTICALE', also:'PESI' },
     { week:2, day_date:'2026-04-09', session_type:'CORSA' },
 
-    // SETTIMANA 3: inizia venerdì 10/04
+    // SETTIMANA 3 — inizia venerdì 10/04
     { week:3, day_date:'2026-04-10', session_type:'PALESTRA' },
     { week:3, day_date:'2026-04-11', session_type:'REST' },
     { week:3, day_date:'2026-04-12', session_type:'STRAPIOMBO' },
@@ -51,7 +51,7 @@ export const TRAINING_PLAN = {
     { week:3, day_date:'2026-04-16', session_type:'PLACCA_VERTICALE', also:'PESI' },
     { week:3, day_date:'2026-04-17', session_type:'CORSA' },
 
-    // SETTIMANA 4 SCARICO: inizia sabato 18/04
+    // SETTIMANA 4 SCARICO — inizia sabato 18/04
     { week:4, day_date:'2026-04-18', session_type:'STRAPIOMBO',              scarico:true },
     { week:4, day_date:'2026-04-19', session_type:'REST',                    scarico:true },
     { week:4, day_date:'2026-04-20', session_type:'PLACCA_VERTICALE', also:'PESI', scarico:true },

@@ -518,7 +518,7 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ fontSize: '10px', color: C.hint }}>RPE</div>
                 <select style={{ ...ss.inp, width: '60px', padding: '6px 8px', fontSize: '12px' }} value={a.rpe} onChange={e => updateAscent(i, 'rpe', e.target.value)}>
-                  <option value="">Seleziona</option>
+                  <option value="">—</option>
                   {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
@@ -580,7 +580,7 @@ function ProjectForm({ crags, onSaved, onClose }) {
           <div>
             <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Falesia</div>
             <select style={{ ...ss.inp, appearance: 'none' }} value={cragId} onChange={e => setCragId(e.target.value)}>
-              <option value="">Seleziona</option>
+              <option value="">—</option>
               {crags.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
@@ -779,7 +779,7 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
                       <div style={{ fontSize: '9px', color: C.hint, marginBottom: '3px' }}>RPE</div>
                       <select style={{ ...ss.inp, appearance: 'none', fontSize: '13px' }}
                         value={r.rpe || ''} onChange={e => updateRow(r.id, 'rpe', e.target.value)}>
-                        <option value="">Seleziona</option>
+                        <option value="">—</option>
                         {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
                       </select>
                     </div>
@@ -1356,7 +1356,7 @@ function StatsSection({ sessions, ascents, crags }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ fontSize: '10px', fontWeight: '700', color: C.hint, width: '16px' }}>{i + 1}</div>
                   <div>
-                    <div style={{ fontSize: '12px', color: C.textSoft }}>{crag?.name || 'n.d.'}</div>
+                    <div style={{ fontSize: '12px', color: C.textSoft }}>{crag?.name || '—'}</div>
                     {crag?.region && <div style={{ fontSize: '10px', color: C.hint }}>{crag.region}</div>}
                   </div>
                 </div>
@@ -1757,7 +1757,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
                   <div style={{ fontSize: '10px', color: C.muted, display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                     {crag.region && <span>{crag.region}</span>}
                     {crag.rock_type && <span style={{ color: C.hint }}>· {crag.rock_type}</span>}
-                    {crag.grade_min && crag.grade_max && <span style={{ color: C.hint }}>· {crag.grade_min} a {crag.grade_max}</span>}
+                    {crag.grade_min && crag.grade_max && <span style={{ color: C.hint }}>· {crag.grade_min}–{crag.grade_max}</span>}
                     {(crag.exposure || []).length > 0 && (crag.exposure || []).map(exp => (
                       <span key={exp} style={{ color: C.blueLight, fontWeight: '700', fontFamily: 'monospace', fontSize: '9px', padding: '1px 6px', background: C.blueBg, borderRadius: '999px', border: `1px solid ${C.blueBorder}` }}>{exp}</span>
                     ))}

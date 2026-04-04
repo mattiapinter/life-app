@@ -50,7 +50,7 @@ function ReadinessGauge({ value }) {
         </svg>
         <div className="-mt-14 text-center">
           <div className="text-5xl font-headline font-extrabold tracking-tight text-on-surface">
-            {v != null ? v : 'n.d.'}
+            {v != null ? v : '—'}
           </div>
           <div className="text-xs text-on-surface-variant mt-1">su 100</div>
         </div>
@@ -414,7 +414,7 @@ export default function HomeSection({
                     {meal}
                   </span>
                   <span className="text-xs text-on-surface-variant max-w-[60%] truncate text-right">
-                    {items.length ? items.join(' · ') : 'n.d.'}
+                    {items.length ? items.join(' · ') : '—'}
                   </span>
                 </div>
               )
@@ -460,7 +460,7 @@ export default function HomeSection({
                         border: `1.5px solid ${isToday ? sc.border : '#353534'}`,
                       }}>
                       <span className="text-xs font-bold text-center leading-tight" style={{ color: sc.text }}>
-                        {displayType === 'REST' ? 'Rip' : sc.label.split(' ')[0].slice(0, 5)}
+                        {displayType === 'REST' ? '—' : sc.label.split(' ')[0].slice(0, 5)}
                       </span>
                     </div>
                     {changed && (
@@ -487,7 +487,7 @@ function avg28chip(hrvToday, hrvLogs) {
   if (!hrvToday || avg == null) {
     return (
       <span className="text-[10px] px-2 py-1 rounded-full bg-surface-container-highest border border-outline-variant text-on-surface-variant">
-        HRV oggi n/d
+        HRV oggi —
       </span>
     )
   }

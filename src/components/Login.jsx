@@ -22,7 +22,7 @@ export default function LoginScreen({ onLogin }) {
       }
       onLogin()
     } catch(e) {
-      setError(e.message || 'Errore. Riprova.')
+      setError(e.message || 'Errore — riprova')
     }
     setLoading(false)
   }

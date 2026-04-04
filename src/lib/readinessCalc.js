@@ -63,7 +63,7 @@ export function timeToMinutes(t) {
 }
 
 export function minutesToHHMM(mins) {
-  if (mins == null || !Number.isFinite(mins)) return 'n.d.'
+  if (mins == null || !Number.isFinite(mins)) return '—'
   let m = ((mins % (24 * 60)) + (24 * 60)) % (24 * 60)
   const h = Math.floor(m / 60)
   const mm = Math.round(m % 60)
