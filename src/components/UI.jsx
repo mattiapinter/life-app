@@ -4,65 +4,56 @@ import { IcoClose, IcoPlay, IcoEdit } from './Icons'
 import { saveExerciseVideo } from '../lib/supabase'
 
 // ── MODAL OVERLAY ─────────────────────────────────────────────────
-export function Modal({ onClose, title, subtitle, accentColor, children }) {
+/** Stesso pattern dei drawer Scalate: quasi tutto schermo, scroll nel corpo, `footer` opzionale fisso in basso */
+export function Modal({ onClose, title, subtitle, accentColor, children, footer = null }) {
+  const scrollStyle = {
+    ...drawer.sheetScroll,
+    padding: '12px 24px',
+    paddingBottom: footer
+      ? 12
+      : 'max(20px, calc(env(safe-area-inset-bottom, 0px) + 24px))',
+  }
   return (
     <div
       style={{
-        ...drawer.overlay(200),
+        ...drawer.overlay(),
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
       onClick={onClose}>
-      <div style={{
-        width:'100%',
-        maxWidth:'448px',
-        margin:'0 auto',
-        background:C.surface,
-        borderRadius:'24px 24px 0 0',
-        maxHeight:'min(88dvh, 100dvh)',
-        display:'flex',
-        flexDirection:'column',
-        overflow:'hidden',
-        boxShadow:'0 -4px 24px rgba(0, 0, 0, 0.3)',
-        border:`1px solid ${C.border}`,
-        borderBottom:'none',
-        boxSizing:'border-box',
-      }} onClick={e => e.stopPropagation()}>
-        <div style={{ flexShrink:0, padding:'24px', paddingBottom:'16px', borderBottom:`1px solid ${C.border}` }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'12px' }}>
-            <div style={{ minWidth:0, flex:1 }}>
-              {subtitle && <div style={{ fontSize:'10px', fontWeight:'700', letterSpacing:'.1em', textTransform:'uppercase', color: accentColor || C.primary, marginBottom:'6px' }}>{subtitle}</div>}
-              <div style={{ fontSize:'18px', fontWeight:'700', color:C.text, wordBreak:'break-word' }}>{title}</div>
-            </div>
-            <div style={{
-              cursor:'pointer',
-              flexShrink:0,
-              padding:'8px',
-              borderRadius:'10px',
-              background:C.bg,
-              border:`1px solid ${C.border}`,
-              transition:'transform 0.2s',
+      <div
+        className="drawer-enter"
+        style={{
+          ...drawer.sheet,
+          borderRadius: '22px',
+        }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ ...drawer.sheetHeader, alignItems: 'flex-start' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            {subtitle && <div style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '.1em', textTransform: 'uppercase', color: accentColor || C.primary, marginBottom: '6px' }}>{subtitle}</div>}
+            <div style={{ fontSize: '18px', fontWeight: '700', color: C.text, wordBreak: 'break-word' }}>{title}</div>
+          </div>
+          <div
+            style={{
+              cursor: 'pointer',
+              flexShrink: 0,
+              padding: '8px',
+              borderRadius: '10px',
+              background: C.bg,
+              border: `1px solid ${C.border}`,
+              transition: 'transform 0.2s',
             }}
-              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
-              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-              onClick={onClose}>
-              <IcoClose />
-            </div>
+            onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.9)' }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+            onClick={onClose}>
+            <IcoClose />
           </div>
         </div>
-        <div style={{
-          flex:1,
-          minHeight:0,
-          overflowY:'auto',
-          WebkitOverflowScrolling:'touch',
-          overscrollBehavior:'contain',
-          padding:'12px 24px',
-          paddingBottom:'calc(env(safe-area-inset-bottom, 20px) + 28px)',
-          boxSizing:'border-box',
-        }}>
+        <div style={scrollStyle}>
           {children}
         </div>
+        {footer != null && footer !== false ? <div style={drawer.sheetFooter}>{footer}</div> : null}
       </div>
     </div>
   )
@@ -189,7 +180,7 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
       {showEmbed && embedUrl && (
         <div
           style={{
-            position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column',
+            position:'fixed', inset:0, zIndex:5001, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column',
             paddingTop:'env(safe-area-inset-top, 0px)', paddingBottom:'env(safe-area-inset-bottom, 0px)',
             boxSizing:'border-box', minHeight:'100dvh',
           }}
@@ -214,7 +205,15 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
 
       {/* Modal per inserire/modificare URL */}
       {showModal && (
-        <Modal title={exerciseName} subtitle="Video esercizio" onClose={() => { setShowModal(false); setUrlInput('') }}>
+        <Modal
+          title={exerciseName}
+          subtitle="Video esercizio"
+          onClose={() => { setShowModal(false); setUrlInput('') }}
+          footer={(
+            <div style={{ ...ss.savBtn, marginTop: 0, opacity: saving ? 0.6 : 1 }} onClick={!saving ? handleSave : undefined}>
+              {saving ? 'Salvataggio...' : 'Salva'}
+            </div>
+          )}>
           <div style={{ fontSize:'11px', color:C.muted, marginBottom:'10px' }}>
             Incolla un URL YouTube o Loom
           </div>
@@ -224,15 +223,12 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
             </div>
           )}
           <input
-            style={{ ...ss.inp, marginBottom:'10px', fontSize:'14px' }}
+            style={{ ...ss.inp, marginBottom: 0, fontSize:'14px' }}
             placeholder="https://youtube.com/watch?v=..."
             value={urlInput}
             onChange={e => setUrlInput(e.target.value)}
             autoFocus
           />
-          <div style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1 }} onClick={!saving ? handleSave : undefined}>
-            {saving ? 'Salvataggio...' : 'Salva'}
-          </div>
         </Modal>
       )}
     </>
@@ -278,7 +274,16 @@ export function ChangeSessionDrawer({ currentEntry, onClose, onChanged }) {
   }
 
   return (
-    <Modal title="Cambia allenamento" subtitle="Imprevisto?" accentColor={C.red} onClose={onClose}>
+    <Modal
+      title="Cambia allenamento"
+      subtitle="Imprevisto?"
+      accentColor={C.red}
+      onClose={onClose}
+      footer={(
+        <div style={{ ...ss.savBtn, marginTop: 0, opacity: (!selected || saving) ? 0.5 : 1 }} onClick={selected && !saving ? handleSave : undefined}>
+          {saving ? 'Salvataggio...' : 'Conferma cambio'}
+        </div>
+      )}>
       <div style={{ fontSize:'11px', color:C.muted, marginBottom:'14px' }}>
         Pianificato: <span style={{ color:C.text, fontWeight:'600' }}>{SESSION_COLORS[currentEntry.session_type]?.label}</span>
       </div>
@@ -298,15 +303,12 @@ export function ChangeSessionDrawer({ currentEntry, onClose, onChanged }) {
         })}
       </div>
       <textarea
-        style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom:'12px' }}
+        style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom: 0 }}
         rows={3}
         placeholder="Note (opzionale) — es. ero stanco, impegno improvviso..."
         value={note}
         onChange={e => setNote(e.target.value)}
       />
-      <div style={{ ...ss.savBtn, opacity: (!selected || saving) ? 0.5 : 1 }} onClick={selected && !saving ? handleSave : undefined}>
-        {saving ? 'Salvataggio...' : 'Conferma cambio'}
-      </div>
     </Modal>
   )
 }

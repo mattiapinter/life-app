@@ -202,7 +202,7 @@ export function FitnessSessionHistory({ fitSessions, onChanged, onEditSession, b
   const inner = (
     <>
       {confirmDel && (
-        <div style={{ ...drawer.centerOverlay(50, 'rgba(0,0,0,0.85)') }} onClick={() => setConfirmDel(null)}>
+        <div style={{ ...drawer.centerOverlay(undefined, 'rgba(0,0,0,0.85)') }} onClick={() => setConfirmDel(null)}>
           <div className="bg-surface-container rounded-xl p-6 w-full border border-error/20" style={{ ...drawer.centerCard, maxWidth: '384px' }} onClick={e => e.stopPropagation()}>
             <div className="text-base font-bold text-on-surface mb-2">Elimina test</div>
             <div className="text-sm text-on-surface-variant mb-5">
@@ -403,11 +403,11 @@ export function FitnessTestForm({ onSaved, editingSession = null, onCancelEdit, 
   )
 
   const bodyStyle = compact
-    ? { padding: '0', paddingBottom: '24px', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }
+    ? null
     : ss.body
 
-  return (
-    <div style={bodyStyle}>
+  const scrollBlock = (
+    <>
       {editingSession && !compact && (
         <div className="flex justify-between items-center mb-3 px-1">
           <span className="text-xs font-bold text-primary uppercase tracking-wider">Modifica sessione</span>
@@ -470,10 +470,40 @@ export function FitnessTestForm({ onSaved, editingSession = null, onCancelEdit, 
           📁 Cartella Foto →
         </a>
       </div>
-      <div style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1 }} onClick={!saving ? salva : undefined}>
+    </>
+  )
+
+  const actionBlock = (
+    <>
+      <div style={{ ...ss.savBtn, marginTop: 0, opacity: saving ? 0.6 : 1 }} onClick={!saving ? salva : undefined}>
         {saving ? 'Salvataggio...' : editingSession ? 'Aggiorna test' : 'Salva test'}
       </div>
       {savedMsg && <div style={{ textAlign:'center', fontSize:'12px', color:C.greenLight, marginTop:'8px' }}>✓ Test salvato!</div>}
+    </>
+  )
+
+  if (compact) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden',
+      }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+          {scrollBlock}
+        </div>
+        <div style={{
+          flexShrink: 0, borderTop: `1px solid ${C.border}`, paddingTop: 12, background: C.surface,
+          paddingBottom: 'max(8px, env(safe-area-inset-bottom, 0px))',
+        }}>
+          {actionBlock}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={bodyStyle}>
+      {scrollBlock}
+      {actionBlock}
     </div>
   )
 }

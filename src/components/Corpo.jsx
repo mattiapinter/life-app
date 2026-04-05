@@ -137,51 +137,52 @@ function AddMeasurementForm({ onSaved, editingEntry = null, onClose }) {
   }
 
   return (
-    <div className="box-border max-w-full overflow-x-hidden bg-surface-container-low p-6 sm:rounded-xl">
-      <h3 className="mb-5 text-sm font-bold uppercase tracking-widest text-on-surface">
-        {editingEntry ? 'Modifica misurazione' : 'Nuova misurazione'}
-      </h3>
-      <div className="mb-5 min-w-0">
-        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Data</label>
-        <input type="date" className="box-border w-full max-w-full rounded-xl border-2 border-outline-variant bg-surface-container-highest px-4 py-3 text-on-surface" value={date} onChange={e => setDate(e.target.value)} />
-      </div>
-      <div className="mb-6 grid min-w-0 max-w-full grid-cols-2 gap-4">
-        {METRICS.map(m => (
-          <div key={m.id} className="min-w-0">
-            <div className="mb-2 flex min-w-0 items-center gap-2">
-              <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: m.color }} />
-              <span className="truncate text-xs font-semibold text-on-surface-variant">{m.label}</span>
-              <span className="flex-shrink-0 text-[10px] text-on-surface-variant/60">{m.unit}</span>
+    <div className="box-border flex min-h-0 flex-1 flex-col max-w-full min-w-0 overflow-x-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 pb-2 [-webkit-overflow-scrolling:touch]">
+        <div className="mb-5 min-w-0">
+          <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Data</label>
+          <input type="date" className="box-border w-full max-w-full rounded-xl border-2 border-outline-variant bg-surface-container-highest px-4 py-3 text-on-surface" value={date} onChange={e => setDate(e.target.value)} />
+        </div>
+        <div className="mb-2 grid min-w-0 max-w-full grid-cols-2 gap-4">
+          {METRICS.map(m => (
+            <div key={m.id} className="min-w-0">
+              <div className="mb-2 flex min-w-0 items-center gap-2">
+                <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: m.color }} />
+                <span className="truncate text-xs font-semibold text-on-surface-variant">{m.label}</span>
+                <span className="flex-shrink-0 text-[10px] text-on-surface-variant/60">{m.unit}</span>
+              </div>
+              <input
+                type="number" step="0.1"
+                className="box-border w-full max-w-full rounded-xl border-2 border-outline-variant bg-surface-container-highest px-3 py-3 text-center text-base font-bold text-on-surface"
+                placeholder="—"
+                value={vals[m.id] || ''}
+                onChange={e => sv(m.id, e.target.value)}
+              />
             </div>
-            <input
-              type="number" step="0.1"
-              className="box-border w-full max-w-full rounded-xl border-2 border-outline-variant bg-surface-container-highest px-3 py-3 text-center text-base font-bold text-on-surface"
-              placeholder="—"
-              value={vals[m.id] || ''}
-              onChange={e => sv(m.id, e.target.value)}
-            />
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-      <button
-        onClick={handleSave}
-        disabled={!hasAny || saving}
-        className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-40"
-        style={{
-          background: saved ? '#4ae176' : 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
-          color: saved ? '#003915' : '#160066',
-          boxShadow: saved ? '0 4px 16px rgba(74, 225, 118, 0.3)' : '0 4px 16px rgba(198, 191, 255, 0.3)'
-        }}>
-        {saving ? 'Salvataggio...' : saved ? '✓ Salvato!' : editingEntry ? 'Aggiorna' : 'Salva misurazione'}
-      </button>
-      {onClose && (
+      <div className="flex-shrink-0 border-t border-outline-variant/20 pt-4 mt-2 space-y-2 bg-surface-container pb-[max(4px,env(safe-area-inset-bottom,0px))]">
         <button
-          type="button"
-          onClick={onClose}
-          className="w-full mt-3 py-3 rounded-xl text-sm font-semibold text-on-surface-variant border border-outline-variant bg-transparent">
-          Annulla
+          onClick={handleSave}
+          disabled={!hasAny || saving}
+          className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all disabled:opacity-40"
+          style={{
+            background: saved ? '#4ae176' : 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
+            color: saved ? '#003915' : '#160066',
+            boxShadow: saved ? '0 4px 16px rgba(74, 225, 118, 0.3)' : '0 4px 16px rgba(198, 191, 255, 0.3)'
+          }}>
+          {saving ? 'Salvataggio...' : saved ? '✓ Salvato!' : editingEntry ? 'Aggiorna' : 'Salva misurazione'}
         </button>
-      )}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 rounded-xl text-sm font-semibold text-on-surface-variant border border-outline-variant bg-transparent">
+            Annulla
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -283,7 +284,7 @@ function BodyStoricoList({ measurements, onDeleted, onEdit }) {
   return (
     <div>
       {confirmDel && (
-        <div style={{ ...drawer.centerOverlay(80, 'rgba(0,0,0,0.85)') }} onClick={() => setConfirmDel(null)}>
+        <div style={{ ...drawer.centerOverlay(undefined, 'rgba(0,0,0,0.85)') }} onClick={() => setConfirmDel(null)}>
           <div className="bg-surface-container rounded-xl p-6 w-full border border-error/20" style={{ ...drawer.centerCard, maxWidth: '384px' }} onClick={e => e.stopPropagation()}>
             <div className="text-base font-bold text-on-surface mb-2">Elimina misurazione</div>
             <div className="text-sm text-on-surface-variant mb-5">del {fmtDateShort(confirmDel.measured_at?.slice(0,10))}?</div>
@@ -369,44 +370,48 @@ function HrvQuickForm({ editingRow = null, onSaved, onClose }) {
   }
 
   return (
-    <div className="max-w-full min-w-0 space-y-5 overflow-x-hidden">
-      <div className="min-w-0">
-        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Data</label>
-        <input
-          type="date"
-          disabled={!!editingRow}
-          className="box-border w-full max-w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-on-surface disabled:opacity-60"
-          value={date.slice(0, 10)}
-          onChange={e => setDate(e.target.value)}
-        />
-        {editingRow && <p className="text-[11px] text-on-surface-variant mt-1">In modifica non puoi cambiare la data del log.</p>}
+    <div className="flex min-h-0 flex-1 flex-col max-w-full min-w-0 overflow-x-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-5 pr-0.5 pb-2 [-webkit-overflow-scrolling:touch]">
+        <div className="min-w-0">
+          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Data</label>
+          <input
+            type="date"
+            disabled={!!editingRow}
+            className="box-border w-full max-w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-on-surface disabled:opacity-60"
+            value={date.slice(0, 10)}
+            onChange={e => setDate(e.target.value)}
+          />
+          {editingRow && <p className="text-[11px] text-on-surface-variant mt-1">In modifica non puoi cambiare la data del log.</p>}
+        </div>
+        <div className="min-w-0">
+          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">HRV (ms)</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            className="box-border w-full max-w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-xl font-bold text-on-surface"
+            placeholder="es. 45"
+            value={val}
+            onChange={e => setVal(e.target.value)}
+          />
+        </div>
       </div>
-      <div className="min-w-0">
-        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">HRV (ms)</label>
-        <input
-          type="number"
-          inputMode="numeric"
-          className="box-border w-full max-w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-xl font-bold text-on-surface"
-          placeholder="es. 45"
-          value={val}
-          onChange={e => setVal(e.target.value)}
-        />
+      <div className="flex-shrink-0 border-t border-outline-variant/20 pt-4 mt-2 space-y-2 bg-surface-container pb-[max(4px,env(safe-area-inset-bottom,0px))]">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={submit}
+          className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider disabled:opacity-40"
+          style={{
+            background: 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
+            color: '#160066',
+            boxShadow: '0 4px 16px rgba(198, 191, 255, 0.3)',
+          }}>
+          {saving ? 'Salvataggio...' : editingRow ? 'Aggiorna' : 'Salva'}
+        </button>
+        <button type="button" onClick={onClose} className="w-full py-3 rounded-xl text-sm font-semibold text-on-surface-variant border border-outline-variant">
+          Annulla
+        </button>
       </div>
-      <button
-        type="button"
-        disabled={saving}
-        onClick={submit}
-        className="w-full py-4 rounded-xl font-bold text-sm uppercase tracking-wider disabled:opacity-40"
-        style={{
-          background: 'linear-gradient(135deg, #c6bfff 0%, #8c81fb 100%)',
-          color: '#160066',
-          boxShadow: '0 4px 16px rgba(198, 191, 255, 0.3)',
-        }}>
-        {saving ? 'Salvataggio...' : editingRow ? 'Aggiorna' : 'Salva'}
-      </button>
-      <button type="button" onClick={onClose} className="w-full py-3 rounded-xl text-sm font-semibold text-on-surface-variant border border-outline-variant">
-        Annulla
-      </button>
     </div>
   )
 }

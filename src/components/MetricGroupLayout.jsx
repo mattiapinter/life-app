@@ -65,14 +65,25 @@ export function CollapsibleHistory({ title, badge, defaultOpen = true, children,
   )
 }
 
-/** Modale full-screen / sheet per form Metriche. */
+/** Popup centrato come drawer: più piccolo dello schermo, scroll nel contenuto. */
 export function MetricheFormModal({ title, onClose, children }) {
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/75 p-0 sm:p-4 overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] [-webkit-overflow-scrolling:touch]"
+      className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/75 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]"
+      style={{
+        paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
+        paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
+        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))',
+        boxSizing: 'border-box',
+      }}
       onClick={onClose}>
       <div
-        className="w-full max-w-lg max-h-[min(92dvh,100dvh)] flex min-h-0 flex-col bg-surface-container rounded-t-3xl sm:rounded-2xl border border-outline-variant/20 shadow-2xl overflow-hidden"
+        className="drawer-enter w-full max-w-lg flex min-h-0 flex-col bg-surface-container rounded-2xl border border-outline-variant/20 overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.45)]"
+        style={{
+          maxHeight:
+            'min(86dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px))',
+        }}
         onClick={e => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-outline-variant/15 bg-surface-container px-4 py-3">
           <span className="min-w-0 flex-1 truncate pr-2 font-headline text-lg font-bold text-on-surface">{title}</span>
@@ -84,7 +95,7 @@ export function MetricheFormModal({ title, onClose, children }) {
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-4 pb-[max(2.5rem,env(safe-area-inset-bottom,0px))] [-webkit-overflow-scrolling:touch]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-4">
           {children}
         </div>
       </div>

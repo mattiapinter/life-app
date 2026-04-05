@@ -20,7 +20,7 @@ function Toast({ message, onDone }) {
   return (
     <div className={exiting ? 'toast-exit' : 'toast-enter'} style={{
       position: 'fixed', bottom: '90px', left: '50%', transform: 'translateX(-50%)',
-      zIndex: 999, background: C.surface, border: `1px solid ${C.border}`,
+      zIndex: 5100, background: C.surface, border: `1px solid ${C.border}`,
       borderRadius: '999px', padding: '8px 18px', fontSize: '12px', fontWeight: '600',
       color: C.text, boxShadow: '0 4px 24px rgba(0,0,0,0.4)', whiteSpace: 'nowrap',
     }}>
@@ -123,14 +123,18 @@ function GpsButton({ url, onUrlChange }) {
         </div>
       )}
       {showModal && (
-        <div style={drawer.overlay(300)} onClick={() => setShowModal(false)}>
+        <div style={drawer.overlay()} onClick={() => setShowModal(false)}>
           <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '4px' }}>Traccia GPS / Avvicinamento</div>
-            <div style={{ fontSize: '11px', color: C.muted, marginBottom: '12px' }}>Incolla un link Komoot, Wikiloc, Google Maps ecc.</div>
-            {url && <div style={{ fontSize: '10px', color: C.hint, marginBottom: '8px', padding: '6px', background: C.bg, borderRadius: '6px', wordBreak: 'break-all' }}>Attuale: {url}</div>}
-            <input style={{ ...ss.inp, marginBottom: '10px' }} placeholder="https://www.komoot.com/tour/..." value={input} onChange={e => setInput(e.target.value)} autoFocus />
-            <div style={{ ...ss.savBtn, background: C.green, opacity: (!input.trim() || saving) ? 0.5 : 1 }} onClick={!saving && input.trim() ? handleSave : undefined}>
-              {saving ? 'Salvataggio...' : 'Salva'}
+            <div style={drawer.sheetScroll}>
+              <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '4px' }}>Traccia GPS / Avvicinamento</div>
+              <div style={{ fontSize: '11px', color: C.muted, marginBottom: '12px' }}>Incolla un link Komoot, Wikiloc, Google Maps ecc.</div>
+              {url && <div style={{ fontSize: '10px', color: C.hint, marginBottom: '8px', padding: '6px', background: C.bg, borderRadius: '6px', wordBreak: 'break-all' }}>Attuale: {url}</div>}
+              <input style={{ ...ss.inp, marginBottom: 0 }} placeholder="https://www.komoot.com/tour/..." value={input} onChange={e => setInput(e.target.value)} autoFocus />
+            </div>
+            <div style={drawer.sheetFooter}>
+              <div style={{ ...ss.savBtn, marginTop: 0, background: C.green, opacity: (!input.trim() || saving) ? 0.5 : 1 }} onClick={!saving && input.trim() ? handleSave : undefined}>
+                {saving ? 'Salvataggio...' : 'Salva'}
+              </div>
             </div>
           </div>
         </div>
@@ -306,16 +310,16 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   }
 
   return (
-    <div style={drawer.overlay(200)} onClick={onClose}>
+    <div style={drawer.overlay()} onClick={onClose}>
       <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={drawer.sheetHeader}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.green, textTransform: 'uppercase', letterSpacing: '.08em' }}>
             {editCrag ? 'Modifica falesia' : 'Nuova falesia'}
           </div>
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
         </div>
 
+        <div style={drawer.sheetScroll}>
         <input style={{ ...ss.inp, marginBottom: '10px', fontSize: '15px', fontWeight: '600' }}
           placeholder="Nome falesia *" value={name} onChange={e => setName(e.target.value)} />
 
@@ -400,15 +404,18 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
               onChange={e => setLng(e.target.value ? parseFloat(e.target.value) : null)} />
           </div>
         </div>
-        <MapboxMap crags={previewCrag} height="200px" onMapClick={(la, ln) => { setLat(la); setLng(ln) }} />
+        <MapboxMap crags={previewCrag} height="180px" onMapClick={(la, ln) => { setLat(la); setLng(ln) }} />
         {lat && lng
-          ? <div style={{ fontSize: '10px', color: C.green, marginTop: '6px', textAlign: 'center' }}>📍 {lat.toFixed(5)}, {lng.toFixed(5)} · tocca la mappa o modifica i campi sopra</div>
-          : <div style={{ fontSize: '10px', color: C.hint, marginTop: '6px', textAlign: 'center' }}>Tocca la mappa o inserisci le coordinate manualmente (opzionale)</div>
+          ? <div style={{ fontSize: '10px', color: C.green, marginTop: '6px', textAlign: 'center', marginBottom: '4px' }}>📍 {lat.toFixed(5)}, {lng.toFixed(5)} · tocca la mappa o modifica i campi sopra</div>
+          : <div style={{ fontSize: '10px', color: C.hint, marginTop: '6px', textAlign: 'center', marginBottom: '4px' }}>Tocca la mappa o inserisci le coordinate manualmente (opzionale)</div>
         }
+        </div>
 
-        <div style={{ ...ss.savBtn, marginTop: '16px', opacity: (!name.trim() || saving) ? 0.5 : 1, background: C.green }}
-          onClick={!saving && name.trim() ? handleSave : undefined}>
-          {saving ? 'Salvataggio...' : editCrag ? 'Salva modifiche' : 'Aggiungi falesia'}
+        <div style={drawer.sheetFooter}>
+          <div style={{ ...ss.savBtn, marginTop: 0, opacity: (!name.trim() || saving) ? 0.5 : 1, background: C.green }}
+            onClick={!saving && name.trim() ? handleSave : undefined}>
+            {saving ? 'Salvataggio...' : editCrag ? 'Salva modifiche' : 'Aggiungi falesia'}
+          </div>
         </div>
       </div>
     </div>
@@ -451,12 +458,13 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
   }
 
   return (
-    <div style={drawer.overlay(200)} onClick={onClose}>
+    <div style={drawer.overlay()} onClick={onClose}>
       <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={drawer.sheetHeader}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuova sessione</div>
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
         </div>
+        <div style={drawer.sheetScroll}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
           <div>
             <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Data</div>
@@ -538,10 +546,13 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
             Nessun tiro ancora · clicca "Aggiungi tiro"
           </div>
         )}
+        </div>
 
-        <div style={{ ...ss.savBtn, marginTop: '8px', opacity: (!date || !cragId || saving) ? 0.5 : 1 }}
-          onClick={!saving && date && cragId ? handleSave : undefined}>
-          {saving ? 'Salvataggio...' : `Salva sessione${ascents.length ? ` (${ascents.length} tiri)` : ''}`}
+        <div style={drawer.sheetFooter}>
+          <div style={{ ...ss.savBtn, marginTop: 0, opacity: (!date || !cragId || saving) ? 0.5 : 1 }}
+            onClick={!saving && date && cragId ? handleSave : undefined}>
+            {saving ? 'Salvataggio...' : `Salva sessione${ascents.length ? ` (${ascents.length} tiri)` : ''}`}
+          </div>
         </div>
       </div>
     </div>
@@ -565,12 +576,13 @@ function ProjectForm({ crags, onSaved, onClose }) {
   }
 
   return (
-    <div style={drawer.overlay(200)} onClick={onClose}>
+    <div style={drawer.overlay()} onClick={onClose}>
       <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={drawer.sheetHeader}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuovo progetto</div>
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
         </div>
+        <div style={drawer.sheetScroll}>
         <input style={{ ...ss.inp, marginBottom: '10px', fontSize: '15px', fontWeight: '600' }}
           placeholder="Nome via *" value={name} onChange={e => setName(e.target.value)} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
@@ -588,11 +600,14 @@ function ProjectForm({ crags, onSaved, onClose }) {
             </select>
           </div>
         </div>
-        <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.6', marginBottom: '14px' }}
+        <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.6', marginBottom: 0 }}
           rows={2} placeholder="Note iniziali..." value={notes} onChange={e => setNotes(e.target.value)} />
-        <div style={{ ...ss.savBtn, background: C.amber, color: '#000', opacity: (!name.trim() || saving) ? 0.5 : 1 }}
-          onClick={!saving && name.trim() ? handleSave : undefined}>
-          {saving ? 'Salvataggio...' : 'Crea progetto'}
+        </div>
+        <div style={drawer.sheetFooter}>
+          <div style={{ ...ss.savBtn, marginTop: 0, background: C.amber, color: '#000', opacity: (!name.trim() || saving) ? 0.5 : 1 }}
+            onClick={!saving && name.trim() ? handleSave : undefined}>
+            {saving ? 'Salvataggio...' : 'Crea progetto'}
+          </div>
         </div>
       </div>
     </div>
@@ -615,12 +630,13 @@ function AttemptForm({ project, onSaved, onClose }) {
   }
 
   return (
-    <div style={drawer.overlay(200)} onClick={onClose}>
+    <div style={drawer.overlay()} onClick={onClose}>
       <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+        <div style={drawer.sheetHeader}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuovo tentativo</div>
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
         </div>
+        <div style={drawer.sheetScroll}>
         <div style={{ fontSize: '14px', fontWeight: '600', color: C.text, marginBottom: '16px' }}>{project.route_name} · {project.grade}</div>
         <div style={{ marginBottom: '10px' }}>
           <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Data</div>
@@ -634,9 +650,12 @@ function AttemptForm({ project, onSaved, onClose }) {
           <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: 'pointer', border: `1px solid ${completed ? C.greenBorder : C.border}`, background: completed ? C.greenBg : C.bg, color: completed ? C.greenLight : C.hint, fontSize: '12px', fontWeight: '600' }}
             onClick={() => setCompleted(true)}>🎉 Chiuso!</div>
         </div>
-        <div style={{ ...ss.savBtn, background: completed ? C.green : C.amber, color: '#000', opacity: saving ? 0.5 : 1 }}
-          onClick={!saving ? handleSave : undefined}>
-          {saving ? 'Salvataggio...' : completed ? '🎉 Registra chiusura!' : 'Salva tentativo'}
+        </div>
+        <div style={drawer.sheetFooter}>
+          <div style={{ ...ss.savBtn, marginTop: 0, background: completed ? C.green : C.amber, color: '#000', opacity: saving ? 0.5 : 1 }}
+            onClick={!saving ? handleSave : undefined}>
+            {saving ? 'Salvataggio...' : completed ? '🎉 Registra chiusura!' : 'Salva tentativo'}
+          </div>
         </div>
       </div>
     </div>
@@ -723,16 +742,16 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
   const visibleRows = rows.filter(r => !r._deleted)
 
   return (
-    <div style={drawer.overlay(200)} onClick={onClose}>
+    <div style={drawer.overlay()} onClick={onClose}>
       <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={drawer.sheetHeader}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.08em' }}>
             Modifica sessione · {fmtDateShort(session.session_date)}
           </div>
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
         </div>
 
+        <div style={drawer.sheetScroll}>
         {/* Note sessione */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Note sessione</div>
@@ -860,11 +879,14 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
           </div>
         ))}
 
-        <div style={{ fontSize: '11px', fontWeight: '600', color: C.violetLight, cursor: 'pointer', textAlign: 'center', padding: '10px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '10px', marginBottom: '12px' }}
+        <div style={{ fontSize: '11px', fontWeight: '600', color: C.violetLight, cursor: 'pointer', textAlign: 'center', padding: '10px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '10px', marginBottom: '4px' }}
           onClick={addNew}>+ Aggiungi tiro</div>
+        </div>
 
-        <div style={{ ...ss.savBtn, opacity: saving ? 0.6 : 1 }} onClick={!saving ? handleSave : undefined}>
-          {saving ? 'Salvataggio...' : 'Salva modifiche'}
+        <div style={drawer.sheetFooter}>
+          <div style={{ ...ss.savBtn, marginTop: 0, opacity: saving ? 0.6 : 1 }} onClick={!saving ? handleSave : undefined}>
+            {saving ? 'Salvataggio...' : 'Salva modifiche'}
+          </div>
         </div>
       </div>
     </div>
@@ -886,7 +908,7 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
   return (
     <div>
       {confirmDel && (
-        <div style={drawer.centerOverlay(300)} onClick={() => setConfirmDel(false)}>
+        <div style={drawer.centerOverlay()} onClick={() => setConfirmDel(false)}>
           <div style={{ ...drawer.centerCard, background: C.surface, borderRadius: '16px', padding: '24px', border: `1px solid ${C.redBorder}` }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '15px', fontWeight: '700', color: C.text, marginBottom: '8px' }}>Elimina falesia</div>
             <div style={{ fontSize: '13px', color: C.muted, marginBottom: '20px', lineHeight: '1.5' }}>Vuoi eliminare <strong style={{ color: C.text }}>{crag.name}</strong>?</div>

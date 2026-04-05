@@ -653,7 +653,7 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
   return (
     <div style={ss.body}>
       {confirmDel && (
-        <div style={drawer.centerOverlay(200, 'rgba(0,0,0,0.85)')} onClick={() => setConfirmDel(null)}>
+        <div style={drawer.centerOverlay(undefined, 'rgba(0,0,0,0.85)')} onClick={() => setConfirmDel(null)}>
           <div style={{ ...drawer.centerCard, maxWidth: '340px', background:C.surface, borderRadius:'16px', padding:'24px', border:`1px solid ${C.redBorder}` }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:'16px', fontWeight:'700', color:C.text, marginBottom:'8px' }}>Elimina sessione</div>
@@ -673,7 +673,7 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
       )}
 
       {showNuke && (
-        <div style={drawer.centerOverlay(200, 'rgba(0,0,0,0.9)')} onClick={() => setShowNuke(false)}>
+        <div style={drawer.centerOverlay(undefined, 'rgba(0,0,0,0.9)')} onClick={() => setShowNuke(false)}>
           <div style={{ ...drawer.centerCard, maxWidth: '340px', background:C.surface, borderRadius:'16px', padding:'24px', border:`1px solid ${C.redBorder}` }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:'16px', fontWeight:'700', color:C.red, marginBottom:'8px' }}>⚠️ Elimina tutto</div>
@@ -866,7 +866,7 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
   return (
     <div style={ss.body}>
       {confirmDel && (
-        <div style={drawer.centerOverlay(200, 'rgba(0,0,0,0.85)')} onClick={() => setConfirmDel(null)}>
+        <div style={drawer.centerOverlay(undefined, 'rgba(0,0,0,0.85)')} onClick={() => setConfirmDel(null)}>
           <div style={{ ...drawer.centerCard, maxWidth: '340px', background:C.surface, borderRadius:'16px', padding:'24px', border:`1px solid ${C.redBorder}` }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:'16px', fontWeight:'700', color:C.text, marginBottom:'8px' }}>Elimina esercizio</div>
