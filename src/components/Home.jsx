@@ -291,16 +291,41 @@ function StanotteNightCard({ healthLogs }) {
           </div>
         </div>
         {sumPhases > 0 && (
-          <div className="flex h-[8px] w-full overflow-hidden rounded-full bg-surface-container-highest">
-            {pDeep > 0 && (
-              <div className="h-full" style={{ width: `${pDeep}%`, background: SLEEP_BAR_DEEP }} title="Profondo" />
-            )}
-            {pRem > 0 && (
-              <div className="h-full" style={{ width: `${pRem}%`, background: SLEEP_BAR_REM }} title="REM" />
-            )}
-            {pLight > 0 && (
-              <div className="h-full" style={{ width: `${pLight}%`, background: SLEEP_BAR_LIGHT }} title="Leggero" />
-            )}
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+              Riparto del tempo dormito (stessi numeri sopra)
+            </p>
+            <div
+              className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-container-highest ring-1 ring-outline-variant/20"
+              role="img"
+              aria-label={`Sonno: profondo ${Math.round(pDeep)}%, REM ${Math.round(pRem)}%, leggero ${Math.round(pLight)}%`}>
+              {pDeep > 0 && (
+                <div className="h-full min-w-[2px]" style={{ width: `${pDeep}%`, background: SLEEP_BAR_DEEP }} />
+              )}
+              {pRem > 0 && (
+                <div className="h-full min-w-[2px]" style={{ width: `${pRem}%`, background: SLEEP_BAR_REM }} />
+              )}
+              {pLight > 0 && (
+                <div className="h-full min-w-[2px]" style={{ width: `${pLight}%`, background: SLEEP_BAR_LIGHT }} />
+              )}
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-on-surface-variant">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: SLEEP_BAR_DEEP }} aria-hidden />
+                <span className="font-semibold text-on-surface">Profondo</span>
+                <span className="tabular-nums text-on-surface-variant/90">{Math.round(pDeep)}%</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: SLEEP_BAR_REM }} aria-hidden />
+                <span className="font-semibold text-on-surface">REM</span>
+                <span className="tabular-nums text-on-surface-variant/90">{Math.round(pRem)}%</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: SLEEP_BAR_LIGHT }} aria-hidden />
+                <span className="font-semibold text-on-surface">Leggero</span>
+                <span className="tabular-nums text-on-surface-variant/90">{Math.round(pLight)}%</span>
+              </span>
+            </div>
           </div>
         )}
       </div>

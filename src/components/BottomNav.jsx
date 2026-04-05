@@ -45,8 +45,8 @@ export default function BottomNav({ active, onChange }) {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 bg-[#1c1b1b]/88 backdrop-blur-2xl border-t border-outline-variant/15 shadow-[0_-8px_32px_rgba(0,0,0,0.35)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-      <div className="relative flex items-end justify-between max-w-lg mx-auto px-1 pt-1 pb-2 min-h-[56px]">
-        <div className="flex flex-1 items-end justify-around pb-1">
+      <div className="relative flex items-end justify-between max-w-lg mx-auto px-1 pt-1 pb-0.5 min-h-[52px]">
+        <div className="flex flex-1 items-end justify-around pb-0.5">
           {SIDE.map(tab => (
             <SideItem key={tab.id} tab={tab} active={active} onTap={handleTap} bouncing={bouncing} />
           ))}
@@ -68,7 +68,7 @@ export default function BottomNav({ active, onChange }) {
           </button>
         </div>
 
-        <div className="flex flex-1 items-end justify-around pb-1">
+        <div className="flex flex-1 items-end justify-around pb-0.5">
           {SIDE_R.map(tab => (
             <SideItem key={tab.id} tab={tab} active={active} onTap={handleTap} bouncing={bouncing} />
           ))}
