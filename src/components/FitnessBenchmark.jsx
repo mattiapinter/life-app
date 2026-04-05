@@ -402,7 +402,9 @@ export function FitnessTestForm({ onSaved, editingSession = null, onCancelEdit, 
     </div>
   )
 
-  const bodyStyle = compact ? { padding: '0', paddingBottom: '24px' } : ss.body
+  const bodyStyle = compact
+    ? { padding: '0', paddingBottom: '24px', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }
+    : ss.body
 
   return (
     <div style={bodyStyle}>
@@ -429,9 +431,9 @@ export function FitnessTestForm({ onSaved, editingSession = null, onCancelEdit, 
       )}
       <div style={ss.card}>
         <div style={ss.secLbl}>Info sessione</div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
-          <div><div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>Data</div><input type="date" style={ss.inp} value={formDate} onChange={e => setFormDate(e.target.value)} /></div>
-          <div><div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>Peso (kg)</div><input type="number" step="0.1" style={ss.inp} value={formPeso} onChange={e => setFormPeso(e.target.value)} placeholder="es. 72" /></div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px', minWidth:0 }}>
+          <div style={{ minWidth:0 }}><div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>Data</div><input type="date" style={{ ...ss.inp, maxWidth:'100%', boxSizing:'border-box' }} value={formDate} onChange={e => setFormDate(e.target.value)} /></div>
+          <div style={{ minWidth:0 }}><div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>Peso (kg)</div><input type="number" step="0.1" style={{ ...ss.inp, maxWidth:'100%', boxSizing:'border-box' }} value={formPeso} onChange={e => setFormPeso(e.target.value)} placeholder="es. 72" /></div>
         </div>
       </div>
       <div style={ss.card}>

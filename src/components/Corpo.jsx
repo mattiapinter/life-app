@@ -1,10 +1,10 @@
 import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
-import { todayStr, fmtDateShort } from '../constants'
+import { todayStr, fmtDateShort, ss } from '../constants'
 import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement, updateBodyMeasurement, loadUserProfile, loadFitnessSessions } from '../lib/supabase'
 import { FitnessTestForm, MetricsDetail, FitnessSessionHistory } from './FitnessBenchmark'
-import { MetricheTabHeader, CollapsibleHistory, MetricheFormModal } from './MetricGroupLayout'
+import { MetricheHeaderFab, MetricheTabHeader, CollapsibleHistory, MetricheFormModal } from './MetricGroupLayout'
 import InsightsSection from './Insights'
 
 export { loadBodyMeasurements }
@@ -137,25 +137,25 @@ function AddMeasurementForm({ onSaved, editingEntry = null, onClose }) {
   }
 
   return (
-    <div className="bg-surface-container-low rounded-xl p-6">
-      <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface mb-5">
+    <div className="box-border max-w-full overflow-x-hidden bg-surface-container-low p-6 sm:rounded-xl">
+      <h3 className="mb-5 text-sm font-bold uppercase tracking-widest text-on-surface">
         {editingEntry ? 'Modifica misurazione' : 'Nuova misurazione'}
       </h3>
-      <div className="mb-5">
-        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Data</label>
-        <input type="date" className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-on-surface" value={date} onChange={e => setDate(e.target.value)} />
+      <div className="mb-5 min-w-0">
+        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-on-surface-variant">Data</label>
+        <input type="date" className="box-border w-full max-w-full rounded-xl border-2 border-outline-variant bg-surface-container-highest px-4 py-3 text-on-surface" value={date} onChange={e => setDate(e.target.value)} />
       </div>
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="mb-6 grid min-w-0 max-w-full grid-cols-2 gap-4">
         {METRICS.map(m => (
-          <div key={m.id}>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
-              <span className="text-xs text-on-surface-variant font-semibold">{m.label}</span>
-              <span className="text-[10px] text-on-surface-variant/60">{m.unit}</span>
+          <div key={m.id} className="min-w-0">
+            <div className="mb-2 flex min-w-0 items-center gap-2">
+              <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ background: m.color }} />
+              <span className="truncate text-xs font-semibold text-on-surface-variant">{m.label}</span>
+              <span className="flex-shrink-0 text-[10px] text-on-surface-variant/60">{m.unit}</span>
             </div>
             <input
               type="number" step="0.1"
-              className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-base font-bold text-on-surface"
+              className="box-border w-full max-w-full rounded-xl border-2 border-outline-variant bg-surface-container-highest px-3 py-3 text-center text-base font-bold text-on-surface"
               placeholder="—"
               value={vals[m.id] || ''}
               onChange={e => sv(m.id, e.target.value)}
@@ -369,24 +369,24 @@ function HrvQuickForm({ editingRow = null, onSaved, onClose }) {
   }
 
   return (
-    <div className="space-y-5">
-      <div>
+    <div className="max-w-full min-w-0 space-y-5 overflow-x-hidden">
+      <div className="min-w-0">
         <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Data</label>
         <input
           type="date"
           disabled={!!editingRow}
-          className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-on-surface disabled:opacity-60"
+          className="box-border w-full max-w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-on-surface disabled:opacity-60"
           value={date.slice(0, 10)}
           onChange={e => setDate(e.target.value)}
         />
         {editingRow && <p className="text-[11px] text-on-surface-variant mt-1">In modifica non puoi cambiare la data del log.</p>}
       </div>
-      <div>
+      <div className="min-w-0">
         <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-2">HRV (ms)</label>
         <input
           type="number"
           inputMode="numeric"
-          className="w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-xl font-bold text-on-surface"
+          className="box-border w-full max-w-full bg-surface-container-highest border-2 border-outline-variant rounded-xl px-4 py-3 text-center text-xl font-bold text-on-surface"
           placeholder="es. 45"
           value={val}
           onChange={e => setVal(e.target.value)}
@@ -757,6 +757,20 @@ export default function MetricheSection({
     ? `Ultimo: ${fmtDateShort(last.measured_at?.slice(0, 10))}${last.weight_kg != null ? ` · ${last.weight_kg} kg` : ''}`
     : 'Misure corporee, grafici e composizione stimata'
 
+  const datiEyebrow = 'salute · metriche'
+  const datiPageSubtitle =
+    sub === 'biometria'
+      ? biometriaSubtitle
+      : sub === 'hrv'
+        ? 'Variabilità cardiaca e storico'
+        : sub === 'testfisici'
+          ? fitSessions.length
+            ? `${fitSessions.length} sessioni · ultimo ${fmtDateShort(fitSessions[fitSessions.length - 1]?.session_date)}`
+            : 'Mobilità, forza e resistenza — benchmark e storico qui sotto'
+          : sub === 'insights'
+            ? 'Correlazioni e trend dai log'
+            : ''
+
   const selectedMetricPanel = selectedMetric && (
     <div className="bg-surface-container-low rounded-xl p-6 border border-outline-variant/15">
       <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/10">
@@ -793,17 +807,21 @@ export default function MetricheSection({
   )
 
   return (
-    <div className="min-h-screen bg-background pb-44">
-      <div className="px-6 pb-2 pt-1">
-        <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
-          Salute
-        </p>
-        <div className="flex items-center gap-3 mb-1">
-          <span className="material-symbols-outlined text-secondary text-2xl">science</span>
-          <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
-            Dati
-          </h1>
+    <div
+      className="min-h-screen bg-background"
+      style={{ paddingBottom: '160px', maxWidth: '448px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <div style={ss.hdr}>
+        <div style={ss.eyebrow}>{datiEyebrow}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={ss.title}>Dati</div>
+          {sub === 'biometria' && (
+            <MetricheHeaderFab onClick={() => openBodyForm(null)} ariaLabel="Nuova misurazione" />
+          )}
+          {sub === 'testfisici' && (
+            <MetricheHeaderFab onClick={() => openFitnessForm(null)} ariaLabel="Nuovo test" />
+          )}
         </div>
+        {datiPageSubtitle ? <div style={ss.subtitle}>{datiPageSubtitle}</div> : null}
       </div>
 
       {loading && sub === 'biometria' ? (
@@ -812,11 +830,6 @@ export default function MetricheSection({
         <div>
           {sub === 'biometria' && (
             <div className="px-6 space-y-5 pb-6">
-              <MetricheTabHeader
-                subtitle={biometriaSubtitle}
-                onFabClick={() => openBodyForm(null)}
-                fabAriaLabel="Nuova misurazione"
-              />
               <OverviewCards measurements={measurements} selectedMetric={selectedMetric} onSelectMetric={setSelectedMetric} />
               {selectedMetricPanel}
               <BodyComposition measurements={measurements} userProfile={userProfile} />
@@ -859,15 +872,6 @@ export default function MetricheSection({
 
           {sub === 'testfisici' && (
             <div className="px-6 space-y-5 pb-6">
-              <MetricheTabHeader
-                subtitle={
-                  fitSessions.length
-                    ? `${fitSessions.length} sessioni · ultimo ${fmtDateShort(fitSessions[fitSessions.length - 1]?.session_date)}`
-                    : 'Mobilità, forza e resistenza — benchmark e storico qui sotto'
-                }
-                onFabClick={() => openFitnessForm(null)}
-                fabAriaLabel="Nuovo test"
-              />
               <MetricsDetail
                 variant="embedded"
                 fitSessions={fitSessions}

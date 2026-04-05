@@ -9,8 +9,110 @@ import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
 import { saveTrainingLog, loadTrainingLogs, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData, saveRunningLog, loadRunningLogs, loadClimbingSessions, loadAscents, loadCrags } from '../lib/supabase'
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
-import { BenchmarkWidget, MetricsDetail } from './FitnessBenchmark'
 import PesiRow from './PesiRow'
+
+function getCoachNoteText(sessionType) {
+  const raw = TRAINING_PLAN.coach_notes.sessions[sessionType]
+  return raw && String(raw).trim() ? String(raw).trim() : null
+}
+
+function getLastSameTypeSession(trainingLogs, sessionType, todayIso) {
+  const candidates = (trainingLogs || []).filter(
+    l => l.session_type === sessionType && l.log_date && l.log_date < todayIso
+  )
+  if (!candidates.length) return null
+  const dates = [...new Set(candidates.map(l => l.log_date))].sort((a, b) => b.localeCompare(a))
+  const d = dates[0]
+  const logs = candidates.filter(l => l.log_date === d)
+  const rpeLog = logs.find(l => l.rpe_actual != null)
+  const rpe = rpeLog?.rpe_actual ?? rpeLog?.rpe
+  const byName = {}
+  logs.forEach(l => {
+    if (!l.exercise_name) return
+    const prev = byName[l.exercise_name]
+    if (!prev || (l.sets_done || 0) > (prev.sets_done || 0)) byName[l.exercise_name] = l
+  })
+  const parts = Object.keys(byName).map(name => {
+    const l = byName[name]
+    const w = l.weight_kg
+    const r = l.reps_done
+    if (w != null && r != null) return `${name} ${w}kg x${r}`
+    if (r != null) return `${name} x${r}`
+    if (w != null) return `${name} ${w}kg`
+    return name
+  })
+  return { date: d, rpe, parts }
+}
+
+function OggiCoachNoteCard({ note }) {
+  const [expanded, setExpanded] = React.useState(false)
+  return (
+    <div style={ss.card}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 22, color: C.violetLight }}>school</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: C.text }}>Nota coach</span>
+      </div>
+      <p
+        style={{
+          fontSize: 13,
+          color: C.textSoft,
+          lineHeight: 1.75,
+          ...(!expanded
+            ? {
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }
+            : {}),
+        }}>
+        {note}
+      </p>
+      <button
+        type="button"
+        style={{
+          marginTop: 10,
+          fontSize: 11,
+          fontWeight: 600,
+          color: C.primary,
+          cursor: 'pointer',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          textAlign: 'left',
+        }}
+        onClick={() => setExpanded(x => !x)}>
+        {expanded ? 'Mostra meno' : 'Leggi tutto'}
+      </button>
+    </div>
+  )
+}
+
+function OggiUltimaVoltaCard({ snapshot }) {
+  return (
+    <div style={ss.card}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 22, color: C.hint }}>history</span>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: C.text }}>Ultima volta</span>
+      </div>
+      {snapshot ? (
+        <>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>Ultima volta: {fmtDateShort(snapshot.date)}</div>
+          {snapshot.rpe != null && (
+            <div style={{ fontSize: 12, color: C.text, marginBottom: 8 }}>RPE: {snapshot.rpe}</div>
+          )}
+          {snapshot.parts.length > 0 && (
+            <div style={{ fontSize: 12, color: C.textSoft, lineHeight: 1.6 }}>{snapshot.parts.join(' | ')}</div>
+          )}
+        </>
+      ) : (
+        <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>
+          Prima volta con questa sessione. Registra i carichi oggi per avere un riferimento la prossima volta.
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── SESSION DETAIL ─────────────────────────────────────────────────
 function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onVideosChange, sessionNotes, climbingSessions, crags, ascents }) {
@@ -384,7 +486,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       </div>
 
       {showWarmup && (
-        <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'16px' }}>
+        <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'16px 24px' }}>
           <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px' }}>
             {needsWarmup2 ? 'Riscaldamento 2 — Falesia (23 min)' : 'Riscaldamento 1 — Casa/Palestra (20 min)'}
           </div>
@@ -1003,7 +1105,6 @@ function CorsaSection({ runningLogs, onRefresh }) {
 export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange, onOpenFitnessTests }) {
   const [sub, setSub]                     = React.useState(initialSub || 'oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
-  const [showMetrics,   setShowMetrics]   = React.useState(false)
   const [sessionNotes,  setSessionNotes]  = React.useState([])
   const [runningLogs,   setRunningLogs]   = React.useState([])
   const [climbingSessions, setClimbingSessions] = React.useState([])
@@ -1032,16 +1133,6 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
     loadAscents().then(setAscents)
   }, [])
 
-  if (showMetrics) {
-    return <MetricsDetail
-      fitSessions={fitSessions}
-      onBack={() => setShowMetrics(false)}
-      onGoToTest={() => { setShowMetrics(false); onOpenFitnessTests?.() }}
-      backLabel="← Oggi"
-      title="Benchmark"
-    />
-  }
-
   if (selectedEntry) {
     return <SessionDetail
       entry={selectedEntry}
@@ -1062,6 +1153,10 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
       n.note_date === today && n.original_session && n.original_session !== n.session_type
     )
     const todayDisplayType = todayChange?.session_type || todayEntry?.session_type
+    const coachNoteOggi = todayEntry ? getCoachNoteText(todayDisplayType) : null
+    const lastSnapOggi = todayEntry
+      ? getLastSameTypeSession(trainingLogs, todayDisplayType, today)
+      : null
 
     return (
       <div style={ss.body}>
@@ -1117,13 +1212,9 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
           </div>
         </div>
 
-        <BenchmarkWidget fitSessions={fitSessions} onOpenMetrics={() => setShowMetrics(true)} />
+        {coachNoteOggi && <OggiCoachNoteCard note={coachNoteOggi} />}
 
-        <div style={{ textAlign:'center', marginTop:'-4px', marginBottom:'8px' }}>
-          <div style={{ fontSize:'11px', color:C.hint, cursor:'pointer', padding:'8px' }} onClick={() => onOpenFitnessTests?.()}>
-            + Registra nuovo test
-          </div>
-        </div>
+        <OggiUltimaVoltaCard snapshot={lastSnapOggi} />
       </div>
     )
   }
@@ -1176,11 +1267,11 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
   )
 
   return (
-    <div style={{ paddingBottom: '160px' }}>
+    <div style={{ paddingBottom: '160px', maxWidth: '448px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <div style={ss.hdr}>
         <div style={ss.eyebrow}>Piano · {TRAINING_PLAN.meta.goal}</div>
         <div style={ss.title}>Allenamento</div>
-        <div style={ss.subtitle}>{todayEntry ? `oggi: ${SESSION_COLORS[todayEntry.session_type]?.label}` : 'nessun allenamento oggi'}</div>
+        <div style={ss.subtitle}>{todayEntry ? `Allenamento oggi: ${SESSION_COLORS[todayEntry.session_type]?.label}` : 'Nessun allenamento oggi'}</div>
       </div>
       {sub === 'oggi'     && renderOggi()}
       {sub === 'piano'    && renderPiano()}

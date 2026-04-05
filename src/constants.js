@@ -68,7 +68,7 @@ export const ss = {
 
   hdr:   {
     background: 'transparent',
-    padding: '8px 0 20px',
+    padding: '8px 24px 20px',
     borderBottom: 'none',
   },
 

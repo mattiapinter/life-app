@@ -234,18 +234,13 @@ export default function DietaSection({ initialSub, onSubChange, weeklyPlan, setW
   )
 
   return (
-    <div className="min-h-screen bg-background pb-40">
-      <div className="px-6 pb-2 pt-1">
-        <p className="font-label text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
-          Nutrizione
-        </p>
-        <div className="flex items-center gap-3 mb-1">
-          <span className="material-symbols-outlined text-secondary text-2xl">restaurant_menu</span>
-          <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Dieta</h1>
-        </div>
-        <p className="text-sm font-medium text-on-surface-variant">
-          {dayData.isSkiDay ? 'Modalità endurance' : 'Piano nutrizionista'}
-        </p>
+    <div
+      className="min-h-screen bg-background"
+      style={{ paddingBottom: '160px', maxWidth: '448px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <div style={ss.hdr}>
+        <div style={ss.eyebrow}>nutrizione · piano</div>
+        <div style={ss.title}>Dieta</div>
+        <div style={ss.subtitle}>{dayData.isSkiDay ? 'Modalità endurance' : 'Piano nutrizionista'}</div>
       </div>
 
       {sub === 'piano'   && renderPiano()}

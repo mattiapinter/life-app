@@ -13,35 +13,50 @@ export function Modal({ onClose, title, subtitle, accentColor, children }) {
         margin:'0 auto',
         background:C.surface,
         borderRadius:'24px 24px 0 0',
-        padding:'24px',
-        paddingBottom:'calc(env(safe-area-inset-bottom, 20px) + 24px)',
-        maxHeight:'85vh',
-        overflowY:'auto',
+        maxHeight:'min(88dvh, 720px)',
+        display:'flex',
+        flexDirection:'column',
+        overflow:'hidden',
         boxShadow:'0 -4px 24px rgba(0, 0, 0, 0.3)',
         border:`1px solid ${C.border}`,
         borderBottom:'none',
+        boxSizing:'border-box',
       }} onClick={e => e.stopPropagation()}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'18px' }}>
-          <div>
-            {subtitle && <div style={{ fontSize:'10px', fontWeight:'700', letterSpacing:'.1em', textTransform:'uppercase', color: accentColor || C.primary, marginBottom:'6px' }}>{subtitle}</div>}
-            <div style={{ fontSize:'18px', fontWeight:'700', color:C.text }}>{title}</div>
-          </div>
-          <div style={{
-            cursor:'pointer',
-            padding:'8px',
-            borderRadius:'10px',
-            background:C.bg,
-            border:`1px solid ${C.border}`,
-            transition:'transform 0.2s',
-          }}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onClick={onClose}>
-            <IcoClose />
+        <div style={{ flexShrink:0, padding:'24px', paddingBottom:'16px', borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'12px' }}>
+            <div style={{ minWidth:0, flex:1 }}>
+              {subtitle && <div style={{ fontSize:'10px', fontWeight:'700', letterSpacing:'.1em', textTransform:'uppercase', color: accentColor || C.primary, marginBottom:'6px' }}>{subtitle}</div>}
+              <div style={{ fontSize:'18px', fontWeight:'700', color:C.text, wordBreak:'break-word' }}>{title}</div>
+            </div>
+            <div style={{
+              cursor:'pointer',
+              flexShrink:0,
+              padding:'8px',
+              borderRadius:'10px',
+              background:C.bg,
+              border:`1px solid ${C.border}`,
+              transition:'transform 0.2s',
+            }}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              onClick={onClose}>
+              <IcoClose />
+            </div>
           </div>
         </div>
-        {children}
+        <div style={{
+          flex:1,
+          minHeight:0,
+          overflowY:'auto',
+          WebkitOverflowScrolling:'touch',
+          overscrollBehavior:'contain',
+          padding:'12px 24px',
+          paddingBottom:'calc(env(safe-area-inset-bottom, 20px) + 28px)',
+          boxSizing:'border-box',
+        }}>
+          {children}
+        </div>
       </div>
     </div>
   )

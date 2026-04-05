@@ -1,5 +1,18 @@
 import React from 'react'
 
+/** FAB + usato in header pagina Dati e in MetricheTabHeader. */
+export function MetricheHeaderFab({ onClick, ariaLabel = 'Aggiungi' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full border-2 border-primary/40 bg-primary/15 text-primary shadow-[0_4px_24px_rgba(198,191,255,0.2)] transition-transform active:scale-[0.96]">
+      <span className="material-symbols-outlined text-[26px]">add</span>
+    </button>
+  )
+}
+
 /** Intestazione tab Metriche: contesto (senza ripetere il nome tab della SubNav) + FAB. */
 export function MetricheTabHeader({ title, subtitle, onFabClick, fabAriaLabel = 'Aggiungi' }) {
   const hasTitle = title != null && String(title).trim() !== ''
@@ -20,30 +33,29 @@ export function MetricheTabHeader({ title, subtitle, onFabClick, fabAriaLabel = 
           </p>
         ) : null}
       </div>
-      <button
-        type="button"
-        onClick={onFabClick}
-        aria-label={fabAriaLabel}
-        className="flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center border-2 border-primary/40 bg-primary/15 text-primary shadow-[0_4px_24px_rgba(198,191,255,0.2)] active:scale-[0.96] transition-transform">
-        <span className="material-symbols-outlined text-[26px]">add</span>
-      </button>
+      <MetricheHeaderFab onClick={onFabClick} ariaLabel={fabAriaLabel} />
     </div>
   )
 }
 
 /** Storico espandibile/collassabile (stesso pattern su tutte le tab Metriche). */
-export function CollapsibleHistory({ title, badge, defaultOpen = true, children, className = '' }) {
+export function CollapsibleHistory({ title, badge, defaultOpen = true, children, className = '', titleIcon }) {
   const [open, setOpen] = React.useState(defaultOpen)
   return (
     <div className={`rounded-xl border border-outline-variant/15 bg-surface-container-low overflow-hidden ${className}`}>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-surface-container-highest/40 transition-colors">
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-surface-container-highest/40">
         <span className="material-symbols-outlined text-on-surface-variant text-xl">
           {open ? 'expand_less' : 'expand_more'}
         </span>
-        <span className="flex-1 text-sm font-bold uppercase tracking-widest text-on-surface">{title}</span>
+        {titleIcon ? (
+          <span className="material-symbols-outlined flex-shrink-0 text-xl text-secondary" aria-hidden>
+            {titleIcon}
+          </span>
+        ) : null}
+        <span className="min-w-0 flex-1 text-sm font-bold uppercase tracking-widest text-on-surface">{title}</span>
         {badge != null && badge !== '' ? (
           <span className="text-xs font-semibold text-on-surface-variant tabular-nums">{badge}</span>
         ) : null}
@@ -60,19 +72,21 @@ export function MetricheFormModal({ title, onClose, children }) {
       className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/75 p-0 sm:p-4"
       onClick={onClose}>
       <div
-        className="w-full max-w-lg max-h-[min(92vh,720px)] flex flex-col bg-surface-container rounded-t-3xl sm:rounded-2xl border border-outline-variant/20 shadow-2xl overflow-hidden"
+        className="w-full max-w-lg max-h-[min(92dvh,720px)] flex min-h-0 flex-col bg-surface-container rounded-t-3xl sm:rounded-2xl border border-outline-variant/20 shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}>
-        <div className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-outline-variant/15 bg-surface-container">
-          <span className="font-headline text-lg font-bold text-on-surface truncate pr-2">{title}</span>
+        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-outline-variant/15 bg-surface-container px-4 py-3">
+          <span className="min-w-0 flex-1 truncate pr-2 font-headline text-lg font-bold text-on-surface">{title}</span>
           <button
             type="button"
             aria-label="Chiudi"
             onClick={onClose}
-            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest text-on-surface-variant">
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full hover:bg-surface-container-highest text-on-surface-variant">
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto overscroll-contain p-5 pb-10">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-4 pb-[max(2.5rem,env(safe-area-inset-bottom,0px))] [-webkit-overflow-scrolling:touch]">
+          {children}
+        </div>
       </div>
     </div>
   )

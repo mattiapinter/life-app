@@ -1789,9 +1789,20 @@ export default function ScalateSection({ initialSub, onSubChange }) {
   return (
     <div style={{ paddingBottom: '160px' }}>
       <div style={ss.hdr}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-          <div style={ss.eyebrow}>arrampicata · performance</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: '999px', padding: '3px 5px' }}>
+        <div style={ss.eyebrow}>arrampicata · performance</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={ss.title}>Scalate</div>
+          <div
+            style={{
+              display: 'flex',
+              flexShrink: 0,
+              alignItems: 'center',
+              gap: '5px',
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: '999px',
+              padding: '3px 5px',
+            }}>
             {['falesia', 'multi pitch'].map(m => {
               const active = climbMode === m
               return (
@@ -1804,7 +1815,6 @@ export default function ScalateSection({ initialSub, onSubChange }) {
             })}
           </div>
         </div>
-        <div style={ss.title}>Scalate</div>
         <div style={ss.subtitle}>
           {sessions.length} sessioni · {ascents.filter(a => IS_FIRST_ASCENT.includes(a.style) && a.completed).length} prime salite
         </div>

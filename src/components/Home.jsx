@@ -3,15 +3,18 @@ import { DAYS, MEALS_CATS, todayIdx, fmtDate, fmtDateShort, fmtDayName, todayStr
 import { SESSION_COLORS } from '../constants'
 import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
 import { saveHrvLog } from '../lib/supabase'
+import { CollapsibleHistory } from './MetricGroupLayout'
 import {
   calcReadiness,
   readinessCoachText,
   readinessBadgeTraining,
   getHrvToday,
   hrvSortedAsc,
-  avgSleepEndMinutes,
-  avgSleepStartMinutes,
   minutesToHHMM,
+  calcSleepTarget,
+  calcLastCoffee,
+  formatSleepDurationMinutes,
+  timeToMinutes,
 } from '../lib/readinessCalc'
 
 function ReadinessGauge({ value }) {
@@ -83,14 +86,6 @@ function HrvWidgetEvolved({ hrvLogs, onHrvSaved, widgetRef }) {
 
   const statusColor = { green: '#4ae176', yellow: '#fbbf24', red: '#ffb4ab' }
 
-  const trend3 = React.useMemo(() => {
-    const last3 = sorted.slice(-3).map(r => r.hrv_value)
-    if (last3.length < 3) return 'flat'
-    const d = last3[2] - last3[0]
-    if (Math.abs(d) < 3) return 'flat'
-    return d > 0 ? 'up' : 'down'
-  }, [sorted])
-
   const handleSave = async () => {
     const v = parseInt(inputVal, 10)
     if (!v || v < 10 || v > 300) return
@@ -105,18 +100,11 @@ function HrvWidgetEvolved({ hrvLogs, onHrvSaved, widgetRef }) {
 
   return (
     <div ref={widgetRef} className="bg-surface-container-low rounded-xl p-6 border border-outline-variant/15 scroll-mt-28">
-      <div className="flex justify-between items-start mb-4 gap-2">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-secondary text-2xl">favorite</span>
-          <div>
-            <span className="text-sm font-bold uppercase tracking-widest text-on-surface block">HRV Mattutino</span>
-            {avg28 && <span className="text-xs text-on-surface-variant">baseline 28gg: <strong className="text-secondary">{avg28}</strong> ms</span>}
-          </div>
-        </div>
-        <div className="flex items-center gap-1 text-on-surface-variant" aria-hidden>
-          {trend3 === 'up' && <span className="material-symbols-outlined text-lg text-tertiary">trending_up</span>}
-          {trend3 === 'down' && <span className="material-symbols-outlined text-lg text-error">trending_down</span>}
-          {trend3 === 'flat' && <span className="material-symbols-outlined text-lg">trending_flat</span>}
+      <div className="mb-4 flex items-center gap-3">
+        <span className="material-symbols-outlined text-secondary text-2xl">favorite</span>
+        <div>
+          <span className="block text-sm font-bold uppercase tracking-widest text-on-surface">HRV Mattutino</span>
+          {avg28 && <span className="text-xs text-on-surface-variant">baseline 28gg: <strong className="text-secondary">{avg28}</strong> ms</span>}
         </div>
       </div>
 
@@ -189,53 +177,134 @@ function HrvWidgetEvolved({ hrvLogs, onHrvSaved, widgetRef }) {
   )
 }
 
-function CaffeineSleepCard({ healthLogs }) {
-  const n = (healthLogs || []).length
-  const avgWake = avgSleepEndMinutes(healthLogs, 7)
-  const defaultWake = 7 * 60 + 30
-  const wakeM = avgWake != null ? Math.round(avgWake) : defaultWake
-  const prima = (wakeM + 90) % (24 * 60)
-  const ultima = (wakeM - 600 + 24 * 60) % (24 * 60)
-  const dormi = (wakeM - 450 + 24 * 60) % (24 * 60)
+function formatClockHm(val) {
+  if (val == null || String(val).trim() === '') return 'n.d.'
+  const s = String(val).trim()
+  const mins = timeToMinutes(s)
+  return mins != null ? minutesToHHMM(mins) : s
+}
 
-  const avgStart = avgSleepStartMinutes(healthLogs, 7)
-  let late = false
-  if (avgStart != null) {
-    const diff = (avgStart - dormi + 24 * 60) % (24 * 60)
-    late = diff > 45 && diff < 12 * 60
+function CaffeineSleepCard({ healthLogs }) {
+  const target = calcSleepTarget(healthLogs)
+  const wakeM = Math.round(target.avgWakeMinutes)
+  const prima = (wakeM + 90) % (24 * 60)
+  const ultimaStr = calcLastCoffee(wakeM)
+  const dormiStr = target.time
+
+  let sleepTip = 'Stai rispettando una buona igiene del sonno. Il ritmo circadiano stabile migliora la qualità del sonno profondo nel lungo periodo (Walker, 2017).'
+  if (target.isAnticipated) {
+    if (target.avgDeep != null && target.avgDeep < 60) {
+      sleepTip = 'Il tuo sonno profondo medio è sotto la soglia ottimale. Anticipare l\'orario di addormentamento comprime meno le fasi di sonno profondo che avvengono nelle prime ore del ciclo (Walker, 2017).'
+    } else if (target.avgTotal != null && target.avgTotal < 360) {
+      sleepTip = 'Il tuo sonno totale medio è insufficiente per il recupero atletico. Anticipa l\'orario di questa sera per recuperare il deficit accumulato (Dattilo et al., 2011).'
+    }
   }
 
-  const sleepTip = late
-    ? 'Il tuo sonno profondo cala quando vai a letto tardi. I tuoi dati lo confermano. Il sonno a onde lente è concentrato nelle prime ore del ciclo e si comprime con gli orari tardivi (Walker, 2017).'
-    : 'Stai rispettando una buona igiene del sonno. Il ritmo circadiano stabile migliora la qualità del sonno profondo nel lungo periodo (Walker, 2017).'
-
   return (
-    <div className="bg-surface-container-low rounded-xl p-5 border border-outline-variant/15">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="material-symbols-outlined text-amber-300 text-xl">local_cafe</span>
+    <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="material-symbols-outlined text-xl text-amber-300">local_cafe</span>
         <span className="text-sm font-bold uppercase tracking-widest text-on-surface">Caffeina e sonno</span>
       </div>
-      <div className="grid grid-cols-3 gap-2 text-center mb-4">
+      <div className="mb-4 grid grid-cols-3 gap-2 text-center">
         <div>
-          <div className="text-[10px] font-bold uppercase text-on-surface-variant mb-1">Prima tazza</div>
-          <div className="text-lg font-headline font-extrabold text-on-surface">{minutesToHHMM(prima)}</div>
+          <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Prima tazza</div>
+          <div className="font-headline text-lg font-extrabold text-on-surface">{minutesToHHMM(prima)}</div>
         </div>
         <div>
-          <div className="text-[10px] font-bold uppercase text-on-surface-variant mb-1">Ultima tazza</div>
-          <div className="text-lg font-headline font-extrabold text-on-surface">{minutesToHHMM(ultima)}</div>
+          <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Ultima tazza</div>
+          <div className="font-headline text-lg font-extrabold text-on-surface">{ultimaStr}</div>
         </div>
         <div>
-          <div className="text-[10px] font-bold uppercase text-on-surface-variant mb-1">Dormi entro</div>
-          <div className="text-lg font-headline font-extrabold text-on-surface">{minutesToHHMM(dormi)}</div>
+          <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Dormi entro</div>
+          <div className="font-headline text-lg font-extrabold text-on-surface">{dormiStr}</div>
         </div>
       </div>
-      <p className="text-xs text-on-surface-variant leading-relaxed">{sleepTip}</p>
-      {n < 3 && (
-        <p className="text-[10px] text-on-surface-variant/70 mt-3 leading-relaxed">
-          Orari calibrati su sveglia di default 07:30 finché non avrai almeno 3 notti registrate in health_logs.
+      <p className="text-xs leading-relaxed text-on-surface-variant">{sleepTip}</p>
+      {target.nightsWithWake < 3 && (
+        <p className="mt-3 text-[10px] leading-relaxed text-on-surface-variant/70">
+          Orari calibrati su sveglia di default 07:30 finché non avrai almeno 3 notti con sveglia in health_logs.
         </p>
       )}
     </div>
+  )
+}
+
+const SLEEP_BAR_DEEP = '#c6bfff'
+const SLEEP_BAR_REM = '#89ceff'
+const SLEEP_BAR_LIGHT = '#474553'
+
+function StanotteNightCard({ healthLogs }) {
+  const last = (healthLogs || [])[0]
+  const hasRow = last && (
+    last.sleep_total != null
+    || last.sleep_deep != null
+    || last.sleep_rem != null
+    || last.sleep_light != null
+    || last.sleep_start
+    || last.sleep_end
+  )
+
+  if (!last || !hasRow) {
+    return (
+      <CollapsibleHistory title="Stanotte" titleIcon="dark_mode" defaultOpen>
+        <p className="text-xs leading-relaxed text-on-surface-variant">
+          Dati sonno in arrivo. Health Auto Export li porta ogni mattina alle 07:30.
+        </p>
+      </CollapsibleHistory>
+    )
+  }
+
+  const total = Number(last.sleep_total) || 0
+  const deep = Number(last.sleep_deep) || 0
+  const rem = Number(last.sleep_rem) || 0
+  const light = Number(last.sleep_light) || 0
+  const sumPhases = deep + rem + light
+  const pDeep = sumPhases > 0 ? (deep / sumPhases) * 100 : 0
+  const pRem = sumPhases > 0 ? (rem / sumPhases) * 100 : 0
+  const pLight = sumPhases > 0 ? (light / sumPhases) * 100 : 0
+
+  return (
+    <CollapsibleHistory title="Stanotte" titleIcon="dark_mode" defaultOpen>
+      <div className="space-y-4">
+        <div className="grid grid-cols-4 gap-2 text-center">
+          {[
+            { l: 'Totale', v: formatSleepDurationMinutes(last.sleep_total) },
+            { l: 'Profondo', v: last.sleep_deep != null ? `${Math.round(Number(last.sleep_deep))} min` : 'n.d.' },
+            { l: 'REM', v: last.sleep_rem != null ? `${Math.round(Number(last.sleep_rem))} min` : 'n.d.' },
+            { l: 'Leggero', v: last.sleep_light != null ? `${Math.round(Number(last.sleep_light))} min` : 'n.d.' },
+          ].map(c => (
+            <div key={c.l} className="min-w-0">
+              <div className="mb-0.5 text-[9px] font-bold uppercase tracking-wide text-on-surface-variant">{c.l}</div>
+              <div className="font-headline text-sm font-extrabold tabular-nums text-on-surface">{c.v}</div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-6 text-xs text-on-surface-variant">
+          <div>
+            <span className="block text-[10px] font-bold uppercase tracking-wide">Addormentato</span>
+            <span className="font-semibold text-on-surface">{formatClockHm(last.sleep_start)}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-bold uppercase tracking-wide">Sveglia</span>
+            <span className="font-semibold text-on-surface">{formatClockHm(last.sleep_end)}</span>
+          </div>
+        </div>
+        {sumPhases > 0 && (
+          <div className="flex h-[8px] w-full overflow-hidden rounded-full bg-surface-container-highest">
+            {pDeep > 0 && (
+              <div className="h-full" style={{ width: `${pDeep}%`, background: SLEEP_BAR_DEEP }} title="Profondo" />
+            )}
+            {pRem > 0 && (
+              <div className="h-full" style={{ width: `${pRem}%`, background: SLEEP_BAR_REM }} title="REM" />
+            )}
+            {pLight > 0 && (
+              <div className="h-full" style={{ width: `${pLight}%`, background: SLEEP_BAR_LIGHT }} title="Leggero" />
+            )}
+          </div>
+        )}
+      </div>
+    </CollapsibleHistory>
   )
 }
 
@@ -336,20 +405,13 @@ export default function HomeSection({
             <button
               type="button"
               onClick={() => setTab('allenamento')}
-              className="w-full rounded-xl p-6 transition-all active:scale-[0.98] text-left relative"
+              className="w-full rounded-xl p-6 text-left transition-all active:scale-[0.98]"
               style={{
                 background: sc.bg,
                 border: `2px solid ${isChanged ? '#fbbf24' : sc.border}`,
                 boxShadow: `0 8px 24px ${sc.text}22`,
               }}>
-              {badgeText && (
-                <span
-                  className="absolute top-3 right-3 text-[9px] font-bold uppercase tracking-wide px-2 py-1 rounded-lg max-w-[55%] text-right leading-tight"
-                  style={{ background: 'rgba(0,0,0,0.35)', color: '#e5e2e1' }}>
-                  {badgeText}
-                </span>
-              )}
-              <div className="flex items-center gap-2 mb-3 pr-16">
+              <div className="mb-3 flex items-center gap-2">
                 <span className="material-symbols-outlined text-xl" style={{ color: sc.text }}>
                   fitness_center
                 </span>
@@ -357,10 +419,17 @@ export default function HomeSection({
                   Allenamento · Settimana {todayEntry.week}{todayEntry.scarico ? ' · Scarico' : ''}
                 </span>
                 {isChanged && (
-                  <span className="w-2 h-2 rounded-full ml-auto animate-pulse" style={{ background: '#fbbf24', boxShadow: '0 0 8px #fbbf24' }} />
+                  <span className="ml-auto h-2 w-2 animate-pulse rounded-full" style={{ background: '#fbbf24', boxShadow: '0 0 8px #fbbf24' }} />
                 )}
               </div>
-              <h3 className="text-2xl font-headline font-extrabold tracking-tight text-on-surface mb-2">
+              {badgeText && (
+                <div
+                  className="mb-3 w-full rounded-lg border border-outline-variant/20 px-3 py-2.5 text-left text-[10px] font-semibold uppercase leading-snug tracking-wide text-on-surface"
+                  style={{ background: 'rgba(0,0,0,0.22)' }}>
+                  {badgeText}
+                </div>
+              )}
+              <h3 className="mb-2 font-headline text-2xl font-extrabold tracking-tight text-on-surface">
                 {sc.label}
               </h3>
               {isChanged && (
@@ -389,6 +458,8 @@ export default function HomeSection({
         )}
 
         <CaffeineSleepCard healthLogs={healthLogs} />
+
+        <StanotteNightCard healthLogs={healthLogs} />
 
         <HrvWidgetEvolved hrvLogs={hrvLogs || []} onHrvSaved={onHrvSaved} widgetRef={hrvWidgetRef} />
 

@@ -70,6 +70,72 @@ export function minutesToHHMM(mins) {
   return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
 }
 
+/** Soglia sonno per card caffeina: orario "dormi entro" e messaggi. */
+export function calcSleepTarget(healthLogs) {
+  const last7 = [...(healthLogs || [])]
+    .sort((a, b) => String(b.log_date).localeCompare(String(a.log_date)))
+    .slice(0, 7)
+
+  const withEnd = last7.filter(r => r.sleep_end && String(r.sleep_end).trim())
+  const avgWakeMinutes = withEnd.length >= 3
+    ? withEnd.reduce((s, r) => s + (timeToMinutes(r.sleep_end) || 0), 0) / withEnd.length
+    : 7 * 60 + 30
+
+  const withDeep = last7.filter(r => r.sleep_deep != null && Number.isFinite(Number(r.sleep_deep)))
+  const avgDeep = withDeep.length >= 3
+    ? withDeep.reduce((s, r) => s + Number(r.sleep_deep), 0) / withDeep.length
+    : null
+
+  const withTotal = last7.filter(r => r.sleep_total != null && Number.isFinite(Number(r.sleep_total)))
+  const avgTotal = withTotal.length >= 3
+    ? withTotal.reduce((s, r) => s + Number(r.sleep_total), 0) / withTotal.length
+    : null
+
+  const baseBed = avgWakeMinutes - 7.5 * 60
+  let bedtimeMinutes = baseBed
+  if (avgDeep !== null && avgDeep < 45) bedtimeMinutes -= 45
+  else if (avgDeep !== null && avgDeep < 60) bedtimeMinutes -= 30
+  if (avgTotal !== null && avgTotal < 360) bedtimeMinutes -= 30
+
+  const isAnticipated = bedtimeMinutes < baseBed
+
+  bedtimeMinutes = Math.max(bedtimeMinutes, 21 * 60)
+  bedtimeMinutes = Math.min(bedtimeMinutes, 25 * 60)
+
+  const h = Math.floor(bedtimeMinutes / 60) % 24
+  const m = Math.round(bedtimeMinutes % 60)
+  const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+
+  return {
+    time,
+    isAnticipated,
+    avgDeep,
+    avgTotal,
+    avgWakeMinutes,
+    nightsWithWake: withEnd.length,
+  }
+}
+
+export function calcLastCoffee(avgWakeMinutes) {
+  const raw = avgWakeMinutes - 10 * 60
+  const capped = Math.min(raw, 14 * 60 + 30)
+  const norm = ((capped % (24 * 60)) + 24 * 60) % (24 * 60)
+  const h = Math.floor(norm / 60) % 24
+  const mm = Math.round(norm % 60)
+  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+}
+
+/** Minuti totali sonno come stringa tipo 5h 45m */
+export function formatSleepDurationMinutes(totalMin) {
+  if (totalMin == null || !Number.isFinite(Number(totalMin))) return 'n.d.'
+  const n = Math.round(Number(totalMin))
+  const hh = Math.floor(n / 60)
+  const mm = n % 60
+  if (hh <= 0) return `${mm}m`
+  if (mm === 0) return `${hh}h`
+  return `${hh}h ${mm}m`
+}
+
 export function avgSleepEndMinutes(healthLogs, days = 7) {
   const logs = [...(healthLogs || [])]
     .filter(r => r.sleep_end != null && String(r.sleep_end).trim() !== '')
