@@ -2,7 +2,7 @@ import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import {
-  C, ss, ALL_TESTS, MOB_TESTS, STR_TESTS,
+  C, ss, ALL_TESTS, MOB_TESTS, STR_TESTS, drawer,
   USER_HEIGHT, USER_LEG, todayStr, fmtDateShort,
 } from '../constants'
 import { saveFitnessSession, updateFitnessSession, deleteFitnessSession } from '../lib/supabase'
@@ -202,8 +202,8 @@ export function FitnessSessionHistory({ fitSessions, onChanged, onEditSession, b
   const inner = (
     <>
       {confirmDel && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-6" onClick={() => setConfirmDel(null)}>
-          <div className="bg-surface-container rounded-xl p-6 w-full max-w-sm border border-error/20" onClick={e => e.stopPropagation()}>
+        <div style={{ ...drawer.centerOverlay(50, 'rgba(0,0,0,0.85)') }} onClick={() => setConfirmDel(null)}>
+          <div className="bg-surface-container rounded-xl p-6 w-full border border-error/20" style={{ ...drawer.centerCard, maxWidth: '384px' }} onClick={e => e.stopPropagation()}>
             <div className="text-base font-bold text-on-surface mb-2">Elimina test</div>
             <div className="text-sm text-on-surface-variant mb-5">
               Sessione del {fmtDateShort(confirmDel.session_date)}? L&apos;operazione non è reversibile.

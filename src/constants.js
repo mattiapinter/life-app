@@ -147,6 +147,62 @@ export const ss = {
   },
 }
 
+/** Bottom sheet / PWA iPhone: `dvh`, overlay scrollabile, spazio per bottom nav + home indicator */
+export const drawer = {
+  overlay: (zIndex = 200, background = 'rgba(0,0,0,0.85)') => ({
+    position: 'fixed',
+    inset: 0,
+    zIndex: zIndex,
+    background,
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    overflowY: 'auto',
+    overscrollBehavior: 'contain',
+    WebkitOverflowScrolling: 'touch',
+    paddingTop: 'env(safe-area-inset-top, 0px)',
+    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+  }),
+  sheet: {
+    width: '100%',
+    maxWidth: '448px',
+    margin: '0 auto',
+    background: C.surface,
+    borderRadius: '20px 20px 0 0',
+    boxSizing: 'border-box',
+    maxHeight: 'min(86dvh, 100dvh)',
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    overscrollBehavior: 'contain',
+    padding: '20px',
+    paddingBottom: 'max(20px, calc(env(safe-area-inset-bottom, 0px) + 52px))',
+  },
+  centerOverlay: (zIndex = 300, background = 'rgba(0,0,0,0.9)') => ({
+    position: 'fixed',
+    inset: 0,
+    zIndex: zIndex,
+    background,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '16px',
+    overflowY: 'auto',
+    overscrollBehavior: 'contain',
+    WebkitOverflowScrolling: 'touch',
+    paddingTop: 'max(16px, env(safe-area-inset-top, 0px))',
+    paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))',
+  }),
+  centerCard: {
+    width: '100%',
+    maxWidth: '320px',
+    maxHeight: 'min(85dvh, 100%)',
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    overscrollBehavior: 'contain',
+    boxSizing: 'border-box',
+  },
+}
+
 // ── CONSTANTS ──────────────────────────────────────────────────────
 export const DAYS = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica']
 export const MEALS_CATS = {

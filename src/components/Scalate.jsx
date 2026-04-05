@@ -1,5 +1,5 @@
 import React from 'react'
-import { C, ss, todayStr, fmtDateShort } from '../constants'
+import { C, ss, todayStr, fmtDateShort, drawer } from '../constants'
 import {
   loadCrags, saveCrag, deleteCrag,
   loadClimbingSessions, saveClimbingSession, deleteClimbingSession, fetchWeatherForSession,
@@ -123,8 +123,8 @@ function GpsButton({ url, onUrlChange }) {
         </div>
       )}
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end' }} onClick={() => setShowModal(false)}>
-          <div style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)' }} onClick={e => e.stopPropagation()}>
+        <div style={drawer.overlay(300)} onClick={() => setShowModal(false)}>
+          <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '4px' }}>Traccia GPS / Avvicinamento</div>
             <div style={{ fontSize: '11px', color: C.muted, marginBottom: '12px' }}>Incolla un link Komoot, Wikiloc, Google Maps ecc.</div>
             {url && <div style={{ fontSize: '10px', color: C.hint, marginBottom: '8px', padding: '6px', background: C.bg, borderRadius: '6px', wordBreak: 'break-all' }}>Attuale: {url}</div>}
@@ -306,9 +306,8 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)', maxHeight: '90vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
-        onClick={e => e.stopPropagation()}>
+    <div style={drawer.overlay(200)} onClick={onClose}>
+      <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.green, textTransform: 'uppercase', letterSpacing: '.08em' }}>
@@ -452,9 +451,8 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)', maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
-        onClick={e => e.stopPropagation()}>
+    <div style={drawer.overlay(200)} onClick={onClose}>
+      <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuova sessione</div>
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
@@ -567,9 +565,8 @@ function ProjectForm({ crags, onSaved, onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)' }}
-        onClick={e => e.stopPropagation()}>
+    <div style={drawer.overlay(200)} onClick={onClose}>
+      <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuovo progetto</div>
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
@@ -618,9 +615,8 @@ function AttemptForm({ project, onSaved, onClose }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)' }}
-        onClick={e => e.stopPropagation()}>
+    <div style={drawer.overlay(200)} onClick={onClose}>
+      <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nuovo tentativo</div>
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
@@ -727,9 +723,8 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
   const visibleRows = rows.filter(r => !r._deleted)
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }} onClick={onClose}>
-      <div className="drawer-enter" style={{ width: '100%', maxWidth: '448px', margin: '0 auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '20px', paddingBottom: 'calc(env(safe-area-inset-bottom, 20px) + 60px)', maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}
-        onClick={e => e.stopPropagation()}>
+    <div style={drawer.overlay(200)} onClick={onClose}>
+      <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ fontSize: '10px', fontWeight: '600', color: C.violet, textTransform: 'uppercase', letterSpacing: '.08em' }}>
@@ -891,8 +886,8 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
   return (
     <div>
       {confirmDel && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: C.surface, borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '320px', border: `1px solid ${C.redBorder}` }}>
+        <div style={drawer.centerOverlay(300)} onClick={() => setConfirmDel(false)}>
+          <div style={{ ...drawer.centerCard, background: C.surface, borderRadius: '16px', padding: '24px', border: `1px solid ${C.redBorder}` }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '15px', fontWeight: '700', color: C.text, marginBottom: '8px' }}>Elimina falesia</div>
             <div style={{ fontSize: '13px', color: C.muted, marginBottom: '20px', lineHeight: '1.5' }}>Vuoi eliminare <strong style={{ color: C.text }}>{crag.name}</strong>?</div>
             <div style={{ display: 'flex', gap: '8px' }}>

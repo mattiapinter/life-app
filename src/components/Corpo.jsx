@@ -1,7 +1,7 @@
 import React from 'react'
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
-import { todayStr, fmtDateShort, ss } from '../constants'
+import { todayStr, fmtDateShort, ss, drawer } from '../constants'
 import { db, loadHrvLogs, saveHrvLog, saveBodyMeasurement, loadBodyMeasurements, deleteBodyMeasurement, updateBodyMeasurement, loadUserProfile, loadFitnessSessions } from '../lib/supabase'
 import { FitnessTestForm, MetricsDetail, FitnessSessionHistory } from './FitnessBenchmark'
 import { MetricheHeaderFab, MetricheTabHeader, CollapsibleHistory, MetricheFormModal } from './MetricGroupLayout'
@@ -283,8 +283,8 @@ function BodyStoricoList({ measurements, onDeleted, onEdit }) {
   return (
     <div>
       {confirmDel && (
-        <div className="fixed inset-0 z-[80] bg-black/85 flex items-center justify-center p-6" onClick={() => setConfirmDel(null)}>
-          <div className="bg-surface-container rounded-xl p-6 w-full max-w-sm border border-error/20" onClick={e => e.stopPropagation()}>
+        <div style={{ ...drawer.centerOverlay(80, 'rgba(0,0,0,0.85)') }} onClick={() => setConfirmDel(null)}>
+          <div className="bg-surface-container rounded-xl p-6 w-full border border-error/20" style={{ ...drawer.centerCard, maxWidth: '384px' }} onClick={e => e.stopPropagation()}>
             <div className="text-base font-bold text-on-surface mb-2">Elimina misurazione</div>
             <div className="text-sm text-on-surface-variant mb-5">del {fmtDateShort(confirmDel.measured_at?.slice(0,10))}?</div>
             <div className="flex gap-3">

@@ -64,6 +64,9 @@ select {
   -webkit-appearance: none;
   appearance: none;
   font-family: 'Inter', sans-serif;
+  /* iOS: evita zoom automatico e picker più stabile in PWA */
+  font-size: 16px !important;
+  line-height: 1.25;
 }
 
 textarea, input {
@@ -120,14 +123,15 @@ button:active, div[role="button"]:active {
 .card-enter:nth-child(9)  { animation-delay: 320ms; }
 .card-enter:nth-child(10) { animation-delay: 360ms; }
 
-/* ── DRAWER SLIDE-UP ──────────────────────────────── */
+/* ── DRAWER ─────────────────────────────────────────
+   Solo opacity: translateY su iOS/PWA rompe l’ancoraggio dei <select> nativi */
 @keyframes drawerIn {
-  from { transform: translateY(100%); opacity: 0.6; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .drawer-enter {
-  animation: drawerIn 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
+  animation: drawerIn 0.26s ease-out both;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   overscroll-behavior: contain;

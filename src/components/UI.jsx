@@ -1,19 +1,25 @@
 import React from 'react'
-import { C, ss, extractYoutubeId, extractLoomId } from '../constants'
+import { C, ss, drawer, extractYoutubeId, extractLoomId } from '../constants'
 import { IcoClose, IcoPlay, IcoEdit } from './Icons'
 import { saveExerciseVideo } from '../lib/supabase'
 
 // ── MODAL OVERLAY ─────────────────────────────────────────────────
 export function Modal({ onClose, title, subtitle, accentColor, children }) {
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(8px)', display:'flex', alignItems:'flex-end' }} onClick={onClose}>
+    <div
+      style={{
+        ...drawer.overlay(200),
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+      onClick={onClose}>
       <div style={{
         width:'100%',
         maxWidth:'448px',
         margin:'0 auto',
         background:C.surface,
         borderRadius:'24px 24px 0 0',
-        maxHeight:'min(88dvh, 720px)',
+        maxHeight:'min(88dvh, 100dvh)',
         display:'flex',
         flexDirection:'column',
         overflow:'hidden',
@@ -181,7 +187,12 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
 
       {/* Embed a schermo intero — solo in browser, non in PWA */}
       {showEmbed && embedUrl && (
-        <div style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column' }}
+        <div
+          style={{
+            position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.95)', display:'flex', flexDirection:'column',
+            paddingTop:'env(safe-area-inset-top, 0px)', paddingBottom:'env(safe-area-inset-bottom, 0px)',
+            boxSizing:'border-box', minHeight:'100dvh',
+          }}
           onClick={() => setShowEmbed(false)}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', flexShrink:0 }}>
             <div style={{ fontSize:'13px', fontWeight:'600', color:C.text }}>{exerciseName}</div>

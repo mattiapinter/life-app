@@ -2,7 +2,7 @@ import React from 'react'
 import { Chart, LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
 Chart.register(LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
 import {
-  C, ss, SESSION_COLORS,
+  C, ss, SESSION_COLORS, drawer,
   todayStr, fmtDate, fmtDateShort, fmtDayName,
 } from '../constants'
 import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
@@ -653,9 +653,8 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
   return (
     <div style={ss.body}>
       {confirmDel && (
-        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
-          onClick={() => setConfirmDel(null)}>
-          <div style={{ background:C.surface, borderRadius:'16px', padding:'24px', width:'100%', maxWidth:'340px', border:`1px solid ${C.redBorder}` }}
+        <div style={drawer.centerOverlay(200, 'rgba(0,0,0,0.85)')} onClick={() => setConfirmDel(null)}>
+          <div style={{ ...drawer.centerCard, maxWidth: '340px', background:C.surface, borderRadius:'16px', padding:'24px', border:`1px solid ${C.redBorder}` }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:'16px', fontWeight:'700', color:C.text, marginBottom:'8px' }}>Elimina sessione</div>
             <div style={{ fontSize:'13px', color:C.muted, marginBottom:'20px', lineHeight:'1.5' }}>
@@ -674,9 +673,8 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
       )}
 
       {showNuke && (
-        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.9)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
-          onClick={() => setShowNuke(false)}>
-          <div style={{ background:C.surface, borderRadius:'16px', padding:'24px', width:'100%', maxWidth:'340px', border:`1px solid ${C.redBorder}` }}
+        <div style={drawer.centerOverlay(200, 'rgba(0,0,0,0.9)')} onClick={() => setShowNuke(false)}>
+          <div style={{ ...drawer.centerCard, maxWidth: '340px', background:C.surface, borderRadius:'16px', padding:'24px', border:`1px solid ${C.redBorder}` }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:'16px', fontWeight:'700', color:C.red, marginBottom:'8px' }}>⚠️ Elimina tutto</div>
             <div style={{ fontSize:'13px', color:C.muted, marginBottom:'16px', lineHeight:'1.5' }}>
@@ -868,9 +866,8 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
   return (
     <div style={ss.body}>
       {confirmDel && (
-        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}
-          onClick={() => setConfirmDel(null)}>
-          <div style={{ background:C.surface, borderRadius:'16px', padding:'24px', width:'100%', maxWidth:'340px', border:`1px solid ${C.redBorder}` }}
+        <div style={drawer.centerOverlay(200, 'rgba(0,0,0,0.85)')} onClick={() => setConfirmDel(null)}>
+          <div style={{ ...drawer.centerCard, maxWidth: '340px', background:C.surface, borderRadius:'16px', padding:'24px', border:`1px solid ${C.redBorder}` }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:'16px', fontWeight:'700', color:C.text, marginBottom:'8px' }}>Elimina esercizio</div>
             <div style={{ fontSize:'13px', color:C.muted, marginBottom:'20px', lineHeight:'1.5' }}>
