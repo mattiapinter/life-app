@@ -1,4 +1,5 @@
 import React from 'react'
+import { DRAWER_MODAL_CHROME } from '../constants'
 
 /** FAB + usato in header pagina Dati e in MetricheTabHeader. */
 export function MetricheHeaderFab({ onClick, ariaLabel = 'Aggiungi' }) {
@@ -73,17 +74,14 @@ export function MetricheFormModal({ title, onClose, children }) {
       style={{
         paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
         paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
-        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
-        paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))',
+        paddingTop: DRAWER_MODAL_CHROME.overlayPaddingTop,
+        paddingBottom: DRAWER_MODAL_CHROME.overlayPaddingBottom,
         boxSizing: 'border-box',
       }}
       onClick={onClose}>
       <div
         className="drawer-enter w-full max-w-lg flex min-h-0 flex-col bg-surface-container rounded-2xl border border-outline-variant/20 overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.45)]"
-        style={{
-          maxHeight:
-            'min(86dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px))',
-        }}
+        style={{ maxHeight: DRAWER_MODAL_CHROME.sheetMaxHeight }}
         onClick={e => e.stopPropagation()}>
         <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-outline-variant/15 bg-surface-container px-4 py-3">
           <span className="min-w-0 flex-1 truncate pr-2 font-headline text-lg font-bold text-on-surface">{title}</span>

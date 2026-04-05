@@ -147,6 +147,19 @@ export const ss = {
   },
 }
 
+/** Padding verticale overlay modali: sotto SubNav (cfr. App main pt 64px+safe) e sopra BottomNav. */
+const DRAWER_OVERLAY_PAD_TOP = 'calc(env(safe-area-inset-top, 0px) + 76px)'
+const DRAWER_OVERLAY_PAD_BOT = 'calc(env(safe-area-inset-bottom, 0px) + 108px)'
+/** Altezza max scheda: non può usare quasi tutto il dvh perché le barre fisse occupano fascia fissa. */
+const DRAWER_SHEET_MAX_HEIGHT =
+  'min(74dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 196px))'
+
+export const DRAWER_MODAL_CHROME = {
+  overlayPaddingTop: DRAWER_OVERLAY_PAD_TOP,
+  overlayPaddingBottom: DRAWER_OVERLAY_PAD_BOT,
+  sheetMaxHeight: DRAWER_SHEET_MAX_HEIGHT,
+}
+
 /** Popup centrato: più piccolo dello schermo (margini), angoli arrotondati, corpo scroll + footer opzionale.
  *  z-index alto: sopra SubNav (40) e BottomNav (50). */
 export const drawer = {
@@ -163,11 +176,11 @@ export const drawer = {
     WebkitOverflowScrolling: 'touch',
     paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
     paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
-    paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
-    paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))',
+    paddingTop: DRAWER_OVERLAY_PAD_TOP,
+    paddingBottom: DRAWER_OVERLAY_PAD_BOT,
     boxSizing: 'border-box',
   }),
-  /** Scheda flottante: max ~86% altezza viewport, scroll interno */
+  /** Scheda flottante: altezza limitata per non finire sotto SubNav / BottomNav */
   sheet: {
     width: '100%',
     maxWidth: '448px',
@@ -175,8 +188,7 @@ export const drawer = {
     background: C.surface,
     borderRadius: '20px',
     boxSizing: 'border-box',
-    maxHeight:
-      'min(86dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px))',
+    maxHeight: DRAWER_SHEET_MAX_HEIGHT,
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -221,15 +233,14 @@ export const drawer = {
     WebkitOverflowScrolling: 'touch',
     paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
     paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
-    paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
-    paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))',
+    paddingTop: DRAWER_OVERLAY_PAD_TOP,
+    paddingBottom: DRAWER_OVERLAY_PAD_BOT,
     boxSizing: 'border-box',
   }),
   centerCard: {
     width: '100%',
     maxWidth: '320px',
-    maxHeight:
-      'min(86dvh, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px))',
+    maxHeight: DRAWER_SHEET_MAX_HEIGHT,
     overflowY: 'auto',
     WebkitOverflowScrolling: 'touch',
     overscrollBehavior: 'contain',
