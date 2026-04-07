@@ -7,6 +7,7 @@ import {
   loadSessionNotes, loadHrvLogs, getUser, onAuthChange,
   loadHealthLogs, loadHealthLogToday, loadAscents, loadClimbingSessions,
   loadActivePlan, loadTrainingCalendar,
+  loadDailyScoreToday, loadDailyScores,
 } from './lib/supabase'
 import { db } from './lib/supabase'
 
@@ -95,6 +96,8 @@ export default function App() {
   const [climbingSessions, setClimbingSessions] = React.useState([])
   const [activePlan,   setActivePlan]   = React.useState(null)
   const [trainingCalendar, setTrainingCalendar] = React.useState([])
+  const [dailyScoreToday, setDailyScoreToday] = React.useState(null)
+  const [dailyScores,     setDailyScores]     = React.useState([])
 
   const [foodOptions, setFoodOptions] = React.useState(() => {
     if (localStorage.getItem('life_v') !== '2') {
@@ -131,6 +134,8 @@ export default function App() {
     loadClimbingSessions().then(setClimbingSessions)
     loadActivePlan().then(setActivePlan)
     loadTrainingCalendar().then(setTrainingCalendar)
+    loadDailyScoreToday().then(setDailyScoreToday)
+    loadDailyScores().then(setDailyScores)
     loadExerciseVideos().then(rows => {
       const map = {}; rows.forEach(r => { map[r.exercise_name] = r.video_url }); setVideos(map)
     })
@@ -163,6 +168,17 @@ export default function App() {
     loadHrvLogs().then(setHrvLogs)
     loadHealthLogs().then(setHealthLogs)
     loadHealthLogToday().then(setHealthLogToday)
+  }
+
+  const handleHrvSaved = async () => {
+    await loadHrvLogs().then(setHrvLogs)
+    await loadHealthLogs().then(setHealthLogs)
+    await loadHealthLogToday().then(setHealthLogToday)
+    await loadDailyScoreToday().then(setDailyScoreToday)
+    // n8n impiega qualche secondo: ricarica dopo 3s per avere il readiness aggiornato
+    setTimeout(() => {
+      loadDailyScoreToday().then(setDailyScoreToday)
+    }, 3000)
   }
   const activeSub = sub || SUB[macro]?.[0]?.id || null
   const handleVideosChange = (name, url) => setVideos(p => ({ ...p, [name]: url }))
@@ -202,9 +218,11 @@ export default function App() {
               hrvLogs={hrvLogs}
               healthLogs={healthLogs}
               healthLogToday={healthLogToday}
-              onHrvSaved={refreshWellnessData}
+              onHrvSaved={handleHrvSaved}
               activePlan={activePlan}
               trainingCalendar={trainingCalendar}
+              dailyScoreToday={dailyScoreToday}
+              dailyScores={dailyScores}
             />
           </div>
         )}

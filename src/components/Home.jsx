@@ -4,14 +4,9 @@ import { SESSION_COLORS } from '../constants'
 import { saveHrvLog } from '../lib/supabase'
 import { CollapsibleHistory } from './MetricGroupLayout'
 import {
-  calcReadiness,
-  readinessCoachText,
   readinessBadgeTraining,
-  getHrvToday,
   hrvSortedAsc,
   minutesToHHMM,
-  calcSleepTarget,
-  calcLastCoffee,
   formatSleepDurationMinutes,
   timeToMinutes,
 } from '../lib/readinessCalc'
@@ -183,47 +178,43 @@ function formatClockHm(val) {
   return mins != null ? minutesToHHMM(mins) : s
 }
 
-function CaffeineSleepCard({ healthLogs }) {
-  const target = calcSleepTarget(healthLogs)
-  const wakeM = Math.round(target.avgWakeMinutes)
-  const prima = (wakeM + 90) % (24 * 60)
-  const ultimaStr = calcLastCoffee(wakeM)
-  const dormiStr = target.time
+function fmtTimeHM(val) {
+  if (!val) return 'n.d.'
+  const s = String(val).trim()
+  return s.length >= 5 ? s.slice(0, 5) : s
+}
 
-  let sleepTip = 'Stai rispettando una buona igiene del sonno. Il ritmo circadiano stabile migliora la qualità del sonno profondo nel lungo periodo (Walker, 2017).'
-  if (target.isAnticipated) {
-    if (target.avgDeep != null && target.avgDeep < 60) {
-      sleepTip = 'Il tuo sonno profondo medio è sotto la soglia ottimale. Anticipare l\'orario di addormentamento comprime meno le fasi di sonno profondo che avvengono nelle prime ore del ciclo (Walker, 2017).'
-    } else if (target.avgTotal != null && target.avgTotal < 360) {
-      sleepTip = 'Il tuo sonno totale medio è insufficiente per il recupero atletico. Anticipa l\'orario di questa sera per recuperare il deficit accumulato (Dattilo et al., 2011).'
-    }
-  }
-
+function CaffeineSleepCard({ dailyScoreToday }) {
   return (
     <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low p-5">
       <div className="mb-4 flex items-center gap-2">
         <span className="material-symbols-outlined text-xl text-amber-300">local_cafe</span>
         <span className="text-sm font-bold uppercase tracking-widest text-on-surface">Caffeina e sonno</span>
       </div>
-      <div className="mb-4 grid grid-cols-3 gap-2 text-center">
-        <div>
-          <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Prima tazza</div>
-          <div className="font-headline text-lg font-extrabold text-on-surface">{minutesToHHMM(prima)}</div>
-        </div>
-        <div>
-          <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Ultima tazza</div>
-          <div className="font-headline text-lg font-extrabold text-on-surface">{ultimaStr}</div>
-        </div>
-        <div>
-          <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Dormi entro</div>
-          <div className="font-headline text-lg font-extrabold text-on-surface">{dormiStr}</div>
-        </div>
-      </div>
-      <p className="text-xs leading-relaxed text-on-surface-variant">{sleepTip}</p>
-      {target.nightsWithWake < 3 && (
-        <p className="mt-3 text-[10px] leading-relaxed text-on-surface-variant/70">
-          Orari calibrati su sveglia di default 07:30 finché non avrai almeno 3 notti con sveglia in health_logs.
+      {dailyScoreToday == null ? (
+        <p className="text-xs leading-relaxed text-on-surface-variant">
+          Dati in arrivo dopo il prossimo export da Health Auto Export
         </p>
+      ) : (
+        <>
+          <div className="mb-4 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Prima tazza</div>
+              <div className="font-headline text-lg font-extrabold text-on-surface">{fmtTimeHM(dailyScoreToday.first_coffee)}</div>
+            </div>
+            <div>
+              <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Ultima tazza</div>
+              <div className="font-headline text-lg font-extrabold text-on-surface">{fmtTimeHM(dailyScoreToday.last_coffee)}</div>
+            </div>
+            <div>
+              <div className="mb-1 text-[10px] font-bold uppercase text-on-surface-variant">Dormi entro</div>
+              <div className="font-headline text-lg font-extrabold text-on-surface">{fmtTimeHM(dailyScoreToday.bedtime)}</div>
+            </div>
+          </div>
+          {dailyScoreToday.bedtime_note && (
+            <p className="text-xs leading-relaxed text-on-surface-variant">{dailyScoreToday.bedtime_note}</p>
+          )}
+        </>
       )}
     </div>
   )
@@ -233,8 +224,8 @@ const SLEEP_BAR_DEEP = '#c6bfff'
 const SLEEP_BAR_REM = '#89ceff'
 const SLEEP_BAR_LIGHT = '#474553'
 
-function StanotteNightCard({ healthLogs }) {
-  const last = (healthLogs || [])[0]
+function StanotteNightCard({ healthLogs, today }) {
+  const last = (healthLogs || []).find(l => l.log_date === today) || (healthLogs || [])[0] || null
   const hasRow = last && (
     last.sleep_total != null
     || last.sleep_deep != null
@@ -344,6 +335,8 @@ export default function HomeSection({
   onHrvSaved,
   activePlan,
   trainingCalendar = [],
+  dailyScoreToday = null,
+  dailyScores = [],
 }) {
   const hrvWidgetRef = React.useRef(null)
   const dayName = DAYS[todayIdx()]
@@ -364,27 +357,21 @@ export default function HomeSection({
     .filter(e => e.day_date >= today)
     .slice(0, 7)
 
-  const hrvToday = getHrvToday(hrvLogs || [])
-  const readiness = calcReadiness(hrvToday, hrvLogs || [], healthLogToday)
-  const hasHrv = !!hrvToday
-  const hasSleep = healthLogToday?.sleep_deep != null && healthLogToday?.sleep_total != null
+  const readiness = dailyScoreToday?.readiness ?? null
   const badgeText = readinessBadgeTraining(readiness)
-
   const showHrvBanner = !(hrvLogs || []).some(r => r.log_date === today)
-
-  const coachReadiness = readiness != null ? readinessCoachText(readiness, hasHrv, hasSleep) : null
 
   const chips = (
     <div className="flex flex-wrap gap-2 justify-center mt-4">
-      {avg28chip(hrvToday, hrvLogs)}
-      {healthLogToday?.sleep_deep != null && (
+      {avg28chip(dailyScoreToday?.hrv_value ?? null, hrvLogs)}
+      {dailyScoreToday?.sleep_deep != null && (
         <span className="text-[10px] px-2 py-1 rounded-full bg-surface-container-highest border border-outline-variant text-on-surface-variant">
-          Profondo {healthLogToday.sleep_deep} min
+          Profondo {dailyScoreToday.sleep_deep} min
         </span>
       )}
-      {healthLogToday?.resting_hr != null && (
+      {dailyScoreToday?.resting_hr != null && (
         <span className="text-[10px] px-2 py-1 rounded-full bg-surface-container-highest border border-outline-variant text-on-surface-variant">
-          FC riposo {healthLogToday.resting_hr}
+          FC riposo {dailyScoreToday.resting_hr}
         </span>
       )}
     </div>
@@ -418,9 +405,6 @@ export default function HomeSection({
         <div>
           <ReadinessGauge value={readiness} />
           {chips}
-          {coachReadiness && (
-            <p className="text-xs text-on-surface-variant leading-relaxed mt-4 text-center px-1">{coachReadiness}</p>
-          )}
         </div>
 
         {todayEntry && todayDisplayType !== 'REST' && (() => {
@@ -483,9 +467,9 @@ export default function HomeSection({
           </div>
         )}
 
-        <CaffeineSleepCard healthLogs={healthLogs} />
+        <CaffeineSleepCard dailyScoreToday={dailyScoreToday} />
 
-        <StanotteNightCard healthLogs={healthLogs} />
+        <StanotteNightCard healthLogs={healthLogs} today={today} />
 
         <HrvWidgetEvolved hrvLogs={hrvLogs || []} onHrvSaved={onHrvSaved} widgetRef={hrvWidgetRef} />
 
@@ -589,11 +573,11 @@ export default function HomeSection({
   )
 }
 
-function avg28chip(hrvToday, hrvLogs) {
+function avg28chip(todayHrvValue, hrvLogs) {
   const sorted = hrvSortedAsc(hrvLogs)
   const last28 = sorted.slice(-28)
   const avg = last28.length ? Math.round(last28.reduce((s, r) => s + r.hrv_value, 0) / last28.length) : null
-  if (!hrvToday || avg == null) {
+  if (todayHrvValue == null || avg == null) {
     return (
       <span className="text-[10px] px-2 py-1 rounded-full bg-surface-container-highest border border-outline-variant text-on-surface-variant">
         HRV oggi —
@@ -602,7 +586,7 @@ function avg28chip(hrvToday, hrvLogs) {
   }
   return (
     <span className="text-[10px] px-2 py-1 rounded-full bg-surface-container-highest border border-outline-variant text-on-surface-variant">
-      HRV {hrvToday.hrv_value} vs media 28gg {avg}
+      HRV {todayHrvValue} vs media 28gg {avg}
     </span>
   )
 }
