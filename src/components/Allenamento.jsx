@@ -1098,10 +1098,127 @@ function CorsaSection({ runningLogs, onRefresh }) {
   )
 }
 
+// ── PAST SESSION DETAIL ───────────────────────────────────────────
+function PastSessionDetail({ entry, trainingLogs, sessionNotes, onBack, onOpenFull }) {
+  const [noteExpanded, setNoteExpanded] = React.useState(false)
+
+  const sessionType = entry.session_type
+  const sc = SESSION_COLORS[sessionType] || SESSION_COLORS.REST
+
+  const logs = (trainingLogs || []).filter(
+    l => l.log_date === entry.day_date && l.session_type === entry.session_type
+  )
+  const note = (sessionNotes || []).find(n => n.note_date === entry.day_date)
+  const hasLogs = logs.length > 0
+
+  const rpeLog = logs.find(l => l.rpe_actual != null)
+  const rpe = rpeLog?.rpe_actual ?? null
+
+  const byExercise = {}
+  logs.forEach(l => {
+    if (!l.exercise_name) return
+    if (!byExercise[l.exercise_name]) byExercise[l.exercise_name] = []
+    byExercise[l.exercise_name].push(l)
+  })
+  const hasExercises = Object.keys(byExercise).length > 0
+
+  return (
+    <div>
+      <div style={{ ...ss.hdr, background: sc.bg, borderBottomColor: sc.border }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', color: sc.text, cursor: 'pointer', fontWeight: '500' }} onClick={onBack}>← Piano</div>
+        </div>
+        <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '.1em', textTransform: 'uppercase', color: sc.text, marginBottom: '6px' }}>
+          Settimana {entry.week} · {fmtDateShort(entry.day_date)}{entry.scarico ? ' · SCARICO' : ''}
+        </div>
+        <div style={{ fontSize: '26px', fontWeight: '700', color: C.text, letterSpacing: '-.02em' }}>{sc.label}</div>
+        {entry.also && <div style={{ fontSize: '11px', color: sc.text, marginTop: '4px', opacity: 0.8 }}>+ {SESSION_COLORS[entry.also]?.label}</div>}
+      </div>
+
+      <div style={ss.body}>
+        {hasLogs ? (
+          <div style={ss.card}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: C.green }}>check_circle</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '.12em', textTransform: 'uppercase', color: C.text }}>Log salvato</span>
+              {rpe != null && (
+                <div style={{ marginLeft: 'auto', fontSize: '10px', fontWeight: '600', padding: '2px 8px', borderRadius: '999px',
+                  background: rpe <= 6 ? C.greenBg : rpe <= 8 ? C.amberBg : C.redBg,
+                  color:      rpe <= 6 ? C.greenLight : rpe <= 8 ? C.amberLight : C.redLight }}>
+                  RPE {rpe}
+                </div>
+              )}
+            </div>
+
+            {hasExercises ? (
+              Object.entries(byExercise).map(([exName, exLogs]) => (
+                <div key={exName} style={{ padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: C.textSoft, marginBottom: '6px' }}>{exName}</div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {exLogs.map((l, i) => {
+                      const setParts = []
+                      if (l.weight_kg != null) setParts.push(`${l.weight_kg}kg`)
+                      if (l.reps_done != null) setParts.push(`${l.reps_done} reps`)
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: C.bg, padding: '4px 8px', borderRadius: '6px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '9px', color: C.hint }}>G{l.sets_done || i + 1}</span>
+                          {l.weight_kg != null && <span style={{ fontSize: '12px', fontWeight: '700', color: C.violetLight }}>{l.weight_kg}kg</span>}
+                          {l.reps_done != null && <span style={{ fontSize: '11px', color: C.muted }}>×{l.reps_done}</span>}
+                          {setParts.length === 0 && <span style={{ fontSize: '11px', color: C.hint }}>completato</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ fontSize: '12px', color: C.hint }}>Sessione completata.</div>
+            )}
+          </div>
+        ) : (
+          <div style={{ ...ss.card, textAlign: 'center', padding: '32px' }}>
+            <div style={{ fontSize: '14px', color: C.muted }}>Nessun dato registrato per questa sessione.</div>
+          </div>
+        )}
+
+        {note?.note_text && (() => {
+          const text = note.note_text
+          const isLong = text.length > 100
+          return (
+            <div style={{ ...ss.card, borderLeft: `3px solid ${C.primary}` }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: C.primary, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '8px' }}>Nota sessione</div>
+              <div style={{ fontSize: '13px', color: C.textSoft, lineHeight: '1.65' }}>
+                {isLong && !noteExpanded ? text.slice(0, 100).trimEnd() + '...' : text}
+              </div>
+              {isLong && (
+                <button type="button"
+                  style={{ marginTop: '8px', fontSize: '11px', fontWeight: '600', color: C.primary, cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+                  onClick={() => setNoteExpanded(x => !x)}>
+                  {noteExpanded ? 'Mostra meno' : 'Leggi tutto'}
+                </button>
+              )}
+            </div>
+          )
+        })()}
+
+        <div
+          style={{
+            ...ss.savBtn,
+            ...(hasLogs ? { background: C.surface, border: `1px solid ${C.border}`, color: C.muted, boxShadow: 'none' } : {}),
+          }}
+          onClick={onOpenFull}>
+          {hasLogs ? 'Modifica o aggiungi dati' : 'Registra questa sessione'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── MAIN ALLENAMENTO ───────────────────────────────────────────────
 export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange, onOpenFitnessTests, activePlan, trainingCalendar = [] }) {
   const [sub, setSub]                     = React.useState(initialSub || 'oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
+  const [pastEntry,     setPastEntry]     = React.useState(null)
   const [sessionNotes,  setSessionNotes]  = React.useState([])
   const [runningLogs,   setRunningLogs]   = React.useState([])
   const [climbingSessions, setClimbingSessions] = React.useState([])
@@ -1111,10 +1228,19 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
   const todayEntry = trainingCalendar.find(e => e.day_date === today) || null
 
   React.useEffect(() => {
-    if (initialSub && initialSub !== sub) setSub(initialSub)
+    if (initialSub && initialSub !== sub) {
+      setSelectedEntry(null)
+      setPastEntry(null)
+      setSub(initialSub)
+    }
   }, [initialSub])
 
-  const changeSub = (s) => { setSub(s); onSubChange?.(s) }
+  const changeSub = (s) => {
+    setSelectedEntry(null)
+    setPastEntry(null)
+    setSub(s)
+    onSubChange?.(s)
+  }
 
   const onLogsChanged = async () => {
     const logs  = await loadTrainingLogs()
@@ -1142,6 +1268,16 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
       climbingSessions={climbingSessions}
       crags={crags}
       ascents={ascents}
+    />
+  }
+
+  if (pastEntry) {
+    return <PastSessionDetail
+      entry={pastEntry}
+      trainingLogs={trainingLogs}
+      sessionNotes={sessionNotes}
+      onBack={() => setPastEntry(null)}
+      onOpenFull={() => { setSelectedEntry(pastEntry); setPastEntry(null) }}
     />
   }
 
@@ -1263,7 +1399,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
               const isChanged = !!changedNote
               return (
                 <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px', background: isToday ? sc.bg : C.surface, borderRadius:'10px', marginBottom:'5px', border:`1px solid ${isToday ? sc.border : C.border}`, cursor:'pointer', opacity: isPast ? 0.5 : 1 }}
-                  onClick={() => setSelectedEntry(entry)}>
+                  onClick={() => isPast ? setPastEntry(entry) : setSelectedEntry(entry)}>
                   <div style={{ width:'8px', height:'8px', borderRadius:'50%', background: isChanged ? C.amber : sc.text, flexShrink:0, opacity: displayType === 'REST' ? 0.2 : 1 }} />
                   <div style={{ width:'38px', fontSize:'10px', color: isToday ? sc.text : C.muted, fontWeight: isToday ? '700' : '400', flexShrink:0 }}>
                     {fmtDateShort(entry.day_date)}
