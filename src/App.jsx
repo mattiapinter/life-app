@@ -6,6 +6,7 @@ import {
   loadFitnessSessions, loadTrainingLogs, loadExerciseVideos,
   loadSessionNotes, loadHrvLogs, getUser, onAuthChange,
   loadHealthLogs, loadHealthLogToday, loadAscents, loadClimbingSessions,
+  loadActivePlan, loadTrainingCalendar,
 } from './lib/supabase'
 import { db } from './lib/supabase'
 
@@ -92,6 +93,8 @@ export default function App() {
   const [healthLogToday, setHealthLogToday] = React.useState(null)
   const [ascents,      setAscents]      = React.useState([])
   const [climbingSessions, setClimbingSessions] = React.useState([])
+  const [activePlan,   setActivePlan]   = React.useState(null)
+  const [trainingCalendar, setTrainingCalendar] = React.useState([])
 
   const [foodOptions, setFoodOptions] = React.useState(() => {
     if (localStorage.getItem('life_v') !== '2') {
@@ -126,6 +129,8 @@ export default function App() {
     loadHealthLogToday().then(setHealthLogToday)
     loadAscents().then(setAscents)
     loadClimbingSessions().then(setClimbingSessions)
+    loadActivePlan().then(setActivePlan)
+    loadTrainingCalendar().then(setTrainingCalendar)
     loadExerciseVideos().then(rows => {
       const map = {}; rows.forEach(r => { map[r.exercise_name] = r.video_url }); setVideos(map)
     })
@@ -198,12 +203,14 @@ export default function App() {
               healthLogs={healthLogs}
               healthLogToday={healthLogToday}
               onHrvSaved={refreshWellnessData}
+              activePlan={activePlan}
+              trainingCalendar={trainingCalendar}
             />
           </div>
         )}
         {macro === 'allenamento' && (
           <div key="allenamento" className="page-enter">
-            <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} onOpenFitnessTests={() => goToDatiTab('testfisici')} />
+            <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} onOpenFitnessTests={() => goToDatiTab('testfisici')} activePlan={activePlan} trainingCalendar={trainingCalendar} />
           </div>
         )}
         {macro === 'scalate' && (

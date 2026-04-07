@@ -1,7 +1,6 @@
 import React from 'react'
 import { DAYS, MEALS_CATS, todayIdx, fmtDate, fmtDateShort, fmtDayName, todayStr } from '../constants'
 import { SESSION_COLORS } from '../constants'
-import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
 import { saveHrvLog } from '../lib/supabase'
 import { CollapsibleHistory } from './MetricGroupLayout'
 import {
@@ -343,6 +342,8 @@ export default function HomeSection({
   healthLogs,
   healthLogToday,
   onHrvSaved,
+  activePlan,
+  trainingCalendar = [],
 }) {
   const hrvWidgetRef = React.useRef(null)
   const dayName = DAYS[todayIdx()]
@@ -351,15 +352,15 @@ export default function HomeSection({
   const mealNames = Object.keys(MEALS_CATS)
   const filled = mealNames.filter(m => Object.values(meals[m] || {}).some(v => v))
   const pct = Math.round((filled.length / mealNames.length) * 100)
-  const todayEntry = getTodayCalEntry()
   const today = todayStr()
+  const todayEntry = trainingCalendar.find(e => e.day_date === today) || null
 
   const todayChange = sessionNotes?.find(n =>
     n.note_date === today && n.original_session && n.original_session !== n.session_type
   )
   const todayDisplayType = todayChange?.session_type || todayEntry?.session_type
 
-  const weekStrip = TRAINING_PLAN.calendar
+  const weekStrip = trainingCalendar
     .filter(e => e.day_date >= today)
     .slice(0, 7)
 
@@ -531,6 +532,17 @@ export default function HomeSection({
 
         <div className="bg-surface-container-low rounded-xl p-6">
           <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface mb-5">Prossimi Allenamenti</h3>
+          {trainingCalendar.length === 0 ? (
+            <div className="flex gap-3 pb-2">
+              {[0,1,2,3,4].map(i => (
+                <div key={i} className="flex-shrink-0 flex flex-col items-center gap-2">
+                  <div className="w-10 h-2.5 rounded bg-surface-container-highest animate-pulse" />
+                  <div className="w-12 h-12 rounded-xl bg-surface-container-highest animate-pulse" />
+                  <div className="w-6 h-2 rounded bg-surface-container-highest animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
             {weekStrip.map((entry, i) => {
               const changed = sessionNotes?.find(n =>
@@ -570,6 +582,7 @@ export default function HomeSection({
               )
             })}
           </div>
+          )}
         </div>
       </div>
     </div>
