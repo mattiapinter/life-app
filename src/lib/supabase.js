@@ -351,16 +351,68 @@ export const deleteRunningLog = async (id) => {
 
 // ── HRV LOGS ──────────────────────────────────────────────────────
 export const saveHrvLog = async (log) => {
-  const userId = await uid(); if (!userId) return false
+  const userId = await uid()
+  if (!userId) return false
   try {
-    const { error } = await db.from('hrv_logs').upsert([{ ...log, user_id: userId }], { onConflict: 'log_date,user_id' })
-    if (error) throw error; return true
+    const { error } = await db
+      .from('hrv_logs')
+      .upsert([{ ...log, user_id: userId }], { onConflict: 'log_date,user_id' })
+    if (error) throw error
+
+    // Notifica n8n per ricalcolare daily_scores e mandare Telegram
+    try {
+      await fetch('http://89.167.27.115:5678/webhook/hrv-inserted', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hrv_value: log.hrv_value,
+          log_date:  log.log_date,
+        }),
+      })
+    } catch(e) {
+      // Non bloccare il salvataggio se n8n non risponde
+      console.warn('n8n webhook non raggiungibile:', e)
+    }
+
+    return true
   } catch(e) { return false }
 }
 export const loadHrvLogs = async () => {
   const userId = await uid(); if (!userId) return []
   try { const { data, error } = await db.from('hrv_logs').select('*').eq('user_id', userId).order('log_date', { ascending: true }); if (error) throw error; return data || [] }
   catch(e) { return [] }
+}
+
+// ── DAILY SCORES ───────────────────────────────────────────────────
+export const loadDailyScoreToday = async () => {
+  const userId = await uid()
+  if (!userId) return null
+  try {
+    const today = todayStr()
+    const { data, error } = await db
+      .from('daily_scores')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('score_date', today)
+      .maybeSingle()
+    if (error) throw error
+    return data || null
+  } catch(e) { return null }
+}
+
+export const loadDailyScores = async () => {
+  const userId = await uid()
+  if (!userId) return []
+  try {
+    const { data, error } = await db
+      .from('daily_scores')
+      .select('*')
+      .eq('user_id', userId)
+      .order('score_date', { ascending: false })
+      .limit(30)
+    if (error) throw error
+    return data || []
+  } catch(e) { return [] }
 }
 
 // ── HEALTH LOGS (sonno, caffeina, readiness raw) ───────────────────
