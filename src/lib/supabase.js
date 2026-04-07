@@ -451,3 +451,45 @@ export const saveUserProfile = async (profile) => {
     if (error) throw error; return true
   } catch(e) { return false }
 }
+
+// ── TRAINING PLAN (dinamico da Supabase) ───────────────────────────
+export const loadActivePlan = async () => {
+  const userId = await uid()
+  if (!userId) return null
+  try {
+    const { data, error } = await db
+      .from('training_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) throw error
+    return data || null
+  } catch(e) { return null }
+}
+
+export const loadTrainingCalendar = async () => {
+  const userId = await uid()
+  if (!userId) return []
+  try {
+    const { data: plan } = await db
+      .from('training_plans')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!plan) return []
+    const { data, error } = await db
+      .from('training_calendar')
+      .select('*')
+      .eq('plan_id', plan.id)
+      .eq('user_id', userId)
+      .order('day_date', { ascending: true })
+    if (error) throw error
+    return data || []
+  } catch(e) { return [] }
+}

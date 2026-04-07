@@ -5,7 +5,7 @@ import {
   C, ss, SESSION_COLORS, drawer,
   todayStr, fmtDate, fmtDateShort, fmtDayName,
 } from '../constants'
-import { TRAINING_PLAN, getTodayCalEntry } from '../data/trainingPlan'
+import { TRAINING_PLAN } from '../data/trainingPlan'
 import { saveTrainingLog, loadTrainingLogs, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData, saveRunningLog, loadRunningLogs, loadClimbingSessions, loadAscents, loadCrags } from '../lib/supabase'
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
@@ -1099,7 +1099,7 @@ function CorsaSection({ runningLogs, onRefresh }) {
 }
 
 // ── MAIN ALLENAMENTO ───────────────────────────────────────────────
-export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange, onOpenFitnessTests }) {
+export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange, onOpenFitnessTests, activePlan, trainingCalendar = [] }) {
   const [sub, setSub]                     = React.useState(initialSub || 'oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
   const [sessionNotes,  setSessionNotes]  = React.useState([])
@@ -1108,7 +1108,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
   const [crags,         setCrags]         = React.useState([])
   const [ascents,       setAscents]       = React.useState([])
   const today      = todayStr()
-  const todayEntry = getTodayCalEntry()
+  const todayEntry = trainingCalendar.find(e => e.day_date === today) || null
 
   React.useEffect(() => {
     if (initialSub && initialSub !== sub) setSub(initialSub)
@@ -1182,8 +1182,19 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
 
         <div style={ss.card}>
           <div style={ss.secLbl}>Questa settimana</div>
+          {trainingCalendar.length === 0 ? (
+            <div style={{ display:'flex', gap:'5px', paddingBottom:'4px' }}>
+              {[0,1,2,3,4,5,6].map(i => (
+                <div key={i} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'4px' }}>
+                  <div style={{ width:'28px', height:'8px', borderRadius:'4px', background:C.border, opacity:0.5 }} />
+                  <div style={{ width:'36px', height:'36px', borderRadius:'9px', background:C.border, opacity:0.3 }} />
+                  <div style={{ width:'20px', height:'7px', borderRadius:'4px', background:C.border, opacity:0.5 }} />
+                </div>
+              ))}
+            </div>
+          ) : (
           <div style={{ display:'flex', gap:'5px', overflowX:'auto', paddingBottom:'4px' }}>
-            {TRAINING_PLAN.calendar.filter(e => e.day_date >= today).slice(0, 8).map((entry, i) => {
+            {trainingCalendar.filter(e => e.day_date >= today).slice(0, 8).map((entry, i) => {
               const changed = sessionNotes.find(n =>
                 n.note_date === entry.day_date && n.original_session && n.original_session !== n.session_type
               )
@@ -1207,6 +1218,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
               )
             })}
           </div>
+          )}
         </div>
 
         {coachNoteOggi && <OggiCoachNoteCard note={coachNoteOggi} />}
@@ -1216,17 +1228,28 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
     )
   }
 
-  const renderPiano = () => (
+  const renderPiano = () => {
+    if (trainingCalendar.length === 0) {
+      return (
+        <div style={ss.body}>
+          <div style={{ fontSize:'13px', color:C.muted, textAlign:'center', padding:'32px 0' }}>
+            Caricamento piano in corso...
+          </div>
+        </div>
+      )
+    }
+    const planWeeks = [...new Set(trainingCalendar.map(e => e.week))].sort((a, b) => a - b)
+    return (
     <div style={ss.body}>
       <div style={{ fontSize:'11px', color:C.muted, marginBottom:'16px', lineHeight:'1.5' }}>
-        {TRAINING_PLAN.meta.goal} · 4 settimane · microcicli da 8 giorni
+        {TRAINING_PLAN.meta.goal} · {planWeeks.length} {planWeeks.length === 1 ? 'settimana' : 'settimane'}
       </div>
-      {[1, 2, 3, 4].map(w => {
-        const entries = TRAINING_PLAN.calendar.filter(e => e.week === w)
+      {planWeeks.map(w => {
+        const entries = trainingCalendar.filter(e => e.week === w)
         return (
           <div key={w} style={{ marginBottom:'20px' }}>
-            <div style={{ fontSize:'11px', fontWeight:'700', color: w === 4 ? C.amber : C.violetLight, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'8px' }}>
-              Settimana {w}{w === 4 ? ' — Scarico' : ''}
+            <div style={{ fontSize:'11px', fontWeight:'700', color: entries[0]?.scarico ? C.amber : C.violetLight, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'8px' }}>
+              Settimana {w}{entries[0]?.scarico ? ' — Scarico' : ''}
             </div>
             {entries.map((entry, i) => {
               const changedNote = sessionNotes.find(n =>
@@ -1261,7 +1284,8 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
         )
       })}
     </div>
-  )
+    )
+  }
 
   return (
     <div style={{ paddingBottom: '160px', maxWidth: '448px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
