@@ -323,6 +323,21 @@ function StanotteNightCard({ healthLogs, today }) {
   )
 }
 
+function CoachMessageCard({ message }) {
+  if (!message) return null
+  return (
+    <CollapsibleHistory
+      title="Il tuo coach"
+      titleIcon="self_improvement"
+      defaultOpen={false}
+    >
+      <p className="text-sm text-on-surface-variant leading-relaxed pt-1">
+        {message}
+      </p>
+    </CollapsibleHistory>
+  )
+}
+
 export default function HomeSection({
   weeklyPlan,
   fitSessions,
@@ -406,6 +421,8 @@ export default function HomeSection({
           <ReadinessGauge value={readiness} />
           {chips}
         </div>
+
+        <CoachMessageCard message={dailyScoreToday?.coach_message ?? null} />
 
         {todayEntry && todayDisplayType !== 'REST' && (() => {
           const sc = SESSION_COLORS[todayDisplayType] || SESSION_COLORS.REST
