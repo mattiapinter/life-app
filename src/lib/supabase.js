@@ -358,23 +358,7 @@ export const saveHrvLog = async (log) => {
       .from('hrv_logs')
       .upsert([{ ...log, user_id: userId }], { onConflict: 'log_date,user_id' })
     if (error) throw error
-
-    // Notifica n8n per ricalcolare daily_scores e mandare Telegram
-    try {
-      await fetch('http://89.167.27.115:5678/webhook/hrv-inserted', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hrv_value: log.hrv_value,
-          log_date:  log.log_date,
-        }),
-      })
-    } catch(e) {
-      // Non bloccare il salvataggio se n8n non risponde
-      console.warn('n8n webhook non raggiungibile:', e)
-    }
-
-    return true
+      return true
   } catch(e) { return false }
 }
 export const loadHrvLogs = async () => {
