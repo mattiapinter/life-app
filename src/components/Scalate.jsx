@@ -933,65 +933,72 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
         />
       )}
 
-      <div style={{ ...ss.hdr, background: C.greenBg, borderBottomColor: C.greenBorder }}>
-        <div style={{ fontSize: '12px', color: C.green, cursor: 'pointer', marginBottom: '12px', fontWeight: '500' }} onClick={onBack}>← Scalate</div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '.08em', textTransform: 'uppercase', color: C.green, marginBottom: '4px' }}>
-              {crag.region || 'Falesia'}{crag.rock_type ? ` · ${crag.rock_type}` : ''}
-            </div>
-            <div style={{ fontSize: '26px', fontWeight: '700', color: C.text, letterSpacing: '-.02em' }}>{crag.name}</div>
-          </div>
-          <div style={{ fontSize: '11px', color: C.green, cursor: 'pointer', padding: '6px 12px', border: `1px solid ${C.greenBorder}`, borderRadius: '8px', marginLeft: '12px', flexShrink: 0 }}
-            onClick={() => setShowEdit(true)}>Modifica</div>
+      <div className="px-6 pb-6" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 52px)' }}>
+        <div className="flex items-center justify-between mb-6">
+          <button type="button" onClick={onBack}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
+            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>arrow_back</span>
+          </button>
+          <button type="button" onClick={() => setShowEdit(true)}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
+            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>edit</span>
+          </button>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+        {(crag.region || crag.rock_type) && (
+          <p className="text-xs font-bold uppercase tracking-widest text-tertiary mb-2">
+            {crag.region}{crag.rock_type ? ` · ${crag.rock_type}` : ''}
+          </p>
+        )}
+
+        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-3">
+          {crag.name}
+        </h1>
+
+        <div className="flex flex-wrap gap-2 mb-4">
           {crag.grade_min && crag.grade_max && (
-            <div style={{ padding: '3px 10px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.greenBorder}`, borderRadius: '999px', fontSize: '10px', color: C.greenLight, fontWeight: '600' }}>
+            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-tertiary/10 border border-tertiary/20 text-tertiary">
               {crag.grade_min} → {crag.grade_max}
-            </div>
+            </span>
           )}
           {crag.exposure && (
-            <div style={{ padding: '3px 10px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.blueBorder}`, borderRadius: '999px', fontSize: '10px', color: C.blueLight, fontWeight: '700', fontFamily: 'monospace' }}>
+            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-mono">
               {crag.exposure}
-            </div>
+            </span>
           )}
           {(crag.styles || []).map(s => {
             const cs = CRAG_STYLES.find(x => x.id === s)
             return cs ? (
-              <div key={s} style={{ padding: '3px 10px', background: 'rgba(0,0,0,0.3)', border: `1px solid ${C.greenBorder}`, borderRadius: '999px', fontSize: '10px', color: C.greenLight }}>
+              <span key={s} className="text-xs font-semibold px-3 py-1.5 rounded-full bg-surface-container border border-outline-variant/20 text-on-surface-variant">
                 {cs.label}
-              </div>
+              </span>
             ) : null
           })}
-          <GpsButton
-            url={crag.gps_url}
-            onUrlChange={async (url) => {
-              await saveCrag({ ...crag, gps_url: url })
-              setCrag(p => ({ ...p, gps_url: url }))
-            }}
-          />
         </div>
 
-        <div style={{ display: 'flex', gap: '16px', marginTop: '14px' }}>
+        <div className="flex gap-5 mb-4">
           {[
             { v: cragSessions.length, l: 'sessioni' },
-            { v: cragAscents.length,  l: 'tiri totali' },
+            { v: cragAscents.length,  l: 'tiri' },
             { v: firstAscents.length, l: 'prime salite' },
+            ...(maxGrade ? [{ v: maxGrade, l: 'grado max' }] : []),
           ].map(it => (
-            <div key={it.l} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: it.l === 'prime salite' ? C.greenLight : C.text }}>{it.v}</div>
-              <div style={{ fontSize: '9px', color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>{it.l}</div>
+            <div key={it.l}>
+              <div className="font-headline text-xl font-extrabold text-on-surface">{it.v}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mt-0.5">{it.l}</div>
             </div>
           ))}
-          {maxGrade && (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: C.greenLight }}>{maxGrade}</div>
-              <div style={{ fontSize: '9px', color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>grado max</div>
-            </div>
-          )}
         </div>
+
+        <GpsButton
+          url={crag.gps_url}
+          onUrlChange={async (url) => {
+            await saveCrag({ ...crag, gps_url: url })
+            setCrag(p => ({ ...p, gps_url: url }))
+          }}
+        />
+
+        <div className="mt-5 h-px w-16 rounded-full bg-tertiary opacity-60" />
       </div>
 
       <div style={ss.body}>

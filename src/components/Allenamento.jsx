@@ -119,6 +119,10 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const [showCoach,    setShowCoach]    = React.useState(false)
   const [showWarmup,   setShowWarmup]   = React.useState(false)
   const [showCooldown, setShowCooldown] = React.useState(false)
+  const [useWarmup2,   setUseWarmup2]   = React.useState(() => {
+    const initType = savedChange?.session_type || entry.session_type
+    return ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(initType)
+  })
   const [showChange,   setShowChange]   = React.useState(false)
   const [sessionNote,  setSessionNote]  = React.useState('')
   const [sessionRpe,   setSessionRpe]   = React.useState('')
@@ -148,6 +152,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const week         = entry.week
   const needsWarmup2 = ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(sessionType)
   const warmupData   = needsWarmup2 ? TRAINING_PLAN.warmup_2 : TRAINING_PLAN.warmup_1
+  const isChanged    = !!savedChange
 
   const saveSession = async () => {
     if (saving || savedMsg) return
@@ -462,59 +467,102 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       {showCoach && <CoachNoteModal sessionType={sessionType} sessionLabel={sc.label} accentColor={sc.text} note={coachNote} onClose={() => setShowCoach(false)} />}
       {showChange && <ChangeSessionDrawer currentEntry={entry} onClose={() => setShowChange(false)} onChanged={(type) => setOverrideType(type)} />}
 
-      <div style={{ ...ss.hdr, background: sc.bg, borderBottomColor: sc.border }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
-          <div style={{ fontSize:'12px', color: sc.text, cursor:'pointer', fontWeight:'500' }} onClick={onBack}>← Piano</div>
-        </div>
-        <div style={{ fontSize:'10px', fontWeight:'600', letterSpacing:'.1em', textTransform:'uppercase', color: sc.text, marginBottom:'6px' }}>
-          Settimana {week} · {fmtDateShort(entry.day_date)}{entry.scarico ? ' · SCARICO' : ''}
-        </div>
-        <div style={{ fontSize:'26px', fontWeight:'700', color:C.text, letterSpacing:'-.02em' }}>{sc.label}</div>
-        {entry.also && <div style={{ fontSize:'11px', color: sc.text, marginTop:'4px', opacity:0.8 }}>+ {SESSION_COLORS[entry.also]?.label}</div>}
-        <div style={{ marginTop:'14px', display:'flex', gap:'8px' }}>
-          <div style={{ flex:1, padding:'9px 12px', background:'rgba(0,0,0,0.3)', borderRadius:'10px', fontSize:'11px', fontWeight:'600', color: sc.text, textAlign:'center', cursor:'pointer', border:`1px solid ${sc.border}` }}
-            onClick={() => setShowWarmup(!showWarmup)}>
-            {showWarmup ? '▲' : '▼'} Riscaldamento
-          </div>
+      <div className="px-6 pb-6" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 52px)' }}>
+        <div className="flex items-center justify-between mb-6">
+          <button type="button" onClick={onBack}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
+            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>arrow_back</span>
+          </button>
           {sessionType !== 'REST' && (
-            <div style={{ padding:'9px 12px', background:'rgba(0,0,0,0.3)', borderRadius:'10px', fontSize:'11px', fontWeight:'600', color: sc.text, cursor:'pointer', border:`1px solid ${sc.border}`, display:'flex', alignItems:'center', gap:'6px' }}
-              onClick={() => setShowCoach(true)}>
-              <IcoInfo col={sc.text} /> Coach
+            <button type="button" onClick={() => setShowCoach(true)}
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: sc.text }}>info</span>
+            </button>
+          )}
+        </div>
+        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: sc.text }}>
+          Settimana {week}{entry.scarico ? ' · Scarico' : ''}
+        </p>
+        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-3">
+          {sc.label}
+        </h1>
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-surface-container border border-outline-variant/20 text-on-surface-variant">
+            {fmtDateShort(entry.day_date)}
+          </span>
+          {entry.also && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-full border text-on-surface-variant"
+              style={{ borderColor: sc.border, background: sc.bg }}>
+              + {SESSION_COLORS[entry.also]?.label}
+            </span>
+          )}
+          {entry.scarico && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300">
+              Settimana scarico
+            </span>
+          )}
+          {isChanged && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24' }}>
+              Modificato
+            </span>
+          )}
+        </div>
+        <div className="mt-5 h-px w-16 rounded-full" style={{ background: sc.text, opacity: 0.6 }} />
+      </div>
+
+      <div style={ss.body}>
+        {/* Riscaldamento — prima card nel corpo, collassabile */}
+        <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low overflow-hidden mb-5">
+          <button type="button" onClick={() => setShowWarmup(v => !v)}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left">
+            <span className="material-symbols-outlined text-on-surface-variant text-xl">
+              {showWarmup ? 'expand_less' : 'expand_more'}
+            </span>
+            <span className="material-symbols-outlined text-xl" style={{ color: sc.text }}>heat</span>
+            <span className="flex-1 text-sm font-bold uppercase tracking-widest text-on-surface">Riscaldamento</span>
+            {!needsWarmup2 && (
+              <div className="flex gap-1 text-[10px]" onClick={e => e.stopPropagation()}>
+                <span
+                  className={`px-2 py-1 rounded-full font-bold cursor-pointer ${!useWarmup2 ? 'bg-primary/20 text-primary' : 'text-on-surface-variant'}`}
+                  onClick={() => setUseWarmup2(false)}>Casa</span>
+                <span
+                  className={`px-2 py-1 rounded-full font-bold cursor-pointer ${useWarmup2 ? 'bg-primary/20 text-primary' : 'text-on-surface-variant'}`}
+                  onClick={() => setUseWarmup2(true)}>Falesia</span>
+              </div>
+            )}
+          </button>
+          {showWarmup && (
+            <div className="px-4 pb-4 pt-1 border-t border-outline-variant/10">
+              {useWarmup2 ? (
+                <>
+                  <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px', marginTop:'8px' }}>Falesia (23 min)</div>
+                  {TRAINING_PLAN.warmup_2.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)}
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px', marginTop:'8px' }}>Casa / Palestra (20 min)</div>
+                  {TRAINING_PLAN.warmup_1.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)}
+                  <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', margin:'14px 0 8px' }}>Trave (10 min)</div>
+                  {TRAINING_PLAN.warmup_1.trave.map((t, i) => (
+                    <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:'11px', fontWeight:'500', color:C.text }}>{t.grip}</div>
+                        <div style={{ fontSize:'10px', color:C.hint, marginTop:'1px' }}>{t.exercise}</div>
+                      </div>
+                      <div style={{ textAlign:'right', marginLeft:'8px', display:'flex', alignItems:'center', gap:'8px' }}>
+                        <div>
+                          <div style={{ fontSize:'10px', color:C.violet }}>{t.protocol}</div>
+                          <div style={{ fontSize:'10px', color:C.hint }}>{t.load}</div>
+                        </div>
+                        <VideoButton exerciseName={t.grip} videos={videos} onVideosChange={onVideosChange} />
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
-      </div>
-
-      {showWarmup && (
-        <div style={{ background:C.surface, borderBottom:`1px solid ${C.border}`, padding:'16px 24px' }}>
-          <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px' }}>
-            {needsWarmup2 ? 'Riscaldamento 2 — Falesia (23 min)' : 'Riscaldamento 1 — Casa/Palestra (20 min)'}
-          </div>
-          {warmupData.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)}
-          {!needsWarmup2 && (
-            <>
-              <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', margin:'14px 0 8px' }}>Trave (10 min)</div>
-              {TRAINING_PLAN.warmup_1.trave.map((t, i) => (
-                <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:'11px', fontWeight:'500', color:C.text }}>{t.grip}</div>
-                    <div style={{ fontSize:'10px', color:C.hint, marginTop:'1px' }}>{t.exercise}</div>
-                  </div>
-                  <div style={{ textAlign:'right', marginLeft:'8px', display:'flex', alignItems:'center', gap:'8px' }}>
-                    <div>
-                      <div style={{ fontSize:'10px', color:C.violet }}>{t.protocol}</div>
-                      <div style={{ fontSize:'10px', color:C.hint }}>{t.load}</div>
-                    </div>
-                    <VideoButton exerciseName={t.grip} videos={videos} onVideosChange={onVideosChange} />
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-      )}
-
-      <div style={ss.body}>
           {sessionType === 'PESI'             && renderPESI()}
           {sessionType === 'PALESTRA'         && renderPALESTRA()}
           {sessionType === 'CORSA'            && renderCORSA()}
@@ -1124,15 +1172,36 @@ function PastSessionDetail({ entry, trainingLogs, sessionNotes, onBack, onOpenFu
 
   return (
     <div>
-      <div style={{ ...ss.hdr, background: sc.bg, borderBottomColor: sc.border }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-          <div style={{ fontSize: '12px', color: sc.text, cursor: 'pointer', fontWeight: '500' }} onClick={onBack}>← Piano</div>
+      <div className="px-6 pb-6" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 52px)' }}>
+        <div className="flex items-center mb-6">
+          <button type="button" onClick={onBack}
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
+            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>arrow_back</span>
+          </button>
         </div>
-        <div style={{ fontSize: '10px', fontWeight: '600', letterSpacing: '.1em', textTransform: 'uppercase', color: sc.text, marginBottom: '6px' }}>
-          Settimana {entry.week} · {fmtDateShort(entry.day_date)}{entry.scarico ? ' · SCARICO' : ''}
+        <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: sc.text }}>
+          Settimana {entry.week}{entry.scarico ? ' · Scarico' : ''}
+        </p>
+        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-3">
+          {sc.label}
+        </h1>
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-surface-container border border-outline-variant/20 text-on-surface-variant">
+            {fmtDateShort(entry.day_date)}
+          </span>
+          {entry.also && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-full border text-on-surface-variant"
+              style={{ borderColor: sc.border, background: sc.bg }}>
+              + {SESSION_COLORS[entry.also]?.label}
+            </span>
+          )}
+          {entry.scarico && (
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300">
+              Settimana scarico
+            </span>
+          )}
         </div>
-        <div style={{ fontSize: '26px', fontWeight: '700', color: C.text, letterSpacing: '-.02em' }}>{sc.label}</div>
-        {entry.also && <div style={{ fontSize: '11px', color: sc.text, marginTop: '4px', opacity: 0.8 }}>+ {SESSION_COLORS[entry.also]?.label}</div>}
+        <div className="mt-5 h-px w-16 rounded-full" style={{ background: sc.text, opacity: 0.6 }} />
       </div>
 
       <div style={ss.body}>

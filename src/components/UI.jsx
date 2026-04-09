@@ -113,35 +113,17 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
     <>
       {existing ? (
         <div
-          style={{
-            width: '32px', height: '32px', borderRadius: '50%',
-            background: C.primaryBgSolid,
-            border: `1px solid ${C.primaryBorder}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', flexShrink: 0, transition: 'transform 0.2s',
-          }}
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/15 border border-primary/30 cursor-pointer flex-shrink-0 active:scale-90 transition-transform"
           onClick={handlePlay}
-          onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.9)' }}
-          onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '16px', color: C.primaryLight }}>play_arrow</span>
+          <span className="material-symbols-outlined text-primary" style={{ fontSize: '16px' }}>play_arrow</span>
         </div>
       ) : (
         <div
-          style={{
-            width: '32px', height: '32px', borderRadius: '50%',
-            background: C.surface,
-            border: `1px solid ${C.border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', flexShrink: 0, transition: 'transform 0.2s',
-          }}
+          className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant cursor-pointer flex-shrink-0 active:scale-90 transition-transform"
           onClick={() => setShowModal(true)}
-          onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.9)' }}
-          onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: '16px', color: C.hint }}>add</span>
+          <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '16px' }}>add</span>
         </div>
       )}
 
