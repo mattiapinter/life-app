@@ -119,10 +119,9 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const [showCoach,    setShowCoach]    = React.useState(false)
   const [showWarmup,   setShowWarmup]   = React.useState(false)
   const [showCooldown, setShowCooldown] = React.useState(false)
-  const [useWarmup2,   setUseWarmup2]   = React.useState(() => {
-    const initType = savedChange?.session_type || entry.session_type
-    return ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(initType)
-  })
+  const [useWarmup2,   setUseWarmup2]   = React.useState(
+    () => ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(entry.session_type)
+  )
   const [showChange,   setShowChange]   = React.useState(false)
   const [sessionNote,  setSessionNote]  = React.useState('')
   const [sessionRpe,   setSessionRpe]   = React.useState('')
