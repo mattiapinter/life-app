@@ -327,8 +327,8 @@ function CoachMessageCard({ message }) {
   if (!message) return null
   return (
     <CollapsibleHistory
-      title="Il tuo coach"
-      titleIcon="self_improvement"
+      title="Briefing"
+      titleIcon="psychiatry"
       defaultOpen={false}
     >
       <p className="text-sm text-on-surface-variant leading-relaxed pt-1">
@@ -450,10 +450,9 @@ export default function HomeSection({
                 )}
               </div>
               {badgeText && (
-                <div
-                  className="mb-3 w-full rounded-lg border border-outline-variant/20 px-3 py-2.5 text-left text-[10px] font-semibold uppercase leading-snug tracking-wide text-on-surface"
-                  style={{ background: 'rgba(0,0,0,0.22)' }}>
-                  {badgeText}
+                <div className="flex items-center gap-1.5 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: sc.text }} />
+                  <span className="text-[10px] font-semibold text-on-surface-variant">{badgeText}</span>
                 </div>
               )}
               <h3 className="mb-2 font-headline text-2xl font-extrabold tracking-tight text-on-surface">
