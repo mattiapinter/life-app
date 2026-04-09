@@ -112,67 +112,36 @@ export function VideoButton({ exerciseName, videos, onVideosChange }) {
   return (
     <>
       {existing ? (
-        <div style={{ display:'flex', gap:'6px', flexShrink:0, whiteSpace:'nowrap' }}>
-          <div
-            style={{
-              display:'flex',
-              alignItems:'center',
-              gap:'5px',
-              padding:'6px 12px',
-              background:C.primaryBgSolid,
-              border:`1px solid ${C.primaryBorder}`,
-              borderRadius:'10px',
-              cursor:'pointer',
-              fontSize:'11px',
-              color:C.primaryLight,
-              fontWeight:'700',
-              whiteSpace:'nowrap',
-              transition:'all 0.2s',
-              boxShadow:`0 2px 8px ${C.primaryGlow}`,
-            }}
-            onClick={handlePlay}
-          >
-            <IcoPlay col={C.primary} /> Video
-          </div>
-          <div
-            style={{
-              padding:'6px 8px',
-              background:C.surface,
-              border:`1px solid ${C.border}`,
-              borderRadius:'10px',
-              cursor:'pointer',
-              flexShrink:0,
-              transition:'transform 0.2s',
-            }}
-            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.9)'}
-            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-            onClick={() => setShowModal(true)}
-          >
-            <IcoEdit />
-          </div>
+        <div
+          style={{
+            width: '32px', height: '32px', borderRadius: '50%',
+            background: C.primaryBgSolid,
+            border: `1px solid ${C.primaryBorder}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', flexShrink: 0, transition: 'transform 0.2s',
+          }}
+          onClick={handlePlay}
+          onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.9)' }}
+          onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', color: C.primaryLight }}>play_arrow</span>
         </div>
       ) : (
         <div
           style={{
-            display:'flex',
-            alignItems:'center',
-            gap:'5px',
-            padding:'6px 12px',
-            background:'transparent',
-            border:`1.5px dashed ${C.hint}`,
-            borderRadius:'10px',
-            cursor:'pointer',
-            fontSize:'11px',
-            color:C.hint,
-            whiteSpace:'nowrap',
-            flexShrink:0,
-            transition:'all 0.2s',
-            fontWeight:'600',
+            width: '32px', height: '32px', borderRadius: '50%',
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', flexShrink: 0, transition: 'transform 0.2s',
           }}
           onClick={() => setShowModal(true)}
+          onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.9)' }}
+          onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
         >
-          + video
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', color: C.hint }}>add</span>
         </div>
       )}
 

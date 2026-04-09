@@ -1,6 +1,15 @@
 import React from 'react'
-import { C } from '../constants'
+import { C, drawer } from '../constants'
 import { VideoButton } from './UI'
+
+const EXERCISE_TRANSLATIONS = {
+  'Goblet squat': 'goblet squat',
+  'Panca piana bilanciere': 'bench press',
+  'Stacco da terra': 'deadlift',
+  'Rematore manubri': 'dumbbell row',
+  'Crunch libretto': 'crunch',
+  'Arch body': 'back extension',
+}
 
 // ── PESI ROW ──────────────────────────────────────────────────────
 // FIX: aggiunto feedback visivo (flash bordo verde) quando il valore
@@ -24,6 +33,32 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
   // FIX: tiene traccia dei set che hanno appena ricevuto un valore propagato
   // per mostrare il flash verde per 600ms
   const [flashedSets, setFlashedSets] = React.useState(new Set())
+
+  const [gifOpen,    setGifOpen]    = React.useState(false)
+  const [gifUrl,     setGifUrl]     = React.useState(undefined)
+  const [gifLoading, setGifLoading] = React.useState(false)
+  const gifCacheRef = React.useRef({})
+
+  const handleOpenGif = async () => {
+    setGifOpen(true)
+    if (gifCacheRef.current[ex.name] !== undefined) {
+      setGifUrl(gifCacheRef.current[ex.name])
+      return
+    }
+    setGifLoading(true)
+    try {
+      const term = EXERCISE_TRANSLATIONS[ex.name] || ex.name
+      const res  = await fetch(`https://wger.de/api/v2/exercise/?format=json&language=2&limit=5&offset=0&term=${encodeURIComponent(term)}`)
+      const data = await res.json()
+      const url  = data.results?.[0]?.images?.[0]?.image ?? null
+      gifCacheRef.current[ex.name] = url
+      setGifUrl(url)
+    } catch {
+      gifCacheRef.current[ex.name] = null
+      setGifUrl(null)
+    }
+    setGifLoading(false)
+  }
 
   const triggerFlash = (indices) => {
     setFlashedSets(new Set(indices))
@@ -106,7 +141,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>{ex.name}</div>
+            <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, cursor: 'pointer' }} onClick={handleOpenGif}>{ex.name}</div>
             <VideoButton exerciseName={ex.name} videos={videos} onVideosChange={onVideosChange} />
           </div>
           <div style={{ fontSize: '10px', color: C.hint, marginTop: '3px' }}>
@@ -177,7 +212,51 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
           opacity: 1,
           transition: 'opacity 0.3s ease',
         }}>
-          ✓ Copiato ai set {Array.from(flashedSets).map(i => i + 1).join(', ')}
+          Copiato ai set {Array.from(flashedSets).map(i => i + 1).join(', ')}
+        </div>
+      )}
+
+      {gifOpen && (
+        <div
+          style={{ ...drawer.overlay(), backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+          onClick={() => setGifOpen(false)}
+        >
+          <div
+            className="drawer-enter"
+            style={{ ...drawer.sheet }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ ...drawer.sheetHeader, justifyContent: 'flex-end' }}>
+              <div
+                style={{ cursor: 'pointer', padding: '6px', borderRadius: '8px', background: C.bg, border: `1px solid ${C.border}` }}
+                onClick={() => setGifOpen(false)}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', color: C.hint, display: 'block' }}>close</span>
+              </div>
+            </div>
+            <div style={{ ...drawer.sheetScroll }}>
+              {gifLoading ? (
+                <div style={{ height: '260px', borderRadius: '12px', background: C.bg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '12px', color: C.hint }}>Caricamento...</span>
+                </div>
+              ) : gifUrl ? (
+                <img
+                  src={gifUrl}
+                  alt={ex.name}
+                  style={{ width: '100%', height: '260px', objectFit: 'cover', borderRadius: '12px', display: 'block' }}
+                />
+              ) : (
+                <div style={{ height: '260px', borderRadius: '12px', background: C.bg, border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '40px', color: C.hint }}>fitness_center</span>
+                  <span style={{ fontSize: '11px', color: C.hint }}>Nessuna immagine disponibile</span>
+                </div>
+              )}
+              <div style={{ marginTop: '16px', fontSize: '17px', fontWeight: '700', color: C.text }}>{ex.name}</div>
+              <div style={{ marginTop: '6px', fontSize: '12px', color: C.hint, lineHeight: '1.7' }}>
+                Tempo {ex.tempo} · {numSets} × {wd.reps} reps{wd.rpe ? ` · RPE ${wd.rpe}` : ''}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
