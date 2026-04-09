@@ -450,9 +450,9 @@ export default function HomeSection({
                 )}
               </div>
               {badgeText && (
-                <div className="flex items-center gap-1.5 mb-3">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: sc.text }} />
-                  <span className="text-[10px] font-semibold text-on-surface-variant">{badgeText}</span>
+                <div className="flex items-center gap-1 mb-2">
+                  <div className="w-1 h-1 rounded-full opacity-60" style={{ background: sc.text }} />
+                  <span className="text-[9px] font-medium tracking-wide text-on-surface-variant/60">{badgeText}</span>
                 </div>
               )}
               <h3 className="mb-2 font-headline text-2xl font-extrabold tracking-tight text-on-surface">
