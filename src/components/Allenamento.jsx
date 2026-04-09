@@ -466,8 +466,8 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       {showCoach && <CoachNoteModal sessionType={sessionType} sessionLabel={sc.label} accentColor={sc.text} note={coachNote} onClose={() => setShowCoach(false)} />}
       {showChange && <ChangeSessionDrawer currentEntry={entry} onClose={() => setShowChange(false)} onChanged={(type) => setOverrideType(type)} />}
 
-      <div className="px-6 pb-6" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 52px)' }}>
-        <div className="flex items-center justify-between mb-6">
+      <div className="px-6 pb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
+        <div className="flex items-center justify-between mb-3">
           <button type="button" onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
             <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>arrow_back</span>
@@ -482,7 +482,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
         <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: sc.text }}>
           Settimana {week}{entry.scarico ? ' · Scarico' : ''}
         </p>
-        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-3">
+        <h1 className="font-headline text-4xl font-extrabold tracking-tight mb-3" style={{ color: sc.text }}>
           {sc.label}
         </h1>
         <div className="flex flex-wrap gap-2">
@@ -1171,8 +1171,8 @@ function PastSessionDetail({ entry, trainingLogs, sessionNotes, onBack, onOpenFu
 
   return (
     <div>
-      <div className="px-6 pb-6" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 52px)' }}>
-        <div className="flex items-center mb-6">
+      <div className="px-6 pb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
+        <div className="flex items-center mb-3">
           <button type="button" onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
             <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>arrow_back</span>
@@ -1181,7 +1181,7 @@ function PastSessionDetail({ entry, trainingLogs, sessionNotes, onBack, onOpenFu
         <p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: sc.text }}>
           Settimana {entry.week}{entry.scarico ? ' · Scarico' : ''}
         </p>
-        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface mb-3">
+        <h1 className="font-headline text-4xl font-extrabold tracking-tight mb-3" style={{ color: sc.text }}>
           {sc.label}
         </h1>
         <div className="flex flex-wrap gap-2">
