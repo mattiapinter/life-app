@@ -90,6 +90,7 @@ function WarmupTimer({ steps, title, onClose }) {
   const [done,         setDone]         = React.useState(false)
   const [elapsed,      setElapsed]      = React.useState(0)
   const startRef = React.useRef(Date.now())
+  const isFirstStep = React.useRef(true)
 
   const cur = steps[stepIdx]
 
@@ -99,6 +100,12 @@ function WarmupTimer({ steps, title, onClose }) {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
+
+  // Start beep when a new exercise begins (skip on first mount)
+  React.useEffect(() => {
+    if (isFirstStep.current) { isFirstStep.current = false; return }
+    playBeep(1100, 0.18)
+  }, [stepIdx])
 
   // Main countdown
   React.useEffect(() => {
@@ -114,6 +121,7 @@ function WarmupTimer({ steps, title, onClose }) {
       setTransitioning(true); setTransCount(3)
       return
     }
+    if (timeLeft <= 3) playBeep(660, 0.1)
     const id = setTimeout(() => setTimeLeft(t => t - 1), 1000)
     return () => clearTimeout(id)
   }, [timeLeft, paused, transitioning, done])
