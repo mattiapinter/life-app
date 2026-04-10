@@ -49,16 +49,32 @@ function buildTimerSteps(exercises) {
   return steps.filter(s => s.name && s.duration > 0)
 }
 
+// Module-level AudioContext — created once during user gesture, reused for all beeps
+let _audioCtx = null
+
+function unlockAudio() {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    // Play silent buffer to unblock iOS autoplay policy
+    const buf = _audioCtx.createBuffer(1, 1, 22050)
+    const src = _audioCtx.createBufferSource()
+    src.buffer = buf; src.connect(_audioCtx.destination); src.start(0)
+    _audioCtx.resume()
+  } catch {}
+}
+
 function playBeep(freq = 880, dur = 0.4) {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain); gain.connect(ctx.destination)
-    osc.frequency.value = freq; osc.type = 'sine'
-    gain.gain.setValueAtTime(0.3, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
-    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + dur)
+    if (!_audioCtx) return
+    _audioCtx.resume().then(() => {
+      const osc = _audioCtx.createOscillator()
+      const gain = _audioCtx.createGain()
+      osc.connect(gain); gain.connect(_audioCtx.destination)
+      osc.frequency.value = freq; osc.type = 'sine'
+      gain.gain.setValueAtTime(0.3, _audioCtx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + dur)
+      osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + dur)
+    })
   } catch {}
 }
 
@@ -184,6 +200,10 @@ function WarmupTimer({ steps, title, onClose }) {
                 Salta
               </button>
             </div>
+            <button type="button" onClick={onClose}
+              style={{ marginTop:'24px', fontSize:'13px', fontWeight:'600', color:'#928f9f', background:'none', border:'none', cursor:'pointer', letterSpacing:'.04em' }}>
+              Termina
+            </button>
           </div>
 
           {transitioning && (
@@ -761,7 +781,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
                   const exs = useWarmup2
                     ? TRAINING_PLAN.warmup_2.exercises
                     : [...TRAINING_PLAN.warmup_1.exercises, ...TRAINING_PLAN.warmup_1.trave.map(t => ({ name: t.grip, duration: t.protocol }))]
-                  setTimerProps({ steps: buildTimerSteps(exs), title: 'Riscaldamento' })
+                  unlockAudio(); setTimerProps({ steps: buildTimerSteps(exs), title: 'Riscaldamento' })
                 }}
                 className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider active:scale-[0.98] transition-transform"
                 style={{ background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', boxShadow:'0 4px 16px rgba(198,191,255,0.2)', border:'none', cursor:'pointer' }}>
@@ -815,7 +835,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
                   <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px', marginTop:'8px' }}>15 min</div>
                   {TRAINING_PLAN.cooldown.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)}
                   <button type="button"
-                    onClick={() => setTimerProps({ steps: buildTimerSteps(TRAINING_PLAN.cooldown.exercises), title: 'Defaticamento' })}
+                    onClick={() => { unlockAudio(); setTimerProps({ steps: buildTimerSteps(TRAINING_PLAN.cooldown.exercises), title: 'Defaticamento' }) }}
                     className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider active:scale-[0.98] transition-transform"
                     style={{ background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', boxShadow:'0 4px 16px rgba(198,191,255,0.2)', border:'none', cursor:'pointer' }}>
                     Avvia defaticamento
@@ -1580,7 +1600,7 @@ function OggiWarmupCard({ videos, onVideosChange }) {
               const exs = palestra
                 ? [...TRAINING_PLAN.warmup_1.exercises, ...TRAINING_PLAN.warmup_1.trave.map(t => ({ name: t.grip, duration: t.protocol }))]
                 : TRAINING_PLAN.warmup_2.exercises
-              setTimerProps({ steps: buildTimerSteps(exs), title: 'Riscaldamento' })
+              unlockAudio(); setTimerProps({ steps: buildTimerSteps(exs), title: 'Riscaldamento' })
             }}
             className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider active:scale-[0.98] transition-transform"
             style={{ background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', boxShadow:'0 4px 16px rgba(198,191,255,0.2)', border:'none', cursor:'pointer' }}>
@@ -1631,7 +1651,7 @@ function OggiCooldownCard({ videos, onVideosChange }) {
         <div style={{ marginTop: 12 }}>
           {TRAINING_PLAN.cooldown.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)}
           <button type="button"
-            onClick={() => setTimerProps({ steps: buildTimerSteps(TRAINING_PLAN.cooldown.exercises), title: 'Defaticamento' })}
+            onClick={() => { unlockAudio(); setTimerProps({ steps: buildTimerSteps(TRAINING_PLAN.cooldown.exercises), title: 'Defaticamento' }) }}
             className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider active:scale-[0.98] transition-transform"
             style={{ background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', boxShadow:'0 4px 16px rgba(198,191,255,0.2)', border:'none', cursor:'pointer' }}>
             Avvia defaticamento
