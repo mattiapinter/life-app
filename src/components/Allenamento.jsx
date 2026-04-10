@@ -11,6 +11,201 @@ import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 import PesiRow from './PesiRow'
 
+// ── TIMER UTILITIES ────────────────────────────────────────────────
+function parseDuration(str) {
+  if (!str) return 30
+  const s = String(str).toLowerCase().trim()
+  if (s.includes('/')) return Math.max(10, parseInt(s) || 30)
+  const minM = s.match(/(\d+)\s*min/)
+  if (minM) return parseInt(minM[1]) * 60
+  const secM = s.match(/(\d+)\s*s\b/)
+  if (secM) return parseInt(secM[1])
+  const numM = s.match(/(\d+)/)
+  if (numM) {
+    const n = parseInt(numM[1])
+    if (s.includes('rep') || s.includes('rip')) return Math.max(30, n * 3)
+    return n > 0 ? n : 30
+  }
+  return 30
+}
+
+function isPerSide(str) {
+  return String(str || '').toLowerCase().includes('lato')
+}
+
+function buildTimerSteps(exercises) {
+  const steps = []
+  for (const ex of exercises) {
+    const name = ex.name || ex.grip || ''
+    const durStr = ex.duration || ex.reps || ex.protocol || ''
+    const duration = parseDuration(durStr)
+    if (isPerSide(durStr)) {
+      steps.push({ name, detail: durStr, side: 'Lato sinistro', duration })
+      steps.push({ name, detail: durStr, side: 'Lato destro', duration })
+    } else {
+      steps.push({ name, detail: durStr, duration })
+    }
+  }
+  return steps.filter(s => s.name && s.duration > 0)
+}
+
+function playBeep(freq = 880, dur = 0.4) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.frequency.value = freq; osc.type = 'sine'
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + dur)
+  } catch {}
+}
+
+// ── WARMUP/COOLDOWN TIMER ─────────────────────────────────────────
+function WarmupTimer({ steps, title, onClose }) {
+  const [stepIdx,      setStepIdx]      = React.useState(0)
+  const [timeLeft,     setTimeLeft]     = React.useState(steps[0]?.duration || 30)
+  const [paused,       setPaused]       = React.useState(false)
+  const [transitioning,setTransitioning]= React.useState(false)
+  const [transCount,   setTransCount]   = React.useState(3)
+  const [done,         setDone]         = React.useState(false)
+  const [elapsed,      setElapsed]      = React.useState(0)
+  const startRef = React.useRef(Date.now())
+
+  const cur = steps[stepIdx]
+
+  // Main countdown
+  React.useEffect(() => {
+    if (paused || transitioning || done) return
+    if (timeLeft <= 0) {
+      playBeep()
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200])
+      if (stepIdx + 1 >= steps.length) {
+        setElapsed(Math.floor((Date.now() - startRef.current) / 1000))
+        setDone(true)
+        return
+      }
+      setTransitioning(true); setTransCount(3)
+      return
+    }
+    const id = setTimeout(() => setTimeLeft(t => t - 1), 1000)
+    return () => clearTimeout(id)
+  }, [timeLeft, paused, transitioning, done])
+
+  // Transition countdown
+  React.useEffect(() => {
+    if (!transitioning) return
+    if (transCount <= 0) {
+      const next = stepIdx + 1
+      setStepIdx(next); setTimeLeft(steps[next].duration); setTransitioning(false)
+      return
+    }
+    const id = setTimeout(() => setTransCount(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [transitioning, transCount])
+
+  const handleSkip = () => {
+    playBeep(660, 0.15)
+    const next = stepIdx + 1
+    if (next >= steps.length) {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000))
+      setDone(true); return
+    }
+    setTransitioning(false); setStepIdx(next); setTimeLeft(steps[next].duration)
+  }
+
+  const R = 72, CIRC = 2 * Math.PI * R
+  const dashOffset = CIRC * (1 - timeLeft / (cur?.duration || 1))
+  const fmtTime = s => s >= 60 ? `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}` : String(s)
+  const fmtElapsed = s => { const m=Math.floor(s/60),sec=s%60; return m>0?`${m} min${sec>0?' '+sec+'s':''}`:`${sec}s` }
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:9999, background:'#131313', display:'flex', flexDirection:'column',
+      paddingTop:'env(safe-area-inset-top,0px)', paddingBottom:'env(safe-area-inset-bottom,0px)', boxSizing:'border-box' }}>
+      {done ? (
+        <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'32px', textAlign:'center' }}>
+          <span className="material-symbols-outlined" style={{ fontSize:'80px', color:'#4ae176', marginBottom:'20px' }}>check_circle</span>
+          <div style={{ fontSize:'22px', fontWeight:'800', color:'#e5e2e1', marginBottom:'8px', lineHeight:'1.2' }}>{title} completato</div>
+          <div style={{ fontSize:'13px', color:'#928f9f', marginBottom:'48px' }}>Durata: {fmtElapsed(elapsed)}</div>
+          <button type="button" onClick={onClose}
+            style={{ padding:'15px 48px', borderRadius:'14px', background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', fontSize:'15px', fontWeight:'800', border:'none', cursor:'pointer' }}>
+            Chiudi
+          </button>
+        </div>
+      ) : (
+        <>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', flexShrink:0 }}>
+            <button type="button" onClick={onClose}
+              style={{ width:'40px', height:'40px', borderRadius:'50%', background:'#201f1f', border:'1px solid #474553', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+              <span className="material-symbols-outlined" style={{ fontSize:'20px', color:'#c8c4d5' }}>close</span>
+            </button>
+            <div style={{ fontSize:'13px', fontWeight:'700', color:'#c8c4d5' }}>{stepIdx+1} di {steps.length}</div>
+            <div style={{ width:'40px' }} />
+          </div>
+
+          <div style={{ height:'3px', background:'#353534', margin:'0 20px', borderRadius:'99px', flexShrink:0 }}>
+            <div style={{ height:'100%', background:'#c6bfff', borderRadius:'99px', width:`${(stepIdx/steps.length)*100}%`, transition:'width 0.6s ease' }} />
+          </div>
+
+          <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 32px' }}>
+            <div style={{ fontSize:'26px', fontWeight:'800', color:'#e5e2e1', textAlign:'center', lineHeight:'1.2', marginBottom: cur?.side ? '6px' : '8px' }}>
+              {cur?.name}
+            </div>
+            {cur?.side && (
+              <div style={{ fontSize:'13px', fontWeight:'700', color:'#c6bfff', letterSpacing:'.05em', textTransform:'uppercase', marginBottom:'6px' }}>{cur.side}</div>
+            )}
+            {cur?.detail && (
+              <div style={{ fontSize:'13px', color:'#928f9f', marginBottom:'40px' }}>{cur.detail}</div>
+            )}
+
+            <div style={{ position:'relative', width:'180px', height:'180px', marginBottom:'40px' }}>
+              <svg width="180" height="180" viewBox="0 0 180 180">
+                <circle cx="90" cy="90" r={R} fill="none" stroke="#353534" strokeWidth="9" />
+                <circle cx="90" cy="90" r={R} fill="none" stroke="#c6bfff" strokeWidth="9"
+                  strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={dashOffset}
+                  style={{ transformOrigin:'90px 90px', transform:'rotate(-90deg)', transition: timeLeft>0 ? 'stroke-dashoffset 1s linear' : 'none' }} />
+              </svg>
+              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ fontSize:'44px', fontWeight:'800', color:'#e5e2e1', lineHeight:'1', fontFamily:"'Manrope',sans-serif" }}>{fmtTime(timeLeft)}</div>
+                {timeLeft < 60 && <div style={{ fontSize:'12px', color:'#928f9f', marginTop:'4px' }}>sec</div>}
+              </div>
+            </div>
+
+            <div style={{ display:'flex', gap:'12px' }}>
+              <button type="button" onClick={() => setPaused(p => !p)}
+                style={{ display:'flex', alignItems:'center', gap:'8px', padding:'13px 24px', borderRadius:'999px', background:'#201f1f', border:'1px solid #474553', fontSize:'14px', fontWeight:'700', color:'#e5e2e1', cursor:'pointer' }}>
+                <span className="material-symbols-outlined" style={{ fontSize:'20px' }}>{paused ? 'play_arrow' : 'pause'}</span>
+                {paused ? 'Riprendi' : 'Pausa'}
+              </button>
+              <button type="button" onClick={handleSkip}
+                style={{ display:'flex', alignItems:'center', gap:'8px', padding:'13px 24px', borderRadius:'999px', background:'#201f1f', border:'1px solid #474553', fontSize:'14px', fontWeight:'700', color:'#e5e2e1', cursor:'pointer' }}>
+                <span className="material-symbols-outlined" style={{ fontSize:'20px' }}>skip_next</span>
+                Salta
+              </button>
+            </div>
+          </div>
+
+          {transitioning && (
+            <div style={{ position:'absolute', inset:0, background:'rgba(19,19,19,0.96)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', zIndex:1 }}>
+              <div style={{ fontSize:'11px', fontWeight:'700', color:'#928f9f', textTransform:'uppercase', letterSpacing:'.12em', marginBottom:'20px' }}>Prossimo</div>
+              <div style={{ fontSize:'24px', fontWeight:'800', color:'#e5e2e1', textAlign:'center', marginBottom: steps[stepIdx+1]?.side ? '8px' : '32px', padding:'0 32px' }}>
+                {steps[stepIdx+1]?.name}
+              </div>
+              {steps[stepIdx+1]?.side && (
+                <div style={{ fontSize:'13px', fontWeight:'700', color:'#c6bfff', textTransform:'uppercase', letterSpacing:'.05em', marginBottom:'32px' }}>
+                  {steps[stepIdx+1].side}
+                </div>
+              )}
+              <div style={{ fontSize:'72px', fontWeight:'800', color:'#c6bfff', lineHeight:'1', fontFamily:"'Manrope',sans-serif" }}>{transCount}</div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 function getCoachNoteText(sessionType) {
   const raw = TRAINING_PLAN.coach_notes.sessions[sessionType]
   return raw && String(raw).trim() ? String(raw).trim() : null
@@ -119,6 +314,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const [showCoach,    setShowCoach]    = React.useState(false)
   const [showWarmup,   setShowWarmup]   = React.useState(false)
   const [showCooldown, setShowCooldown] = React.useState(false)
+  const [timerProps,   setTimerProps]   = React.useState(null)
   const [useWarmup2,   setUseWarmup2]   = React.useState(
     () => ['PLACCA_VERTICALE','STRAPIOMBO','DAY_PROJECT','STRAPIOMBO_TRAZIONI_SETT4'].includes(entry.session_type)
   )
@@ -463,6 +659,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
 
   return (
     <div>
+      {timerProps && <WarmupTimer steps={timerProps.steps} title={timerProps.title} onClose={() => setTimerProps(null)} />}
       {showCoach && <CoachNoteModal sessionType={sessionType} sessionLabel={sc.label} accentColor={sc.text} note={coachNote} onClose={() => setShowCoach(false)} />}
       {showChange && <ChangeSessionDrawer currentEntry={entry} onClose={() => setShowChange(false)} onChanged={(type) => setOverrideType(type)} />}
 
@@ -559,6 +756,17 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
                   ))}
                 </>
               )}
+              <button type="button"
+                onClick={() => {
+                  const exs = useWarmup2
+                    ? TRAINING_PLAN.warmup_2.exercises
+                    : [...TRAINING_PLAN.warmup_1.exercises, ...TRAINING_PLAN.warmup_1.trave.map(t => ({ name: t.grip, duration: t.protocol }))]
+                  setTimerProps({ steps: buildTimerSteps(exs), title: 'Riscaldamento' })
+                }}
+                className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider active:scale-[0.98] transition-transform"
+                style={{ background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', boxShadow:'0 4px 16px rgba(198,191,255,0.2)', border:'none', cursor:'pointer' }}>
+                Avvia riscaldamento
+              </button>
             </div>
           )}
         </div>
@@ -605,15 +813,13 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
               {showCooldown && (
                 <div className="px-4 pb-4 pt-1 border-t border-outline-variant/10">
                   <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px', marginTop:'8px' }}>15 min</div>
-                  {TRAINING_PLAN.cooldown.exercises.map((ex, i) => (
-                    <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 0', borderBottom:`1px solid ${C.border}` }}>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:'12px', fontWeight:'500', color:C.text }}>{ex.name}</div>
-                        {ex.note && <div style={{ fontSize:'10px', color:C.hint, marginTop:'1px' }}>{ex.note}</div>}
-                      </div>
-                      <div style={{ fontSize:'11px', color:C.muted, marginLeft:'8px' }}>{ex.duration}</div>
-                    </div>
-                  ))}
+                  {TRAINING_PLAN.cooldown.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)}
+                  <button type="button"
+                    onClick={() => setTimerProps({ steps: buildTimerSteps(TRAINING_PLAN.cooldown.exercises), title: 'Defaticamento' })}
+                    className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider active:scale-[0.98] transition-transform"
+                    style={{ background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', boxShadow:'0 4px 16px rgba(198,191,255,0.2)', border:'none', cursor:'pointer' }}>
+                    Avvia defaticamento
+                  </button>
                 </div>
               )}
             </div>
@@ -1292,8 +1498,9 @@ function PastSessionDetail({ entry, trainingLogs, sessionNotes, onBack, onOpenFu
 
 // ── OGGI WARMUP CARD ──────────────────────────────────────────────
 function OggiWarmupCard({ videos, onVideosChange }) {
-  const [open,     setOpen]     = React.useState(false)
-  const [palestra, setPalestra] = React.useState(true)
+  const [open,      setOpen]      = React.useState(false)
+  const [palestra,  setPalestra]  = React.useState(true)
+  const [timerProps,setTimerProps]= React.useState(null)
 
   const WarmupRow = ({ ex }) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: `1px solid ${C.border}` }}>
@@ -1315,6 +1522,8 @@ function OggiWarmupCard({ videos, onVideosChange }) {
   )
 
   return (
+    <>
+    {timerProps && <WarmupTimer steps={timerProps.steps} title={timerProps.title} onClose={() => setTimerProps(null)} />}
     <div style={ss.card}>
       <div
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
@@ -1366,16 +1575,47 @@ function OggiWarmupCard({ videos, onVideosChange }) {
           ) : (
             TRAINING_PLAN.warmup_2.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)
           )}
+          <button type="button"
+            onClick={() => {
+              const exs = palestra
+                ? [...TRAINING_PLAN.warmup_1.exercises, ...TRAINING_PLAN.warmup_1.trave.map(t => ({ name: t.grip, duration: t.protocol }))]
+                : TRAINING_PLAN.warmup_2.exercises
+              setTimerProps({ steps: buildTimerSteps(exs), title: 'Riscaldamento' })
+            }}
+            className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider active:scale-[0.98] transition-transform"
+            style={{ background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', boxShadow:'0 4px 16px rgba(198,191,255,0.2)', border:'none', cursor:'pointer' }}>
+            Avvia riscaldamento
+          </button>
         </div>
       )}
     </div>
+  </>
   )
 }
 
 // ── OGGI COOLDOWN CARD ─────────────────────────────────────────────
-function OggiCooldownCard() {
-  const [open, setOpen] = React.useState(false)
+function OggiCooldownCard({ videos, onVideosChange }) {
+  const [open,      setOpen]      = React.useState(false)
+  const [timerProps,setTimerProps]= React.useState(null)
+
+  const WarmupRow = ({ ex }) => (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 0', borderBottom:`1px solid ${C.border}` }}>
+      <div style={{ flex:1 }}>
+        <div style={{ fontSize:'12px', fontWeight:'500', color:C.text }}>{ex.name}</div>
+        {ex.note && <div style={{ fontSize:'10px', color:C.hint, marginTop:'1px' }}>{ex.note}</div>}
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:'8px', marginLeft:'8px' }}>
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontSize:'11px', color:C.muted }}>{ex.duration}</div>
+        </div>
+        <VideoButton exerciseName={ex.name} videos={videos} onVideosChange={onVideosChange} />
+      </div>
+    </div>
+  )
+
   return (
+  <>
+    {timerProps && <WarmupTimer steps={timerProps.steps} title={timerProps.title} onClose={() => setTimerProps(null)} />}
     <div style={ss.card}>
       <div
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
@@ -1389,15 +1629,17 @@ function OggiCooldownCard() {
       </div>
       {open && (
         <div style={{ marginTop: 12 }}>
-          {TRAINING_PLAN.cooldown.exercises.map((ex, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: `1px solid ${C.border}` }}>
-              <div style={{ fontSize: 12, color: C.text }}>{ex.name}</div>
-              <div style={{ fontSize: 11, color: C.muted }}>{ex.duration}</div>
-            </div>
-          ))}
+          {TRAINING_PLAN.cooldown.exercises.map((ex, i) => <WarmupRow key={i} ex={ex} />)}
+          <button type="button"
+            onClick={() => setTimerProps({ steps: buildTimerSteps(TRAINING_PLAN.cooldown.exercises), title: 'Defaticamento' })}
+            className="w-full mt-4 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider active:scale-[0.98] transition-transform"
+            style={{ background:'linear-gradient(135deg,#c6bfff 0%,#8c81fb 100%)', color:'#160066', boxShadow:'0 4px 16px rgba(198,191,255,0.2)', border:'none', cursor:'pointer' }}>
+            Avvia defaticamento
+          </button>
         </div>
       )}
     </div>
+  </>
   )
 }
 
@@ -1548,7 +1790,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
 
         <OggiUltimaVoltaCard snapshot={lastSnapOggi} />
         <OggiWarmupCard videos={videos} onVideosChange={onVideosChange} />
-        <OggiCooldownCard />
+        <OggiCooldownCard videos={videos} onVideosChange={onVideosChange} />
       </div>
     )
   }
