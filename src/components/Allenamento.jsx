@@ -467,7 +467,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       {showChange && <ChangeSessionDrawer currentEntry={entry} onClose={() => setShowChange(false)} onChanged={(type) => setOverrideType(type)} />}
 
       <div className="px-6 pb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <button type="button" onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
             <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>arrow_back</span>
@@ -1172,7 +1172,7 @@ function PastSessionDetail({ entry, trainingLogs, sessionNotes, onBack, onOpenFu
   return (
     <div>
       <div className="px-6 pb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-2">
           <button type="button" onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
             <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: '20px' }}>arrow_back</span>
