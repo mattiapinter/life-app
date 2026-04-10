@@ -933,7 +933,7 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
         />
       )}
 
-      <div className="px-6 pb-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}>
+      <div className="px-6 pb-6" style={{ paddingTop: '16px' }}>
         <div className="flex items-center justify-between mb-2">
           <button type="button" onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container border border-outline-variant/30 active:scale-95 transition-transform">
