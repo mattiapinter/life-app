@@ -63,18 +63,20 @@ function unlockAudio() {
   } catch {}
 }
 
-function playBeep(freq = 880, dur = 0.4) {
+function playBeep(freq = 880, dur = 0.5) {
   try {
     if (!_audioCtx) return
-    _audioCtx.resume().then(() => {
+    const play = () => {
       const osc = _audioCtx.createOscillator()
       const gain = _audioCtx.createGain()
       osc.connect(gain); gain.connect(_audioCtx.destination)
       osc.frequency.value = freq; osc.type = 'sine'
-      gain.gain.setValueAtTime(0.3, _audioCtx.currentTime)
+      gain.gain.setValueAtTime(0.7, _audioCtx.currentTime)
       gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + dur)
       osc.start(_audioCtx.currentTime); osc.stop(_audioCtx.currentTime + dur)
-    })
+    }
+    if (_audioCtx.state === 'running') { play() }
+    else { _audioCtx.resume().then(play).catch(() => {}) }
   } catch {}
 }
 
@@ -90,6 +92,13 @@ function WarmupTimer({ steps, title, onClose }) {
   const startRef = React.useRef(Date.now())
 
   const cur = steps[stepIdx]
+
+  // Lock body scroll while timer is open
+  React.useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
 
   // Main countdown
   React.useEffect(() => {
@@ -138,7 +147,8 @@ function WarmupTimer({ steps, title, onClose }) {
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:9999, background:'#131313', display:'flex', flexDirection:'column',
-      paddingTop:'env(safe-area-inset-top,0px)', paddingBottom:'env(safe-area-inset-bottom,0px)', boxSizing:'border-box' }}>
+      paddingTop:'env(safe-area-inset-top,0px)', paddingBottom:'env(safe-area-inset-bottom,0px)', boxSizing:'border-box',
+      overflow:'hidden', overscrollBehavior:'none', touchAction:'none' }}>
       {done ? (
         <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'32px', textAlign:'center' }}>
           <span className="material-symbols-outlined" style={{ fontSize:'80px', color:'#4ae176', marginBottom:'20px' }}>check_circle</span>
@@ -182,9 +192,11 @@ function WarmupTimer({ steps, title, onClose }) {
                   strokeLinecap="round" strokeDasharray={CIRC} strokeDashoffset={dashOffset}
                   style={{ transformOrigin:'90px 90px', transform:'rotate(-90deg)', transition: timeLeft>0 ? 'stroke-dashoffset 1s linear' : 'none' }} />
               </svg>
-              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-                <div style={{ fontSize:'44px', fontWeight:'800', color:'#e5e2e1', lineHeight:'1', fontFamily:"'Manrope',sans-serif" }}>{fmtTime(timeLeft)}</div>
-                {timeLeft < 60 && <div style={{ fontSize:'12px', color:'#928f9f', marginTop:'4px' }}>sec</div>}
+              <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ textAlign:'center', lineHeight:'1' }}>
+                  <div style={{ fontSize:'48px', fontWeight:'800', color:'#e5e2e1', fontFamily:"'Manrope',sans-serif", letterSpacing:'-0.02em' }}>{fmtTime(timeLeft)}</div>
+                  <div style={{ fontSize:'11px', color:'#928f9f', marginTop:'6px', opacity: timeLeft < 60 ? 1 : 0 }}>sec</div>
+                </div>
               </div>
             </div>
 
