@@ -593,17 +593,25 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
           )}
 
           {sessionType !== 'REST' && (
-            <div style={{ ...ss.card }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer' }} onClick={() => setShowCooldown(!showCooldown)}>
-                <div style={{ fontSize:'12px', fontWeight:'600', color:C.muted }}>Defaticamento · 15 min</div>
-                <div style={{ fontSize:'12px', color:C.hint }}>{showCooldown ? '▲' : '▼'}</div>
-              </div>
+            <div className="rounded-xl border border-outline-variant/15 bg-surface-container-low overflow-hidden mb-5">
+              <button type="button" onClick={() => setShowCooldown(v => !v)}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left">
+                <span className="material-symbols-outlined text-on-surface-variant text-xl">
+                  {showCooldown ? 'expand_less' : 'expand_more'}
+                </span>
+                <span className="material-symbols-outlined text-xl" style={{ color: sc.text }}>spa</span>
+                <span className="flex-1 text-sm font-bold uppercase tracking-widest text-on-surface">Defaticamento</span>
+              </button>
               {showCooldown && (
-                <div style={{ marginTop:'12px' }}>
+                <div className="px-4 pb-4 pt-1 border-t border-outline-variant/10">
+                  <div style={{ fontSize:'11px', fontWeight:'600', color:C.hint, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'10px', marginTop:'8px' }}>15 min</div>
                   {TRAINING_PLAN.cooldown.exercises.map((ex, i) => (
-                    <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:`1px solid ${C.border}` }}>
-                      <div style={{ fontSize:'12px', color:C.text }}>{ex.name}</div>
-                      <div style={{ fontSize:'11px', color:C.muted }}>{ex.duration}</div>
+                    <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'9px 0', borderBottom:`1px solid ${C.border}` }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:'12px', fontWeight:'500', color:C.text }}>{ex.name}</div>
+                        {ex.note && <div style={{ fontSize:'10px', color:C.hint, marginTop:'1px' }}>{ex.note}</div>}
+                      </div>
+                      <div style={{ fontSize:'11px', color:C.muted, marginLeft:'8px' }}>{ex.duration}</div>
                     </div>
                   ))}
                 </div>
@@ -1374,7 +1382,7 @@ function OggiCooldownCard() {
         onClick={() => setOpen(x => !x)}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 22, color: C.violetLight }}>self_improvement</span>
+          <span className="material-symbols-outlined" style={{ fontSize: 22, color: C.violetLight }}>spa</span>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: C.text }}>Defaticamento</span>
         </div>
         <span className="material-symbols-outlined" style={{ fontSize: 18, color: C.hint, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>expand_more</span>
