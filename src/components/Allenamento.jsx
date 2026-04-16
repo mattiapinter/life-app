@@ -6,7 +6,7 @@ import {
   todayStr, fmtDate, fmtDateShort, fmtDayName,
 } from '../constants'
 import { TRAINING_PLAN } from '../data/trainingPlan'
-import { saveTrainingLog, loadTrainingLogs, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData, saveRunningLog, loadRunningLogs, loadClimbingSessions, loadAscents, loadCrags } from '../lib/supabase'
+import { saveTrainingLog, loadTrainingLogs, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData, saveRunningLog, loadRunningLogs, deleteRunningLog, updateRunningLog, updateTrainingLogRpe, loadClimbingSessions, loadAscents, loadCrags } from '../lib/supabase'
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 import PesiRow from './PesiRow'
@@ -369,6 +369,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const [runPace,     setRunPace]     = React.useState('')
   const [runHr,       setRunHr]       = React.useState('')
   const [runElev,     setRunElev]     = React.useState('')
+  const [runDuration, setRunDuration] = React.useState('')
 
   const [linkedSessionId, setLinkedSessionId] = React.useState('')
 
@@ -426,16 +427,17 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       }))
     }
 
-    if (sessionType === 'CORSA' && (runDist || runPace || runHr)) {
+    if (sessionType === 'CORSA' && (runDist || runPace || runHr || runDuration)) {
       promises.push(saveRunningLog({
-        log_date:    entry.day_date,
-        distance_km: runDist  ? parseFloat(runDist)  : null,
-        pace_avg:    runPace  ? runPace.trim()        : null,
-        hr_avg:      runHr    ? parseInt(runHr)       : null,
-        elevation_m: runElev  ? parseInt(runElev)     : null,
-        rpe:         sessionRpe ? parseInt(sessionRpe) : null,
-        notes:       sessionNote.trim() || null,
-        created_at:  new Date().toISOString(),
+        log_date:     entry.day_date,
+        distance_km:  runDist     ? parseFloat(runDist)    : null,
+        pace_avg:     runPace     ? runPace.trim()          : null,
+        hr_avg:       runHr       ? parseInt(runHr)        : null,
+        elevation_m:  runElev     ? parseInt(runElev)      : null,
+        duration_min: runDuration ? parseInt(runDuration)  : null,
+        rpe:          sessionRpe  ? parseInt(sessionRpe)   : null,
+        notes:        sessionNote.trim() || null,
+        created_at:   new Date().toISOString(),
       }))
     }
 
@@ -599,12 +601,19 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
               <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Dislivello m</div>
               <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runElev} onChange={e => setRunElev(e.target.value)} />
             </div>
-          </div>
-          {runDist && runPace && runHr && (
-            <div style={{ fontSize:'10px', color:C.green, background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 12px', textAlign:'center' }}>
-              Efficienza: {(parseFloat(runHr) / (1 / (parseFloat(runPace?.split(':')[0] || 0) + (parseFloat(runPace?.split(':')[1] || 0) / 60)))).toFixed(0)} bpm·min/km
+            <div style={{ gridColumn:'1 / -1' }}>
+              <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Durata min</div>
+              <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runDuration} onChange={e => setRunDuration(e.target.value)} />
             </div>
-          )}
+          </div>
+          {runDist && runDuration && runHr && (() => {
+            const ef = ((parseFloat(runDist) * 1000 / parseInt(runDuration)) / parseInt(runHr)).toFixed(3)
+            return (
+              <div style={{ fontSize:'10px', color:C.green, background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 12px', textAlign:'center' }}>
+                EF {ef} m·min⁻¹·bpm⁻¹ — Coyle et al. 1988
+              </div>
+            )
+          })()}
         </div>
       </div>
     )
@@ -910,13 +919,63 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
 }
 
 // ── STORICO ALLENAMENTI ────────────────────────────────────────────
-function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
+function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged, runningLogs, onRunningLogsChanged }) {
   const [expanded,     setExpanded]     = React.useState(null)
   const [noteExpanded, setNoteExpanded] = React.useState(null)
   const [confirmDel,   setConfirmDel]   = React.useState(null)
   const [deleting,     setDeleting]     = React.useState(false)
   const [showNuke,     setShowNuke]     = React.useState(false)
   const [nukeConfirm,  setNukeConfirm]  = React.useState('')
+  const [editingKey,   setEditingKey]   = React.useState(null)
+  const [editRpe,      setEditRpe]      = React.useState('')
+  const [editNote,     setEditNote]     = React.useState('')
+  const [editRunDist,  setEditRunDist]  = React.useState('')
+  const [editRunPace,  setEditRunPace]  = React.useState('')
+  const [editRunHr,    setEditRunHr]    = React.useState('')
+  const [editRunElev,  setEditRunElev]  = React.useState('')
+  const [editRunDur,   setEditRunDur]   = React.useState('')
+  const [editRunId,    setEditRunId]    = React.useState(null)
+  const [savingEdit,   setSavingEdit]   = React.useState(false)
+
+  const startEdit = (sess) => {
+    const rpeLog = sess.logs.find(l => l.rpe_actual)
+    const note   = sessionNotes.find(n => n.note_date === sess.date && n.session_type === sess.type)
+    setEditRpe(rpeLog?.rpe_actual ? String(rpeLog.rpe_actual) : '')
+    setEditNote(note?.note_text || '')
+    if (sess.type === 'CORSA') {
+      const run = (runningLogs || []).find(r => r.log_date === sess.date)
+      setEditRunDist(run?.distance_km  != null ? String(run.distance_km)  : '')
+      setEditRunPace(run?.pace_avg     || '')
+      setEditRunHr(run?.hr_avg         != null ? String(run.hr_avg)         : '')
+      setEditRunElev(run?.elevation_m  != null ? String(run.elevation_m)  : '')
+      setEditRunDur(run?.duration_min  != null ? String(run.duration_min)  : '')
+      setEditRunId(run?.id || null)
+    }
+    setEditingKey(`${sess.date}__${sess.type}`)
+  }
+
+  const saveEdit = async (sess) => {
+    setSavingEdit(true)
+    const promises = []
+    if (editRpe) promises.push(updateTrainingLogRpe(sess.date, sess.type, parseInt(editRpe)))
+    promises.push(saveSessionNote({ note_date: sess.date, session_type: sess.type, note_text: editNote }))
+    if (sess.type === 'CORSA' && editRunId) {
+      promises.push(updateRunningLog(editRunId, {
+        distance_km:  editRunDist ? parseFloat(editRunDist) : null,
+        pace_avg:     editRunPace.trim() || null,
+        hr_avg:       editRunHr   ? parseInt(editRunHr)    : null,
+        elevation_m:  editRunElev ? parseInt(editRunElev)  : null,
+        duration_min: editRunDur  ? parseInt(editRunDur)   : null,
+        rpe:          editRpe     ? parseInt(editRpe)      : null,
+        notes:        editNote.trim() || null,
+      }))
+    }
+    await Promise.all(promises)
+    await onDataChanged()
+    if (onRunningLogsChanged) await onRunningLogsChanged()
+    setSavingEdit(false)
+    setEditingKey(null)
+  }
 
   const sessions = {}
   trainingLogs.forEach(log => {
@@ -1077,12 +1136,73 @@ function StoricoAllenamenti({ trainingLogs, sessionNotes, onDataChanged }) {
                   )
                 })()}
 
-                <div style={{ marginTop:'12px', textAlign:'right' }}>
-                  <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', opacity:0.7 }}
-                    onClick={() => setConfirmDel({ date: sess.date, type: sess.type })}>
-                    Elimina sessione
+                {editingKey === key ? (
+                  <div style={{ marginTop:'12px', background:C.bg, borderRadius:'10px', padding:'12px', border:`1px solid ${C.border}` }}>
+                    {sess.type === 'CORSA' && (
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'10px' }}>
+                        {[
+                          { label:'Distanza km', val:editRunDist, set:setEditRunDist, mode:'decimal' },
+                          { label:'Passo medio', val:editRunPace, set:setEditRunPace, mode:'text', ph:'5:30' },
+                          { label:'FC media bpm', val:editRunHr, set:setEditRunHr, mode:'numeric' },
+                          { label:'Dislivello m', val:editRunElev, set:setEditRunElev, mode:'numeric' },
+                          { label:'Durata min', val:editRunDur, set:setEditRunDur, mode:'numeric', span:true },
+                        ].map(f => (
+                          <div key={f.label} style={f.span ? { gridColumn:'1 / -1' } : {}}>
+                            <div style={{ fontSize:'9px', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'3px' }}>{f.label}</div>
+                            <input
+                              type={f.mode === 'text' ? 'text' : 'number'}
+                              inputMode={f.mode}
+                              step={f.mode === 'decimal' ? '0.1' : undefined}
+                              style={{ ...ss.inp, fontSize:'14px', fontWeight:'600', textAlign:'center', padding:'8px' }}
+                              placeholder={f.ph || '—'}
+                              value={f.val}
+                              onChange={e => f.set(e.target.value)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ fontSize:'9px', color:C.hint, textTransform:'uppercase', letterSpacing:'.06em', marginBottom:'5px' }}>RPE</div>
+                    <div style={{ display:'flex', gap:'4px', marginBottom:'10px' }}>
+                      {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                        <div key={n}
+                          style={{ flex:1, padding:'6px 0', textAlign:'center', borderRadius:'6px', cursor:'pointer', fontSize:'11px', fontWeight:'600',
+                            background: parseInt(editRpe) === n ? C.violet : C.surface,
+                            color: parseInt(editRpe) === n ? '#fff' : C.hint,
+                            border:`1px solid ${parseInt(editRpe) === n ? C.violetBorder : C.border}`,
+                          }}
+                          onClick={() => setEditRpe(editRpe === String(n) ? '' : String(n))}>
+                          {n}
+                        </div>
+                      ))}
+                    </div>
+                    <textarea
+                      style={{ ...ss.inp, resize:'vertical', lineHeight:'1.6', marginBottom:'10px', fontSize:'13px' }}
+                      rows={2} placeholder="Note sessione..."
+                      value={editNote} onChange={e => setEditNote(e.target.value)}
+                    />
+                    <div style={{ display:'flex', gap:'8px' }}>
+                      <div style={{ flex:1, padding:'10px', textAlign:'center', borderRadius:'8px', cursor:'pointer', background:C.surface, border:`1px solid ${C.border}`, fontSize:'12px', color:C.muted }}
+                        onClick={() => setEditingKey(null)}>Annulla</div>
+                      <div style={{ flex:2, padding:'10px', textAlign:'center', borderRadius:'8px', cursor:'pointer',
+                        background: savingEdit ? C.surface : C.violet,
+                        border:`1px solid ${savingEdit ? C.border : C.violetBorder}`,
+                        fontSize:'12px', fontWeight:'600', color: savingEdit ? C.hint : '#fff', opacity: savingEdit ? 0.6 : 1 }}
+                        onClick={() => !savingEdit && saveEdit(sess)}>
+                        {savingEdit ? 'Salvataggio...' : 'Salva modifiche'}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div style={{ marginTop:'12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div style={{ fontSize:'11px', color:C.primary, cursor:'pointer', fontWeight:'500' }}
+                      onClick={() => startEdit(sess)}>Modifica</div>
+                    <div style={{ fontSize:'11px', color:C.red, cursor:'pointer', opacity:0.7 }}
+                      onClick={() => setConfirmDel({ date: sess.date, type: sess.type })}>
+                      Elimina sessione
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1379,6 +1499,11 @@ function CorsaSection({ runningLogs, onRefresh }) {
               <div style={{ fontSize: '12px', fontWeight: '600', color: C.text }}>{fmtDateShort(r.log_date)}</div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {r.distance_km && <div style={{ fontSize: '11px', fontWeight: '700', color: C.violetLight }}>{r.distance_km} km</div>}
+                {r.duration_min && <div style={{ fontSize: '11px', color: C.orange }}>🕐 {r.duration_min} min</div>}
+                {r.distance_km && r.duration_min && r.hr_avg && (() => {
+                  const ef = ((parseFloat(r.distance_km) * 1000 / r.duration_min) / r.hr_avg).toFixed(3)
+                  return <div style={{ fontSize: '10px', color: C.green, fontWeight: '600' }}>EF {ef}</div>
+                })()}
                 {r.pace_avg    && <div style={{ fontSize: '11px', color: C.orange }}>⏱ {r.pace_avg}/km</div>}
                 {r.hr_avg      && <div style={{ fontSize: '11px', color: C.red }}>♥ {r.hr_avg} bpm</div>}
                 {r.elevation_m && <div style={{ fontSize: '11px', color: C.muted }}>↑ {r.elevation_m}m</div>}
@@ -1903,7 +2028,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
       </div>
       {sub === 'oggi'     && renderOggi()}
       {sub === 'piano'    && renderPiano()}
-      {sub === 'storico'  && <StoricoAllenamenti trainingLogs={trainingLogs} sessionNotes={sessionNotes} onDataChanged={onLogsChanged} />}
+      {sub === 'storico'  && <StoricoAllenamenti trainingLogs={trainingLogs} sessionNotes={sessionNotes} onDataChanged={onLogsChanged} runningLogs={runningLogs} onRunningLogsChanged={() => loadRunningLogs().then(setRunningLogs)} />}
       {sub === 'esercizi' && <ExercisesTable trainingLogs={trainingLogs} onDataChanged={onLogsChanged} />}
       {sub === 'corsa'    && <CorsaSection runningLogs={runningLogs} onRefresh={() => loadRunningLogs().then(setRunningLogs)} />}
     </div>

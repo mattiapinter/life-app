@@ -348,6 +348,32 @@ export const deleteRunningLog = async (id) => {
   try { const { error } = await db.from('running_logs').delete().eq('id', id).eq('user_id', userId); if (error) throw error; return true }
   catch(e) { return false }
 }
+export const updateRunningLog = async (id, log) => {
+  const userId = await uid(); if (!userId) return false
+  try {
+    const { error } = await db.from('running_logs').update({
+      distance_km:  log.distance_km,
+      pace_avg:     log.pace_avg,
+      hr_avg:       log.hr_avg,
+      elevation_m:  log.elevation_m,
+      duration_min: log.duration_min,
+      rpe:          log.rpe,
+      notes:        log.notes,
+    }).eq('id', id).eq('user_id', userId)
+    if (error) throw error; return true
+  } catch(e) { return false }
+}
+export const updateTrainingLogRpe = async (date, sessionType, rpe) => {
+  const userId = await uid(); if (!userId) return false
+  try {
+    const { error } = await db.from('training_logs')
+      .update({ rpe_actual: rpe })
+      .eq('log_date', date)
+      .eq('session_type', sessionType)
+      .eq('user_id', userId)
+    if (error) throw error; return true
+  } catch(e) { return false }
+}
 
 // ── HRV LOGS ──────────────────────────────────────────────────────
 export const saveHrvLog = async (log) => {
