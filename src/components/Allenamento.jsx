@@ -1,6 +1,6 @@
 import React from 'react'
-import { Chart, LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js'
-Chart.register(LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip)
+import { Chart, LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip, Legend } from 'chart.js'
+Chart.register(LineController, BarController, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip, Legend)
 import {
   C, ss, SESSION_COLORS, drawer,
   todayStr, fmtDate, fmtDateShort, fmtDayName,
@@ -1381,75 +1381,179 @@ function ExercisesTable({ trainingLogs, onDataChanged }) {
   )
 }
 
+function runningPaceToSec(pace) {
+  if (!pace) return null
+  const parts = String(pace).trim().split(':')
+  if (parts.length !== 2) return null
+  const m = parseInt(parts[0], 10)
+  const s = parseInt(parts[1], 10)
+  if (!Number.isFinite(m) || !Number.isFinite(s)) return null
+  return m * 60 + s
+}
+
+function runningSecToPaceStr(sec) {
+  if (sec == null || !Number.isFinite(sec)) return '—'
+  const m = Math.floor(sec / 60)
+  const s = Math.round(sec % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function runningDateMinusDays(days) {
+  const d = new Date()
+  d.setHours(12, 0, 0, 0)
+  d.setDate(d.getDate() - days)
+  return d.toISOString().slice(0, 10)
+}
+
 // ── CORSA SECTION ──────────────────────────────────────────────────
-function CorsaSection({ runningLogs, onRefresh }) {
+function CorsaSection({ runningLogs, onRefresh: _onRefresh }) {
   const canvasPaceRef = React.useRef(null)
-  const canvasKmRef   = React.useRef(null)
-  const chartPaceRef  = React.useRef(null)
-  const chartKmRef    = React.useRef(null)
+  const canvasKmRef = React.useRef(null)
+  const chartPaceRef = React.useRef(null)
+  const chartKmRef = React.useRef(null)
 
   const sorted = [...runningLogs].sort((a, b) => a.log_date.localeCompare(b.log_date))
-  const withPaceHr = sorted.filter(r => r.pace_avg && r.hr_avg)
+  const cutoff28 = React.useMemo(() => runningDateMinusDays(28), [])
+  const last4w = sorted.filter(r => r.log_date >= cutoff28)
+
+  const withPace = sorted.filter(r => runningPaceToSec(r.pace_avg) != null)
 
   const weeklyKm = React.useMemo(() => {
     const weeks = {}
     sorted.forEach(r => {
       if (!r.distance_km) return
       const d = new Date(r.log_date + 'T12:00:00')
-      const mon = new Date(d); mon.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1))
+      const mon = new Date(d)
+      mon.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1))
       const key = mon.toISOString().split('T')[0]
       if (!weeks[key]) weeks[key] = 0
       weeks[key] += parseFloat(r.distance_km)
     })
-    return Object.entries(weeks).sort((a, b) => a[0].localeCompare(b[0])).map(([w, km]) => ({ w, km: parseFloat(km.toFixed(1)) }))
+    return Object.entries(weeks)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([w, km]) => ({ w, km: parseFloat(km.toFixed(1)) }))
   }, [runningLogs])
 
-  const paceToSec = (pace) => {
-    if (!pace) return null
-    const parts = pace.split(':')
-    if (parts.length !== 2) return null
-    return parseInt(parts[0]) * 60 + parseInt(parts[1])
-  }
+  const kpiKm4w = last4w.reduce((s, r) => s + (parseFloat(r.distance_km) || 0), 0)
+  const paces4w = last4w.map(r => runningPaceToSec(r.pace_avg)).filter(v => v != null)
+  const kpiPaceAvg4w =
+    paces4w.length > 0
+      ? `${runningSecToPaceStr(paces4w.reduce((a, b) => a + b, 0) / paces4w.length)}/km`
+      : '—'
+  const pacesAll = sorted.map(r => runningPaceToSec(r.pace_avg)).filter(v => v != null)
+  const kpiBestPace = pacesAll.length > 0 ? `${runningSecToPaceStr(Math.min(...pacesAll))}/km` : '—'
 
   React.useEffect(() => {
-    if (canvasPaceRef.current && withPaceHr.length >= 2) {
+    const sortedInner = [...runningLogs].sort((a, b) => a.log_date.localeCompare(b.log_date))
+    const withPaceInner = sortedInner.filter(r => runningPaceToSec(r.pace_avg) != null)
+    const paceSecsInner = withPaceInner.map(r => runningPaceToSec(r.pace_avg))
+    const ma4Inner = paceSecsInner.map((_, i) => {
+      const slice = paceSecsInner.slice(Math.max(0, i - 3), i + 1)
+      return slice.reduce((a, b) => a + b, 0) / slice.length
+    })
+
+    if (canvasPaceRef.current && withPaceInner.length >= 2) {
       if (chartPaceRef.current) chartPaceRef.current.destroy()
       chartPaceRef.current = new Chart(canvasPaceRef.current, {
         type: 'line',
         data: {
-          labels: withPaceHr.map(r => fmtDateShort(r.log_date)),
+          labels: withPaceInner.map(r => fmtDateShort(r.log_date)),
           datasets: [
-            { label: 'Passo (sec/km)', data: withPaceHr.map(r => paceToSec(r.pace_avg)), borderColor: C.orange, backgroundColor: C.orangeBg, tension: 0.35, fill: false, pointRadius: 4, borderWidth: 2, yAxisID: 'y' },
-            { label: 'FC media (bpm)', data: withPaceHr.map(r => r.hr_avg), borderColor: C.red, backgroundColor: C.redBg, tension: 0.35, fill: false, pointRadius: 4, borderWidth: 2, yAxisID: 'y2' },
+            {
+              label: 'Passo',
+              data: paceSecsInner,
+              borderColor: C.orange,
+              backgroundColor: C.orangeBg,
+              tension: 0.35,
+              fill: false,
+              pointRadius: 3,
+              borderWidth: 2,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Media 4 uscite',
+              data: ma4Inner,
+              borderColor: '#928f9f',
+              borderDash: [5, 4],
+              tension: 0.35,
+              fill: false,
+              pointRadius: 0,
+              borderWidth: 2,
+              yAxisID: 'y',
+            },
           ],
         },
         options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: true, labels: { color: '#888', font: { size: 9 }, boxWidth: 10 } } },
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, labels: { color: '#928f9f', font: { size: 9 }, boxWidth: 10 } },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const v = ctx.parsed.y
+                  if (v == null) return ctx.dataset.label || ''
+                  const m = Math.floor(v / 60)
+                  const s = Math.round(v % 60)
+                  return `${ctx.dataset.label}: ${m}:${String(s).padStart(2, '0')}/km`
+                },
+              },
+            },
+          },
           scales: {
-            x: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } },
-            y: { position: 'left', ticks: { color: C.orange, font: { size: 9 }, callback: v => { const m = Math.floor(v/60); return `${m}:${String(v%60).padStart(2,'0')}` } }, grid: { color: '#1E1E1E' } },
-            y2: { position: 'right', ticks: { color: C.red, font: { size: 9 } }, grid: { display: false } },
+            x: { ticks: { color: '#888', font: { size: 9 }, maxRotation: 45 }, grid: { color: '#1E1E1E' } },
+            y: {
+              position: 'left',
+              ticks: {
+                color: C.orange,
+                font: { size: 9 },
+                callback(v) {
+                  const m = Math.floor(v / 60)
+                  return `${m}:${String(Math.round(v % 60)).padStart(2, '0')}`
+                },
+              },
+              grid: { color: '#1E1E1E' },
+              title: { display: true, text: 'Passo (sotto = più veloce)', color: '#928f9f', font: { size: 10 } },
+            },
           },
         },
       })
+    } else if (chartPaceRef.current) {
+      chartPaceRef.current.destroy()
+      chartPaceRef.current = null
     }
-    if (canvasKmRef.current && weeklyKm.length >= 2) {
+    if (canvasKmRef.current && weeklyKm.length >= 1) {
       if (chartKmRef.current) chartKmRef.current.destroy()
       chartKmRef.current = new Chart(canvasKmRef.current, {
-        type: 'line',
+        type: 'bar',
         data: {
           labels: weeklyKm.map(w => fmtDateShort(w.w)),
-          datasets: [{ data: weeklyKm.map(w => w.km), borderColor: C.violet, backgroundColor: 'rgba(123,111,232,0.1)', tension: 0.35, fill: true, pointRadius: 4, borderWidth: 2, pointBackgroundColor: C.violet }],
+          datasets: [
+            {
+              label: 'km',
+              data: weeklyKm.map(w => w.km),
+              backgroundColor: 'rgba(123, 111, 232, 0.45)',
+              borderColor: C.violet,
+              borderWidth: 1,
+            },
+          ],
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } }, y: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' } } } },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#888', font: { size: 9 }, maxRotation: 45 }, grid: { display: false } },
+            y: { ticks: { color: '#888', font: { size: 9 } }, grid: { color: '#1E1E1E' }, beginAtZero: true },
+          },
+        },
       })
     }
     return () => {
       if (chartPaceRef.current) chartPaceRef.current.destroy()
       if (chartKmRef.current) chartKmRef.current.destroy()
     }
-  }, [runningLogs])
+  }, [runningLogs, weeklyKm])
 
   if (sorted.length === 0) {
     return (
@@ -1461,62 +1565,76 @@ function CorsaSection({ runningLogs, onRefresh }) {
     )
   }
 
-  const totalKm = sorted.reduce((s, r) => s + (parseFloat(r.distance_km) || 0), 0)
-  const avgHr   = sorted.filter(r => r.hr_avg).reduce((s, r, _, a) => s + r.hr_avg / a.length, 0)
-
   return (
     <div style={ss.body}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
         {[
-          { l: 'Km totali', v: totalKm.toFixed(1), c: C.violet },
-          { l: 'FC media',  v: avgHr ? Math.round(avgHr) + ' bpm' : '—', c: C.red },
-          { l: 'Uscite',    v: sorted.length, c: C.orange },
+          { l: 'Km · 4 sett.', v: kpiKm4w.toFixed(1), c: C.violet },
+          { l: 'Passo medio · 4 sett.', v: kpiPaceAvg4w, c: C.orange },
+          { l: 'Passo migliore', v: kpiBestPace, c: C.greenLight },
         ].map(it => (
-          <div key={it.l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: it.c }}>{it.v}</div>
-            <div style={{ fontSize: '9px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em', marginTop: '3px' }}>{it.l}</div>
+          <div key={it.l} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '10px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: it.v.length > 8 ? '15px' : '18px', fontWeight: '700', color: it.c, lineHeight: 1.15 }}>{it.v}</div>
+            <div style={{ fontSize: '8px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.05em', marginTop: '4px', lineHeight: 1.2 }}>{it.l}</div>
           </div>
         ))}
       </div>
-      {withPaceHr.length >= 2 && (
+
+      {withPace.length >= 2 && (
         <div style={ss.card}>
-          <div style={ss.secLbl}>Passo Medio vs FC — correlazione</div>
-          <div style={{ position: 'relative', height: '160px' }}><canvas ref={canvasPaceRef} /></div>
-          <div style={{ fontSize: '10px', color: C.hint, marginTop: '8px' }}>Passo che cala con FC stabile = miglioramento aerobico 📈</div>
+          <div style={ss.secLbl}>Passo nel tempo</div>
+          <div style={{ position: 'relative', height: '180px' }}>
+            <canvas ref={canvasPaceRef} />
+          </div>
+          <div style={{ fontSize: '10px', color: C.hint, marginTop: '8px', lineHeight: 1.45 }}>
+            In basso passi più veloci (meno secondi per km). Linea tratteggiata = media mobile sulle ultime 4 uscite con passo registrato.
+          </div>
         </div>
       )}
-      {weeklyKm.length >= 2 && (
-        <div style={ss.card}>
-          <div style={ss.secLbl}>Volume km settimanale</div>
-          <div style={{ position: 'relative', height: '130px' }}><canvas ref={canvasKmRef} /></div>
+
+      {weeklyKm.length >= 1 && (
+        <div style={{ ...ss.card, marginTop: '12px' }}>
+          <div style={ss.secLbl}>Volume settimanale (km)</div>
+          <div style={{ position: 'relative', height: '150px' }}>
+            <canvas ref={canvasKmRef} />
+          </div>
         </div>
       )}
-      <div style={ss.card}>
-        <div style={ss.secLbl}>Storico uscite</div>
+
+      <div style={{ ...ss.card, marginTop: '12px' }}>
+        <div style={ss.secLbl}>Storico</div>
         {[...sorted].reverse().map((r, i) => (
-          <div key={r.id || i} style={{ padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: C.text }}>{fmtDateShort(r.log_date)}</div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {r.distance_km && <div style={{ fontSize: '11px', fontWeight: '700', color: C.violetLight }}>{r.distance_km} km</div>}
-                {r.duration_min && <div style={{ fontSize: '11px', color: C.orange }}>🕐 {r.duration_min} min</div>}
-                {r.distance_km && r.duration_min && r.hr_avg && (() => {
-                  const ef = ((parseFloat(r.distance_km) * 1000 / r.duration_min) / r.hr_avg).toFixed(3)
-                  return <div style={{ fontSize: '10px', color: C.green, fontWeight: '600' }}>EF {ef}</div>
-                })()}
-                {r.pace_avg    && <div style={{ fontSize: '11px', color: C.orange }}>⏱ {r.pace_avg}/km</div>}
-                {r.hr_avg      && <div style={{ fontSize: '11px', color: C.red }}>♥ {r.hr_avg} bpm</div>}
-                {r.elevation_m && <div style={{ fontSize: '11px', color: C.muted }}>↑ {r.elevation_m}m</div>}
-                {r.rpe && (
-                  <div style={{ fontSize: '10px', fontWeight: '600', padding: '1px 6px', borderRadius: '999px',
-                    background: r.rpe <= 6 ? C.greenBg : r.rpe <= 8 ? C.amberBg : C.redBg,
-                    color: r.rpe <= 6 ? C.greenLight : r.rpe <= 8 ? C.amberLight : C.redLight }}>
+          <div key={r.id || i} style={{ padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', color: C.text, minWidth: '72px' }}>{fmtDateShort(r.log_date)}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', justifyContent: 'flex-end', flex: 1 }}>
+                {r.distance_km != null && r.distance_km !== '' && (
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: C.violetLight }}>{r.distance_km} km</span>
+                )}
+                {r.duration_min != null && <span style={{ fontSize: '10px', color: C.muted }}>{r.duration_min}′</span>}
+                {r.pace_avg && <span style={{ fontSize: '10px', color: C.orange }}>{r.pace_avg}/km</span>}
+                {r.hr_avg != null && <span style={{ fontSize: '10px', color: C.red }}>{r.hr_avg} bpm</span>}
+                {r.elevation_m != null && r.elevation_m !== '' && (
+                  <span style={{ fontSize: '10px', color: C.hint }}>Δ{r.elevation_m}m</span>
+                )}
+                {r.rpe != null && (
+                  <span
+                    style={{
+                      fontSize: '9px',
+                      fontWeight: '600',
+                      padding: '1px 5px',
+                      borderRadius: '999px',
+                      background: r.rpe <= 6 ? C.greenBg : r.rpe <= 8 ? C.amberBg : C.redBg,
+                      color: r.rpe <= 6 ? C.greenLight : r.rpe <= 8 ? C.amberLight : C.redLight,
+                    }}>
                     RPE {r.rpe}
-                  </div>
+                  </span>
                 )}
               </div>
             </div>
-            {r.notes && <div style={{ fontSize: '11px', color: C.hint, marginTop: '4px', fontStyle: 'italic' }}>{r.notes}</div>}
+            {r.notes ? (
+              <div style={{ fontSize: '10px', color: C.hint, marginTop: '3px', fontStyle: 'italic', lineHeight: 1.35 }}>{r.notes}</div>
+            ) : null}
           </div>
         ))}
       </div>

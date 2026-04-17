@@ -3,45 +3,71 @@ import {
   Chart,
   LineController,
   ScatterController,
-  BarController,
+  DoughnutController,
   LineElement,
-  BarElement,
   PointElement,
+  ArcElement,
   LinearScale,
   CategoryScale,
   Filler,
   Tooltip,
+  Legend,
 } from 'chart.js'
 import { CollapsibleHistory } from './MetricGroupLayout'
 import { TRAINING_PLAN } from '../data/trainingPlan'
+import { SESSION_COLORS } from '../constants'
 import { hrvSortedAsc } from '../lib/readinessCalc'
 import { loadBodyMeasurements } from '../lib/supabase'
 
 Chart.register(
   LineController,
   ScatterController,
-  BarController,
+  DoughnutController,
   LineElement,
-  BarElement,
   PointElement,
+  ArcElement,
   LinearScale,
   CategoryScale,
   Filler,
-  Tooltip
+  Tooltip,
+  Legend
 )
 
 const GRID = '#353534'
 const TICKS = '#928f9f'
 
-const GRADE_INDEX = {
-  '4': 1, '4+': 2, '5': 3, '5+': 4,
-  '6a': 5, '6a+': 6, '6b': 7, '6b+': 8,
-  '6c': 9, '6c+': 10, '7a': 11, '7a+': 12,
-  '7b': 13, '7b+': 14, '7c': 15, '7c+': 16,
-  '8a': 17, '8a+': 18, '8b': 19, '8b+': 20,
+const CLIMB_GRADES = [
+  '4', '4+', '5', '5+', '6a', '6a+', '6b', '6b+', '6c', '6c+',
+  '7a', '7a+', '7b', '7b+', '7c', '7c+',
+  '8a', '8a+', '8b', '8b+', '8c', '8c+', '9a', '9a+', '9b', '9b+', '9c',
+]
+const GRADE_INDEX = Object.fromEntries(CLIMB_GRADES.map((g, i) => [g, i]))
+CLIMB_GRADES.forEach(g => { GRADE_INDEX[g.toLowerCase()] = GRADE_INDEX[g] })
+
+function gradeToIdx(g) {
+  if (g == null) return null
+  const t = String(g).trim()
+  return GRADE_INDEX[t] ?? GRADE_INDEX[t.toLowerCase()] ?? null
 }
 
-const FIRST_STYLES = new Set(['a_vista', 'flash', 'redpoint'])
+function idxToGradeLabel(idx) {
+  if (idx == null || !Number.isFinite(idx)) return '—'
+  const i = Math.max(0, Math.min(CLIMB_GRADES.length - 1, Math.round(idx)))
+  return CLIMB_GRADES[i]
+}
+
+function isoDaysAgo(days) {
+  const d = new Date()
+  d.setHours(12, 0, 0, 0)
+  d.setDate(d.getDate() - days)
+  return d.toISOString().slice(0, 10)
+}
+
+function fmtMonthIt(ym) {
+  const [y, m] = ym.split('-').map(Number)
+  if (!y || !m) return ym
+  return new Date(y, m - 1, 1).toLocaleDateString('it-IT', { month: 'short', year: '2-digit' })
+}
 
 function readinessForDate(dateStr, allHrv, healthByDate) {
   const hrvToday = allHrv.find(r => r.log_date === dateStr)
@@ -73,16 +99,6 @@ function linReg(points) {
   const m = (n * sxy - sx * sy) / (n * sxx - sx * sx || 1)
   const b = (sy - m * sx) / n
   return { m, b }
-}
-
-function weekKeyISO(dateStr) {
-  const d = new Date(dateStr + 'T12:00:00')
-  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
-  const day = t.getUTCDay() || 7
-  t.setUTCDate(t.getUTCDate() + 4 - day)
-  const y = t.getUTCFullYear()
-  const w = Math.ceil((((t - new Date(Date.UTC(y, 0, 1))) / 86400000) + 1) / 7)
-  return `${y}-W${String(w).padStart(2, '0')}`
 }
 
 function isScaricoDate(d) {
@@ -143,12 +159,17 @@ function ReadinessRpeChart({ points, n }) {
     return () => { if (chartRef.current) chartRef.current.destroy() }
   }, [points, corrNeg])
 
-  if (n < 5) {
-    return <p className="text-xs text-on-surface-variant py-4">Servono almeno 5 sessioni con RPE e readiness per questo grafico.</p>
+  if (n < 3) {
+    return <p className="text-xs text-on-surface-variant py-4">Servono almeno 3 sessioni con RPE e readiness per iniziare a vedere un pattern.</p>
   }
   return (
     <>
       <div className="relative h-52"><canvas ref={canvasRef} /></div>
+      {n < 8 ? (
+        <p className="text-xs text-on-surface-variant/80 mt-2 leading-relaxed">
+          Con almeno 8 punti il trend sarà più stabile; intanto usa questo come indicazione generale.
+        </p>
+      ) : null}
       <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
         {corrNeg
           ? 'Il tuo readiness predice accuratamente lo sforzo percepito. Nei giorni con HRV elevato il tuo RPE è effettivamente più basso a parità di sessione. Il sistema è calibrato su di te (Esco e Flatt, 2014).'
@@ -158,64 +179,178 @@ function ReadinessRpeChart({ points, n }) {
   )
 }
 
-function SleepVolumeChart({ weeks }) {
+function HrvTrend30Chart({ series }) {
   const canvasRef = React.useRef(null)
   const chartRef = React.useRef(null)
-  const avgDeep = weeks.length ? weeks.reduce((s, w) => s + w.avgDeep, 0) / weeks.length : 0
-  const lineOk = avgDeep >= 60
 
   React.useEffect(() => {
-    if (!canvasRef.current || weeks.length < 2) return
+    if (!canvasRef.current || series.length < 2) return
     if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
     chartRef.current = new Chart(canvasRef.current, {
-      type: 'bar',
+      type: 'line',
       data: {
-        labels: weeks.map(w => w.label),
+        labels: series.map(r => r.log_date),
         datasets: [
           {
-            type: 'bar',
-            label: 'sessioni',
-            data: weeks.map(w => w.sessions),
-            backgroundColor: 'rgba(198, 191, 255, 0.25)',
-            borderColor: '#8c81fb',
-            borderWidth: 1,
-            yAxisID: 'y',
+            label: 'HRV',
+            data: series.map(r => r.hrv_value),
+            borderColor: '#89ceff',
+            backgroundColor: 'rgba(137, 206, 255, 0.12)',
+            tension: 0.25,
+            fill: true,
+            pointRadius: 2,
+            borderWidth: 2,
           },
           {
-            type: 'line',
-            label: 'sonno profondo',
-            data: weeks.map(w => w.avgDeep),
-            borderColor: lineOk ? '#4ae176' : '#ffb4ab',
+            label: 'Media 7gg',
+            data: series.map(r => r.ma7),
+            borderColor: '#c6bfff',
+            borderDash: [5, 4],
             tension: 0.3,
-            yAxisID: 'y1',
-            pointRadius: 3,
+            fill: false,
+            pointRadius: 0,
+            borderWidth: 2,
           },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: true, labels: { color: TICKS, font: { size: 9 }, boxWidth: 10 } },
+        },
         scales: {
-          x: { ticks: { color: TICKS }, grid: { color: GRID } },
-          y: { position: 'left', ticks: { color: TICKS }, grid: { color: GRID }, title: { display: true, text: 'Sessioni', color: TICKS } },
-          y1: { position: 'right', ticks: { color: TICKS }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Deep min', color: TICKS } },
+          x: { ticks: { color: TICKS, maxRotation: 45, font: { size: 9 } }, grid: { color: GRID } },
+          y: { ticks: { color: TICKS }, grid: { color: GRID }, title: { display: true, text: 'ms', color: TICKS } },
         },
       },
     })
     return () => { if (chartRef.current) chartRef.current.destroy() }
-  }, [weeks, lineOk])
+  }, [series])
 
-  if (weeks.length < 2) {
-    return <p className="text-xs text-on-surface-variant py-4">Servono almeno 2 settimane di dati sonno e allenamento.</p>
+  if (series.length < 2) {
+    return <p className="text-xs text-on-surface-variant py-4">Servono almeno 2 letture HRV negli ultimi 30 giorni.</p>
   }
+  const last = series[series.length - 1]
+  const prev = series[series.length - 2]
+  const drop = last.ma7 != null && prev.ma7 != null && last.ma7 < prev.ma7 * 0.92
   return (
     <>
       <div className="relative h-52"><canvas ref={canvasRef} /></div>
       <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
-        {lineOk
-          ? 'Il tuo sonno profondo è nella zona ottimale per il recupero muscolare. Il rilascio di GH avviene principalmente in questa fase e supporta l\'adattamento agli stimoli allenanti (Dattilo et al., 2011).'
-          : 'Il tuo sonno profondo è cronicamente sotto la soglia ottimale. Il recupero muscolare e il rilascio di GH avvengono principalmente in questa fase. Anticipa l\'orario di addormentamento di 30 minuti questa settimana (Dattilo et al., 2011).'}
+        {drop
+          ? 'La media mobile a 7 giorni sta scendendo: spesso precede fatica accumulata o stress. Valuta volume e recupero nelle prossime sessioni.'
+          : 'Confronta la linea viola (trend 7 giorni) con i punti giornalieri: quando restano allineati il carico è sostenibile; divergenze forti meritano un check-in sul recupero.'}
+      </p>
+    </>
+  )
+}
+
+function TrainingMixDonut({ rows }) {
+  const canvasRef = React.useRef(null)
+  const chartRef = React.useRef(null)
+
+  React.useEffect(() => {
+    if (!canvasRef.current || !rows.length) return
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
+    chartRef.current = new Chart(canvasRef.current, {
+      type: 'doughnut',
+      data: {
+        labels: rows.map(r => SESSION_COLORS[r.type]?.label || r.type),
+        datasets: [{
+          data: rows.map(r => r.n),
+          backgroundColor: rows.map(r => {
+            const sc = SESSION_COLORS[r.type] || SESSION_COLORS.REST
+            return sc.bg || '#353534'
+          }),
+          borderColor: rows.map(r => {
+            const sc = SESSION_COLORS[r.type] || SESSION_COLORS.REST
+            return sc.border || GRID
+          }),
+          borderWidth: 1,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: TICKS, font: { size: 10 }, boxWidth: 10, padding: 8 } },
+        },
+      },
+    })
+    return () => { if (chartRef.current) chartRef.current.destroy() }
+  }, [rows])
+
+  if (!rows.length) {
+    return <p className="text-xs text-on-surface-variant py-4">Nessuna sessione registrata negli ultimi 30 giorni.</p>
+  }
+  return (
+    <>
+      <div className="relative mx-auto h-52 max-w-[220px]"><canvas ref={canvasRef} /></div>
+      <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
+        Ogni fetta conta i giorni in cui hai loggato almeno un allenamento per quel tipo di sessione (rispetto al piano). Utile per vedere se stai saltando troppo spesso qualcosa.
+      </p>
+    </>
+  )
+}
+
+function GradeProgressionChart({ rows }) {
+  const canvasRef = React.useRef(null)
+  const chartRef = React.useRef(null)
+
+  React.useEffect(() => {
+    if (!canvasRef.current || rows.length < 2) return
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
+    chartRef.current = new Chart(canvasRef.current, {
+      type: 'line',
+      data: {
+        labels: rows.map(r => fmtMonthIt(r.month)),
+        datasets: [{
+          label: 'Grado max',
+          data: rows.map(r => r.idx),
+          borderColor: '#89ceff',
+          backgroundColor: 'rgba(137, 206, 255, 0.08)',
+          tension: 0.2,
+          stepped: 'before',
+          fill: false,
+          pointRadius: 4,
+          borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: TICKS, maxRotation: 45 }, grid: { color: GRID } },
+          y: {
+            ticks: {
+              color: TICKS,
+              callback(v) { return idxToGradeLabel(Number(v)) },
+            },
+            grid: { color: GRID },
+            title: { display: true, text: 'A vista / flash', color: TICKS },
+          },
+        },
+      },
+    })
+    return () => { if (chartRef.current) chartRef.current.destroy() }
+  }, [rows])
+
+  if (rows.length < 2) {
+    return <p className="text-xs text-on-surface-variant py-4">Servono almeno 2 mesi con salite a vista o in flash per vedere l'andamento.</p>
+  }
+  const last = rows[rows.length - 1].idx
+  const prev = rows[rows.length - 2].idx
+  return (
+    <>
+      <div className="relative h-52"><canvas ref={canvasRef} /></div>
+      <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
+        {last > prev
+          ? `L'ultimo mese (${fmtMonthIt(rows[rows.length - 1].month)}) chiude sul massimo ${idxToGradeLabel(last)}: segnale positivo di progressione sulle vie nuove.`
+          : last < prev
+            ? 'Il picco mensile è sceso rispetto al mese precedente: può essere normale (rotazione vie, periodo) o segnale da monitorare se persiste.'
+            : 'Grado massimo stabile sul periodo: mantieni volume e recupero bilanciati.'}
       </p>
     </>
   )
@@ -288,123 +423,6 @@ function PwTrendChart({ sessions, scaricoPlugin }) {
   )
 }
 
-function ReadinessGradeChart({ points, n }) {
-  const canvasRef = React.useRef(null)
-  const chartRef = React.useRef(null)
-  const { m } = points.length >= 2 ? linReg(points) : { m: 0 }
-
-  React.useEffect(() => {
-    if (!canvasRef.current || points.length < 2) return
-    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
-    const xs = points.map(p => p.x)
-    const minX = Math.min(...xs)
-    const maxX = Math.max(...xs)
-    const reg = linReg(points)
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'scatter',
-      data: {
-        datasets: [
-          {
-            type: 'scatter',
-            data: points.map(p => ({ x: p.x, y: p.y })),
-            backgroundColor: '#89ceff',
-            pointRadius: 5,
-          },
-          {
-            type: 'line',
-            data: [{ x: minX, y: reg.m * minX + reg.b }, { x: maxX, y: reg.m * maxX + reg.b }],
-            borderColor: m >= 0 ? '#4ae176' : '#ffb4ab',
-            borderWidth: 2,
-            pointRadius: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: TICKS }, grid: { color: GRID }, title: { display: true, text: 'Readiness', color: TICKS } },
-          y: { ticks: { color: TICKS }, grid: { color: GRID }, title: { display: true, text: 'Grado idx', color: TICKS } },
-        },
-      },
-    })
-    return () => { if (chartRef.current) chartRef.current.destroy() }
-  }, [points, m])
-
-  if (n < 4) {
-    return <p className="text-xs text-on-surface-variant py-4">Servono almeno 4 salite con readiness e grado.</p>
-  }
-  return (
-    <>
-      <div className="relative h-52"><canvas ref={canvasRef} /></div>
-      <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
-        {m > 0
-          ? 'Nei giorni con readiness più alto tendi a salire più forte. Continua a registrare per affinare il pattern.'
-          : 'Il rapporto readiness e difficoltà delle vie varia. Più dati aiuteranno a personalizzare il carico in falesia.'}
-      </p>
-    </>
-  )
-}
-
-function HrrTrendChart({ series }) {
-  const canvasRef = React.useRef(null)
-  const chartRef = React.useRef(null)
-  const improving = series.length >= 4 && series[series.length - 1].hrr > series[0].hrr
-
-  React.useEffect(() => {
-    if (!canvasRef.current || series.length < 3) return
-    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null }
-    const ma4 = series.map((_, i) => {
-      const slice = series.slice(Math.max(0, i - 3), i + 1)
-      return Math.round(slice.reduce((s, x) => s + x.hrr, 0) / slice.length)
-    })
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'line',
-      data: {
-        labels: series.map((_, i) => String(i + 1)),
-        datasets: [
-          {
-            data: series.map(s => s.hrr),
-            borderColor: improving ? '#4ae176' : '#ffb4ab',
-            tension: 0.3,
-            fill: false,
-            pointRadius: 3,
-          },
-          {
-            data: ma4,
-            borderColor: '#928f9f',
-            borderDash: [4, 4],
-            tension: 0.3,
-            pointRadius: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: TICKS }, grid: { color: GRID } },
-          y: { ticks: { color: TICKS }, grid: { color: GRID }, title: { display: true, text: 'HRR bpm', color: TICKS } },
-        },
-      },
-    })
-    return () => { if (chartRef.current) chartRef.current.destroy() }
-  }, [series, improving])
-
-  return (
-    <>
-      <div className="relative h-52"><canvas ref={canvasRef} /></div>
-      <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">
-        {improving
-          ? 'Il tuo recupero cardiovascolare post sforzo sta migliorando. Un HRR più alto a 60 secondi indica un miglioramento della capacità aerobica e della funzione vagale (Buchheit et al., 2010).'
-          : 'L\'HRR è stabile o in leggero calo. Può indicare accumulo di fatica o necessità di maggiore volume aerobico. Monitora nelle prossime sessioni prima di trarre conclusioni.'}
-      </p>
-    </>
-  )
-}
-
 export default function InsightsSection({
   hrvLogs = [],
   healthLogs = [],
@@ -450,26 +468,52 @@ export default function InsightsSection({
     return pts
   }, [trainingLogs, hrvLogs, healthByDate])
 
-  const sleepWeeks = React.useMemo(() => {
-    const trainDates = new Set((trainingLogs || []).map(l => l.log_date).filter(Boolean))
-    const map = {}
-    ;(healthLogs || []).forEach(h => {
-      if (!h.log_date || h.sleep_deep == null) return
-      const wk = weekKeyISO(h.log_date)
-      if (!map[wk]) map[wk] = { deep: [], dates: new Set() }
-      map[wk].deep.push(h.sleep_deep)
+  const hrv30Series = React.useMemo(() => {
+    const cutoff = isoDaysAgo(30)
+    const raw = hrvSortedAsc((hrvLogs || []).filter(r => r.log_date >= cutoff && r.hrv_value != null))
+    const vals = raw.map(r => Number(r.hrv_value))
+    const ma7 = vals.map((_, i) => {
+      const slice = vals.slice(Math.max(0, i - 6), i + 1)
+      return slice.reduce((a, b) => a + b, 0) / slice.length
     })
-    trainDates.forEach(d => {
-      const wk = weekKeyISO(d)
-      if (!map[wk]) map[wk] = { deep: [], dates: new Set() }
-      map[wk].dates.add(d)
+    return raw.map((r, i) => ({ log_date: r.log_date, hrv_value: vals[i], ma7: ma7[i] }))
+  }, [hrvLogs])
+
+  const trainingMix30 = React.useMemo(() => {
+    const cutoff = isoDaysAgo(30)
+    const seen = new Set()
+    const counts = {}
+    ;(trainingLogs || []).forEach(l => {
+      if (!l.log_date || l.log_date < cutoff) return
+      const st = l.session_type
+      if (!st) return
+      const key = `${l.log_date}\0${st}`
+      if (seen.has(key)) return
+      seen.add(key)
+      counts[st] = (counts[st] || 0) + 1
     })
-    return Object.keys(map).sort().map(k => ({
-      label: k.replace('-W', ' S'),
-      sessions: map[k].dates.size,
-      avgDeep: map[k].deep.length ? map[k].deep.reduce((a, b) => a + b, 0) / map[k].deep.length : 0,
-    })).filter(w => w.avgDeep > 0 || w.sessions > 0)
-  }, [healthLogs, trainingLogs])
+    return Object.entries(counts)
+      .map(([type, n]) => ({ type, n }))
+      .sort((a, b) => b.n - a.n)
+  }, [trainingLogs])
+
+  const gradeProgressionSeries = React.useMemo(() => {
+    const styles = new Set(['a_vista', 'flash'])
+    const byMonth = {}
+    ;(ascents || []).forEach(a => {
+      if (!a.completed || !styles.has(a.style)) return
+      const sid = a.session_id != null ? String(a.session_id) : ''
+      const d = sessionDateById[sid]
+      if (!d) return
+      const idx = gradeToIdx(a.grade)
+      if (idx == null) return
+      const month = d.slice(0, 7)
+      byMonth[month] = Math.max(byMonth[month] ?? -1, idx)
+    })
+    return Object.entries(byMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, idx]) => ({ month, idx }))
+  }, [ascents, sessionDateById])
 
   const pwSessions = React.useMemo(() => {
     const measures = [...bodyMeasurements].sort((a, b) => String(a.measured_at).localeCompare(String(b.measured_at)))
@@ -498,36 +542,6 @@ export default function InsightsSection({
     return out.sort((a, b) => a.session_date.localeCompare(b.session_date))
   }, [fitSessions, bodyMeasurements])
 
-  const readinessGradePoints = React.useMemo(() => {
-    const pts = []
-    const bySession = {}
-    ;(ascents || []).forEach(a => {
-      if (!FIRST_STYLES.has(a.style)) return
-      const sidKey = a.session_id != null ? String(a.session_id) : ''
-      const sd = sessionDateById[sidKey]
-      if (!sd) return
-      if (!bySession[sidKey]) bySession[sidKey] = []
-      const g = String(a.grade || '').trim()
-      const idx = GRADE_INDEX[g] ?? GRADE_INDEX[g.toLowerCase()]
-      if (idx != null) bySession[sidKey].push(idx)
-    })
-    Object.entries(bySession).forEach(([sid, idxs]) => {
-      const sd = sessionDateById[sid]
-      if (!sd) return
-      const rd = readinessForDate(sd, hrvLogs, healthByDate)
-      if (rd == null) return
-      pts.push({ x: rd, y: Math.max(...idxs) })
-    })
-    return pts
-  }, [ascents, sessionDateById, hrvLogs, healthByDate])
-
-  const hrrSeries = React.useMemo(() => {
-    return (ascents || [])
-      .filter(a => a.hrr_bpm != null && a.session_id != null && sessionDateById[String(a.session_id)])
-      .map(a => ({ date: sessionDateById[String(a.session_id)], hrr: Number(a.hrr_bpm) }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-  }, [ascents, sessionDateById])
-
   const scaricoPlugin = React.useMemo(() => ({
     id: 'scaricoBands',
     beforeDatasetsDraw(chart) {
@@ -546,28 +560,42 @@ export default function InsightsSection({
     },
   }), [])
 
-  const hrrCount = hrrSeries.length
-
   return (
     <div className="space-y-4">
       <p className="text-sm text-on-surface-variant leading-relaxed">
-        Correlazioni e trend dai tuoi log. Ogni sezione si apre per approfondire.
+        Trend operativi (recupero, piano, progressione) e correlazioni chiave. Ogni sezione si apre per approfondire.
       </p>
+
+      <CollapsibleHistory
+        title="HRV · ultimi 30 giorni"
+        badge={hrv30Series.length}
+        defaultOpen={hrv30Series.length >= 4}
+        className={hrv30Series.length < 2 ? 'opacity-40' : ''}>
+        <HrvTrend30Chart series={hrv30Series} />
+      </CollapsibleHistory>
+
+      <CollapsibleHistory
+        title="Distribuzione allenamento · 30 giorni"
+        badge={trainingMix30.reduce((s, r) => s + r.n, 0)}
+        defaultOpen={trainingMix30.length >= 2}
+        className={trainingMix30.length === 0 ? 'opacity-40' : ''}>
+        <TrainingMixDonut rows={trainingMix30} />
+      </CollapsibleHistory>
+
+      <CollapsibleHistory
+        title="Progressione gradi (a vista / flash)"
+        badge={gradeProgressionSeries.length}
+        defaultOpen={gradeProgressionSeries.length >= 3}
+        className={gradeProgressionSeries.length < 2 ? 'opacity-40' : ''}>
+        <GradeProgressionChart rows={gradeProgressionSeries} />
+      </CollapsibleHistory>
 
       <CollapsibleHistory
         title="Readiness vs RPE"
         badge={readinessRpePoints.length}
         defaultOpen={readinessRpePoints.length >= 5}
-        className={readinessRpePoints.length < 5 ? 'opacity-40' : ''}>
+        className={readinessRpePoints.length < 3 ? 'opacity-40' : ''}>
         <ReadinessRpeChart points={readinessRpePoints} n={readinessRpePoints.length} />
-      </CollapsibleHistory>
-
-      <CollapsibleHistory
-        title="Sonno profondo vs volume"
-        badge={sleepWeeks.length}
-        defaultOpen={sleepWeeks.length >= 2}
-        className={sleepWeeks.length < 2 ? 'opacity-40' : ''}>
-        <SleepVolumeChart weeks={sleepWeeks} />
       </CollapsibleHistory>
 
       <CollapsibleHistory
@@ -576,28 +604,6 @@ export default function InsightsSection({
         defaultOpen={pwSessions.length >= 2}
         className={pwSessions.length < 2 ? 'opacity-40' : ''}>
         <PwTrendChart sessions={pwSessions} scaricoPlugin={scaricoPlugin} />
-      </CollapsibleHistory>
-
-      <CollapsibleHistory
-        title="Readiness vs grado arrampicata"
-        badge={readinessGradePoints.length}
-        defaultOpen={readinessGradePoints.length >= 4}
-        className={readinessGradePoints.length < 4 ? 'opacity-40' : ''}>
-        <ReadinessGradeChart points={readinessGradePoints} n={readinessGradePoints.length} />
-      </CollapsibleHistory>
-
-      <CollapsibleHistory
-        title="HRR nel tempo"
-        badge={hrrCount}
-        defaultOpen={hrrCount >= 3}
-        className={hrrCount < 3 ? 'opacity-40' : ''}>
-        {hrrCount < 3 ? (
-          <p className="text-xs text-on-surface-variant py-3 leading-relaxed">
-            Registra l&apos;HRR in almeno 3 sessioni di arrampicata per attivare questo grafico. Trovi il campo nella schermata di salvataggio di ogni sessione.
-          </p>
-        ) : (
-          <HrrTrendChart series={hrrSeries} />
-        )}
       </CollapsibleHistory>
     </div>
   )

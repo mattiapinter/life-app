@@ -422,16 +422,62 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   )
 }
 
+/** Vie già loggate su una falesia: nomi per `<datalist>` e mappa normalizzata → grado più recente. */
+function buildCragRouteHints(cragId, savedSessions, savedAscents) {
+  const cid = Number(cragId)
+  if (!Number.isFinite(cid) || cid <= 0) return { optionNames: [], byNorm: {} }
+  const sidSet = new Set((savedSessions || []).filter(s => s.crag_id === cid).map(s => s.id))
+  const byNorm = {}
+  ;(savedAscents || []).forEach(a => {
+    if (!a.session_id || !sidSet.has(a.session_id)) return
+    const raw = (a.route_name || '').trim()
+    if (!raw) return
+    const norm = raw.toLowerCase()
+    const sess = (savedSessions || []).find(s => s.id === a.session_id)
+    const dateStr = sess?.session_date || ''
+    const g = a.grade != null ? String(a.grade).trim() : ''
+    const prev = byNorm[norm]
+    if (!prev || dateStr >= prev.lastDate) {
+      byNorm[norm] = {
+        displayName: raw,
+        lastDate: dateStr,
+        grade: g || prev?.grade || '',
+      }
+    }
+  })
+  const optionNames = Object.values(byNorm)
+    .map(x => x.displayName)
+    .sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }))
+  return { optionNames, byNorm }
+}
+
 // ── SESSION FORM ───────────────────────────────────────────────────
-function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
+function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, onClose, sessionType = 'falesia' }) {
   const [date,    setDate]    = React.useState(todayStr())
   const [cragId,  setCragId]  = React.useState(crags[0]?.id || '')
   const [notes,   setNotes]   = React.useState('')
   const [ascents, setAscents] = React.useState([])
   const [saving,  setSaving]  = React.useState(false)
+  const routeListId = React.useId().replace(/:/g, '_')
+
+  const routeHints = React.useMemo(
+    () => buildCragRouteHints(cragId, savedSessions, savedAscents),
+    [cragId, savedSessions, savedAscents]
+  )
 
   const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '' }])
   const updateAscent = (i, field, val) => setAscents(p => p.map((a, idx) => idx === i ? { ...a, [field]: val } : a))
+  const onRouteNameChange = (i, val) => {
+    const norm = val.trim().toLowerCase()
+    const hint = norm ? routeHints.byNorm[norm] : null
+    setAscents(p =>
+      p.map((row, idx) => {
+        if (idx !== i) return row
+        const nextGrade = hint?.grade && GRADES.includes(hint.grade) ? hint.grade : row.grade
+        return { ...row, route_name: val, grade: hint ? nextGrade : row.grade }
+      })
+    )
+  }
   const removeAscent = (i) => setAscents(p => p.filter((_, idx) => idx !== i))
 
   const handleSave = async () => {
@@ -486,13 +532,27 @@ function SessionForm({ crags, onSaved, onClose, sessionType = 'falesia' }) {
             onClick={addAscent}>+ Aggiungi tiro</div>
         </div>
 
+        <datalist id={routeListId}>
+          {routeHints.optionNames.map(name => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+
         {ascents.map((a, i) => (
           <div key={i} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', marginBottom: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <div style={{ fontSize: '11px', fontWeight: '600', color: C.hint }}>Tiro {i + 1}</div>
               <div style={{ fontSize: '16px', color: C.hint, cursor: 'pointer' }} onClick={() => removeAscent(i)}>×</div>
             </div>
-            <input style={{ ...ss.inp, marginBottom: '8px' }} placeholder="Nome via (opzionale)" value={a.route_name} onChange={e => updateAscent(i, 'route_name', e.target.value)} />
+            <input
+              type="text"
+              list={routeListId}
+              autoComplete="off"
+              style={{ ...ss.inp, marginBottom: '8px', fontSize: '16px' }}
+              placeholder="Nome via (opzionale)"
+              value={a.route_name}
+              onChange={e => onRouteNameChange(i, e.target.value)}
+            />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Grado</div>
@@ -1647,6 +1707,8 @@ export default function ScalateSection({ initialSub, onSubChange }) {
         {showSessForm && (
           <SessionForm
             crags={crags.filter(c => c.id === selectedCrag.id)}
+            savedSessions={sessions}
+            savedAscents={ascents}
             onSaved={() => { setShowSessForm(false); loadAll(); setToast('Sessione salvata') }}
             onClose={() => setShowSessForm(false)}
           />
@@ -1672,7 +1734,15 @@ export default function ScalateSection({ initialSub, onSubChange }) {
   const renderFalesie = () => (
     <div style={ss.body}>
       {showCragForm && <CragForm onSaved={() => { setShowCragForm(false); loadAll(); setToast('Falesia salvata') }} onClose={() => setShowCragForm(false)} />}
-      {showSessForm && <SessionForm crags={crags} onSaved={() => { setShowSessForm(false); loadAll(); setToast('Sessione salvata') }} onClose={() => setShowSessForm(false)} />}
+      {showSessForm && (
+        <SessionForm
+          crags={crags}
+          savedSessions={sessions}
+          savedAscents={ascents}
+          onSaved={() => { setShowSessForm(false); loadAll(); setToast('Sessione salvata') }}
+          onClose={() => setShowSessForm(false)}
+        />
+      )}
 
       {crags.length > 0 && (
         <div style={{ marginBottom: '16px' }}>
