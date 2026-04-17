@@ -422,7 +422,7 @@ function CragForm({ onSaved, onClose, editCrag = null }) {
   )
 }
 
-/** Vie già loggate su una falesia: nomi per `<datalist>` e mappa normalizzata → grado più recente. */
+/** Vie già loggate su una falesia: elenco per `<select>` e mappa normalizzata → grado più recente. */
 function buildCragRouteHints(cragId, savedSessions, savedAscents) {
   const cid = Number(cragId)
   if (!Number.isFinite(cid) || cid <= 0) return { optionNames: [], byNorm: {} }
@@ -458,16 +458,50 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
   const [notes,   setNotes]   = React.useState('')
   const [ascents, setAscents] = React.useState([])
   const [saving,  setSaving]  = React.useState(false)
-  const routeListId = React.useId().replace(/:/g, '_')
 
   const routeHints = React.useMemo(
     () => buildCragRouteHints(cragId, savedSessions, savedAscents),
     [cragId, savedSessions, savedAscents]
   )
 
+  /** Valore `<select>`: '' | nome canonico da archivio | '__new__' (nome libero sotto). */
+  const routeSelectValue = (routeName) => {
+    const raw = (routeName || '').trim()
+    if (!raw) return ''
+    const hint = routeHints.byNorm[raw.toLowerCase()]
+    if (hint && routeHints.optionNames.some(n => n.toLowerCase() === raw.toLowerCase())) return hint.displayName
+    return '__new__'
+  }
+
   const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '' }])
   const updateAscent = (i, field, val) => setAscents(p => p.map((a, idx) => idx === i ? { ...a, [field]: val } : a))
-  const onRouteNameChange = (i, val) => {
+
+  const onRouteSelectChange = (i, val) => {
+    if (val === '') {
+      updateAscent(i, 'route_name', '')
+      return
+    }
+    if (val === '__new__') {
+      setAscents(p =>
+        p.map((row, idx) => {
+          if (idx !== i) return row
+          const listed = row.route_name.trim() && routeHints.byNorm[row.route_name.trim().toLowerCase()]
+          return { ...row, route_name: listed ? '' : row.route_name }
+        })
+      )
+      return
+    }
+    const hint = routeHints.byNorm[val.toLowerCase()]
+    setAscents(p =>
+      p.map((row, idx) => {
+        if (idx !== i) return row
+        const nextGrade = hint?.grade && GRADES.includes(hint.grade) ? hint.grade : row.grade
+        return { ...row, route_name: val, grade: nextGrade }
+      })
+    )
+  }
+
+  const onCustomRouteNameChange = (i, val) => {
     const norm = val.trim().toLowerCase()
     const hint = norm ? routeHints.byNorm[norm] : null
     setAscents(p =>
@@ -532,27 +566,33 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
             onClick={addAscent}>+ Aggiungi tiro</div>
         </div>
 
-        <datalist id={routeListId}>
-          {routeHints.optionNames.map(name => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
-
         {ascents.map((a, i) => (
           <div key={i} style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', marginBottom: '8px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <div style={{ fontSize: '11px', fontWeight: '600', color: C.hint }}>Tiro {i + 1}</div>
               <div style={{ fontSize: '16px', color: C.hint, cursor: 'pointer' }} onClick={() => removeAscent(i)}>×</div>
             </div>
-            <input
-              type="text"
-              list={routeListId}
-              autoComplete="off"
-              style={{ ...ss.inp, marginBottom: '8px', fontSize: '16px' }}
-              placeholder="Nome via (opzionale)"
-              value={a.route_name}
-              onChange={e => onRouteNameChange(i, e.target.value)}
-            />
+            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Via su questa falesia</div>
+            <select
+              style={{ ...ss.inp, appearance: 'none', marginBottom: '8px', fontSize: '16px' }}
+              value={routeSelectValue(a.route_name)}
+              onChange={e => onRouteSelectChange(i, e.target.value)}>
+              <option value="">— Nessuna / da definire —</option>
+              {routeHints.optionNames.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+              <option value="__new__">Altra via (scrivi sotto)</option>
+            </select>
+            {routeSelectValue(a.route_name) === '__new__' && (
+              <input
+                type="text"
+                autoComplete="off"
+                style={{ ...ss.inp, marginBottom: '8px', fontSize: '16px' }}
+                placeholder="Nome nuova via (opzionale)"
+                value={a.route_name}
+                onChange={e => onCustomRouteNameChange(i, e.target.value)}
+              />
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Grado</div>
