@@ -944,22 +944,6 @@ function EditSessionDrawer({ session, ascents, savedSessions = [], savedAscents 
 
   return (
     <>
-      {delConfirm && (
-        <div style={drawer.centerOverlay()} onClick={() => !deleting && setDelConfirm(false)}>
-          <div style={{ ...drawer.centerCard, background: C.surface, borderRadius: '16px', padding: '24px', border: `1px solid ${C.redBorder}` }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: C.text, marginBottom: '8px' }}>Elimina sessione</div>
-            <div style={{ fontSize: '13px', color: C.muted, marginBottom: '20px', lineHeight: '1.5' }}>
-              Verranno eliminati anche tutti i tiri collegati. Azione irreversibile.
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: deleting ? 'default' : 'pointer', background: C.bg, border: `1px solid ${C.border}`, fontSize: '13px', color: C.muted }} onClick={() => !deleting && setDelConfirm(false)}>Annulla</div>
-              <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: deleting ? 'default' : 'pointer', background: C.redBg, border: `1px solid ${C.redBorder}`, fontSize: '13px', fontWeight: '600', color: C.red, opacity: deleting ? 0.6 : 1 }} onClick={() => !deleting && handleDeleteSession()}>
-                {deleting ? '…' : 'Elimina'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     <div style={drawer.overlay()} onClick={onClose}>
       <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
         <div style={drawer.sheetHeader}>
@@ -1114,12 +1098,19 @@ function EditSessionDrawer({ session, ascents, savedSessions = [], savedAscents 
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
               {[{ v: true, l: 'Completata' }, { v: false, l: 'Tentativo' }].map(o => (
                 <div key={o.l}
-                  style={{ flex: 1, padding: '5px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', border: `1px solid ${t.completed === o.v ? C.green : C.border}`, background: t.completed === o.v ? C.greenBg : 'transparent', color: t.completed === o.v ? C.greenLight : C.hint }}
+                  style={{ flex: 1, minWidth: '100px', padding: '5px', textAlign: 'center', borderRadius: '8px', cursor: 'pointer', fontSize: '10px', fontWeight: '600', border: `1px solid ${t.completed === o.v ? C.green : C.border}`, background: t.completed === o.v ? C.greenBg : 'transparent', color: t.completed === o.v ? C.greenLight : C.hint }}
                   onClick={() => updateNew(t._key, 'completed', o.v)}>{o.l}</div>
               ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                <div style={{ fontSize: '10px', color: C.hint }}>RPE</div>
+                <select style={{ ...ss.inp, width: '64px', padding: '6px 8px', fontSize: '12px', appearance: 'none' }} value={t.rpe || ''} onChange={e => updateNew(t._key, 'rpe', e.target.value)}>
+                  <option value="">—</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ fontSize: '9px', color: C.hint }}>Qualita':</div>
@@ -1148,6 +1139,22 @@ function EditSessionDrawer({ session, ascents, savedSessions = [], savedAscents 
         </div>
       </div>
     </div>
+      {delConfirm && (
+        <div style={drawer.centerOverlay(5200)} onClick={() => !deleting && setDelConfirm(false)}>
+          <div style={{ ...drawer.centerCard, background: C.surface, borderRadius: '16px', padding: '24px', border: `1px solid ${C.redBorder}` }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: C.text, marginBottom: '8px' }}>Elimina sessione</div>
+            <div style={{ fontSize: '13px', color: C.muted, marginBottom: '20px', lineHeight: '1.5' }}>
+              Verranno eliminati anche tutti i tiri collegati. Azione irreversibile.
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: deleting ? 'default' : 'pointer', background: C.bg, border: `1px solid ${C.border}`, fontSize: '13px', color: C.muted }} onClick={() => !deleting && setDelConfirm(false)}>Annulla</div>
+              <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: deleting ? 'default' : 'pointer', background: C.redBg, border: `1px solid ${C.redBorder}`, fontSize: '13px', fontWeight: '600', color: C.red, opacity: deleting ? 0.6 : 1 }} onClick={() => !deleting && handleDeleteSession()}>
+                {deleting ? '…' : 'Elimina'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
