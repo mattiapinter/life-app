@@ -113,6 +113,33 @@ export default function App() {
     const p = {}; DAYS.forEach(d => { p[d] = { isSkiDay: false, meals: {} } }); return p
   })
 
+  /** Macro già visitate: restano montate (nascoste) per non rifare fetch/render al cambio tab. */
+  const [sectionEverMounted, setSectionEverMounted] = React.useState({ home: true })
+  const scrollByMacro = React.useRef({ home: 0, allenamento: 0, scalate: 0, dieta: 0, dati: 0 })
+  /** Sotto-tab per macro (così le sezioni nascoste non ricevono il `sub` della schermata attiva). */
+  const [subSnapshots, setSubSnapshots] = React.useState({
+    allenamento: SUB.allenamento[0].id,
+    scalate: SUB.scalate[0].id,
+    dieta: SUB.dieta[0].id,
+    dati: SUB.dati[0].id,
+  })
+
+  React.useEffect(() => {
+    setSectionEverMounted(s => ({ ...s, [macro]: true }))
+  }, [macro])
+
+  React.useEffect(() => {
+    const y = scrollByMacro.current[macro] ?? 0
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => window.scrollTo(0, y))
+    })
+  }, [macro])
+
+  React.useEffect(() => {
+    if (macro === 'home' || !SUB[macro]?.length) return
+    if (sub != null) setSubSnapshots(ss => (ss[macro] === sub ? ss : { ...ss, [macro]: sub }))
+  }, [macro, sub])
+
   React.useEffect(() => {
     const { data: { subscription } } = onAuthChange((_event, session) => {
       setUser(session?.user || null)
@@ -158,8 +185,15 @@ export default function App() {
     syncOptsTimer.current = setTimeout(() => { syncFoodOptionsToSupabase(foodOptions) }, 1500)
   }, [foodOptions, user])
 
-  const setMacro = (m) => { setMacroRaw(m); setSub(SUB[m]?.[0]?.id || null) }
+  const setMacro = (m) => {
+    scrollByMacro.current[macro] = window.scrollY
+    const nextSub = SUB[m]?.length ? (subSnapshots[m] || SUB[m][0].id) : null
+    setMacroRaw(m)
+    setSub(nextSub)
+  }
   const goToDatiTab = (tabId) => {
+    scrollByMacro.current[macro] = window.scrollY
+    setSubSnapshots(ss => ({ ...ss, dati: tabId }))
     setMacroRaw('dati')
     setSub(tabId)
   }
@@ -207,8 +241,8 @@ export default function App() {
       {subTabs.length > 0 && <SubNav tabs={subTabs} active={activeSub} onChange={setSub} />}
 
       <main className={subTabs.length > 0 ? 'pt-[calc(64px+env(safe-area-inset-top,0px))]' : ''}>
-        {macro === 'home' && (
-          <div key="home" className="page-enter">
+        {sectionEverMounted.home && (
+          <div key="home" className="page-enter" hidden={macro !== 'home'}>
             <HomeSection
               weeklyPlan={weeklyPlan}
               fitSessions={fitSessions}
@@ -226,25 +260,25 @@ export default function App() {
             />
           </div>
         )}
-        {macro === 'allenamento' && (
-          <div key="allenamento" className="page-enter">
-            <AllenamentoSection initialSub={activeSub} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} onOpenFitnessTests={() => goToDatiTab('testfisici')} activePlan={activePlan} trainingCalendar={trainingCalendar} />
+        {sectionEverMounted.allenamento && (
+          <div key="allenamento" className="page-enter" hidden={macro !== 'allenamento'}>
+            <AllenamentoSection initialSub={subSnapshots.allenamento} onSubChange={setSub} trainingLogs={trainingLogs} setTrainingLogs={setTrainingLogs} fitSessions={fitSessions} setFitSessions={setFitSessions} videos={videos} onVideosChange={handleVideosChange} onOpenFitnessTests={() => goToDatiTab('testfisici')} activePlan={activePlan} trainingCalendar={trainingCalendar} />
           </div>
         )}
-        {macro === 'scalate' && (
-          <div key="scalate" className="page-enter">
-            <ScalateSection initialSub={activeSub} onSubChange={setSub} />
+        {sectionEverMounted.scalate && (
+          <div key="scalate" className="page-enter" hidden={macro !== 'scalate'}>
+            <ScalateSection initialSub={subSnapshots.scalate} onSubChange={setSub} />
           </div>
         )}
-        {macro === 'dieta' && (
-          <div key="dieta" className="page-enter">
-            <DietaSection initialSub={activeSub} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} />
+        {sectionEverMounted.dieta && (
+          <div key="dieta" className="page-enter" hidden={macro !== 'dieta'}>
+            <DietaSection initialSub={subSnapshots.dieta} onSubChange={setSub} weeklyPlan={weeklyPlan} setWeeklyPlan={setWeeklyPlan} foodOptions={foodOptions} setFoodOptions={setFoodOptions} />
           </div>
         )}
-        {macro === 'dati' && (
-          <div key="dati" className="page-enter">
+        {sectionEverMounted.dati && (
+          <div key="dati" className="page-enter" hidden={macro !== 'dati'}>
             <MetricheSection
-              initialSub={activeSub}
+              initialSub={subSnapshots.dati}
               onSubChange={setSub}
               fitSessions={fitSessions}
               setFitSessions={setFitSessions}

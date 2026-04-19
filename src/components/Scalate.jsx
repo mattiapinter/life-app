@@ -1870,13 +1870,17 @@ export default function ScalateSection({ initialSub, onSubChange }) {
 
   const changeSub = (s) => { setSub(s); onSubChange?.(s) }
 
-  const loadAll = async () => {
-    setLoading(true)
-    const [c, s, a, p, at] = await Promise.all([
-      loadCrags(), loadClimbingSessions(), loadAscents(), loadProjects(), loadProjectAttempts()
-    ])
-    setCrags(c); setSessions(s); setAscents(a); setProjects(p); setAttempts(at)
-    setLoading(false)
+  const loadAll = async (opts = {}) => {
+    const quiet = !!opts.quiet
+    if (!quiet) setLoading(true)
+    try {
+      const [c, s, a, p, at] = await Promise.all([
+        loadCrags(), loadClimbingSessions(), loadAscents(), loadProjects(), loadProjectAttempts()
+      ])
+      setCrags(c); setSessions(s); setAscents(a); setProjects(p); setAttempts(at)
+    } finally {
+      if (!quiet) setLoading(false)
+    }
   }
 
   React.useEffect(() => { loadAll() }, [])
@@ -1900,14 +1904,14 @@ export default function ScalateSection({ initialSub, onSubChange }) {
           crag={selectedCrag}
           sessions={sessions}
           ascents={ascents}
-          onBack={() => { setSelectedCrag(null); loadAll() }}
+          onBack={() => { setSelectedCrag(null); loadAll({ quiet: true }) }}
           onAddSession={() => setShowSessForm(true)}
           onDelete={async () => {
             await deleteCrag(selectedCrag.id)
             setSelectedCrag(null)
-            loadAll()
+            loadAll({ quiet: true })
           }}
-          onCragUpdated={loadAll}
+          onCragUpdated={() => loadAll({ quiet: true })}
           onSessionDeleted={() => setToast('Sessione eliminata')}
         />
         {showSessForm && (
@@ -1915,7 +1919,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
             crags={crags.filter(c => c.id === selectedCrag.id)}
             savedSessions={sessions}
             savedAscents={ascents}
-            onSaved={() => { setShowSessForm(false); loadAll(); setToast('Sessione salvata') }}
+            onSaved={() => { setShowSessForm(false); loadAll({ quiet: true }); setToast('Sessione salvata') }}
             onClose={() => setShowSessForm(false)}
           />
         )}
@@ -1939,13 +1943,13 @@ export default function ScalateSection({ initialSub, onSubChange }) {
 
   const renderFalesie = () => (
     <div style={ss.body}>
-      {showCragForm && <CragForm onSaved={() => { setShowCragForm(false); loadAll(); setToast('Falesia salvata') }} onClose={() => setShowCragForm(false)} />}
+      {showCragForm && <CragForm onSaved={() => { setShowCragForm(false); loadAll({ quiet: true }); setToast('Falesia salvata') }} onClose={() => setShowCragForm(false)} />}
       {showSessForm && (
         <SessionForm
           crags={crags}
           savedSessions={sessions}
           savedAscents={ascents}
-          onSaved={() => { setShowSessForm(false); loadAll(); setToast('Sessione salvata') }}
+          onSaved={() => { setShowSessForm(false); loadAll({ quiet: true }); setToast('Sessione salvata') }}
           onClose={() => setShowSessForm(false)}
         />
       )}
@@ -2129,8 +2133,8 @@ export default function ScalateSection({ initialSub, onSubChange }) {
       ) : (
         <>
           {sub === 'falesie'  && climbMode === 'falesia' && renderFalesie()}
-          {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} onRefresh={loadAll} onSessionDeleted={() => setToast('Sessione eliminata')} />}
-          {sub === 'progetti' && <ProjectsTab projects={projects} attempts={attempts} crags={crags} onAdded={loadAll} onRefresh={loadAll} />}
+          {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} onRefresh={() => loadAll({ quiet: true })} onSessionDeleted={() => setToast('Sessione eliminata')} />}
+          {sub === 'progetti' && <ProjectsTab projects={projects} attempts={attempts} crags={crags} onAdded={() => loadAll({ quiet: true })} onRefresh={() => loadAll({ quiet: true })} />}
           {sub === 'stats'    && <StatsSection sessions={sessions} ascents={ascents} crags={crags} />}
         </>
       )}
