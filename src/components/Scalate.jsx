@@ -763,18 +763,70 @@ function AttemptForm({ project, onSaved, onClose }) {
 }
 
 // ── EDIT SESSION DRAWER ────────────────────────────────────────────
-function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
+function EditSessionDrawer({ session, ascents, savedSessions = [], savedAscents = [], onClose, onSaved, onDeleted }) {
   const [notes,    setNotes]    = React.useState(session.notes || '')
   const [rows,     setRows]     = React.useState(
     ascents.map(a => ({ ...a, _dirty: false, _deleted: false }))
   )
   const [newTiri,  setNewTiri]  = React.useState([])
   const [saving,   setSaving]   = React.useState(false)
+  const [delConfirm, setDelConfirm] = React.useState(false)
+  const [deleting,   setDeleting]   = React.useState(false)
+
+  const routeHints = React.useMemo(
+    () => buildCragRouteHints(session.crag_id, savedSessions, savedAscents),
+    [session.crag_id, savedSessions, savedAscents]
+  )
+
+  const routeSelectValue = (routeName) => {
+    const raw = (routeName || '').trim()
+    if (!raw) return ''
+    const hint = routeHints.byNorm[raw.toLowerCase()]
+    if (hint && routeHints.optionNames.some(n => n.toLowerCase() === raw.toLowerCase())) return hint.displayName
+    return '__new__'
+  }
 
   const updateRow = (id, field, val) =>
     setRows(p => p.map(r => r.id === id ? { ...r, [field]: val, _dirty: true } : r))
   const deleteRow = (id) =>
     setRows(p => p.map(r => r.id === id ? { ...r, _deleted: true } : r))
+
+  const onRouteSelectChangeRow = (id, val) => {
+    if (val === '') {
+      updateRow(id, 'route_name', '')
+      return
+    }
+    if (val === '__new__') {
+      setRows(p =>
+        p.map(r => {
+          if (r.id !== id) return r
+          const listed = r.route_name.trim() && routeHints.byNorm[r.route_name.trim().toLowerCase()]
+          return { ...r, route_name: listed ? '' : r.route_name, _dirty: true }
+        })
+      )
+      return
+    }
+    const hint = routeHints.byNorm[val.toLowerCase()]
+    setRows(p =>
+      p.map(r => {
+        if (r.id !== id) return r
+        const nextGrade = hint?.grade && GRADES.includes(hint.grade) ? hint.grade : r.grade
+        return { ...r, route_name: val, grade: nextGrade, _dirty: true }
+      })
+    )
+  }
+
+  const onCustomRouteNameChangeRow = (id, val) => {
+    const norm = val.trim().toLowerCase()
+    const hint = norm ? routeHints.byNorm[norm] : null
+    setRows(p =>
+      p.map(r => {
+        if (r.id !== id) return r
+        const nextGrade = hint?.grade && GRADES.includes(hint.grade) ? hint.grade : r.grade
+        return { ...r, route_name: val, grade: hint ? nextGrade : r.grade, _dirty: true }
+      })
+    )
+  }
 
   const addNew = () =>
     setNewTiri(p => [...p, { _key: Date.now(), route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '' }])
@@ -782,6 +834,55 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
     setNewTiri(p => p.map(t => t._key === key ? { ...t, [field]: val } : t))
   const removeNew = (key) =>
     setNewTiri(p => p.filter(t => t._key !== key))
+
+  const onRouteSelectChangeNew = (key, val) => {
+    if (val === '') {
+      updateNew(key, 'route_name', '')
+      return
+    }
+    if (val === '__new__') {
+      setNewTiri(p =>
+        p.map(t => {
+          if (t._key !== key) return t
+          const listed = t.route_name.trim() && routeHints.byNorm[t.route_name.trim().toLowerCase()]
+          return { ...t, route_name: listed ? '' : t.route_name }
+        })
+      )
+      return
+    }
+    const hint = routeHints.byNorm[val.toLowerCase()]
+    setNewTiri(p =>
+      p.map(t => {
+        if (t._key !== key) return t
+        const nextGrade = hint?.grade && GRADES.includes(hint.grade) ? hint.grade : t.grade
+        return { ...t, route_name: val, grade: nextGrade }
+      })
+    )
+  }
+
+  const onCustomRouteNameChangeNew = (key, val) => {
+    const norm = val.trim().toLowerCase()
+    const hint = norm ? routeHints.byNorm[norm] : null
+    setNewTiri(p =>
+      p.map(t => {
+        if (t._key !== key) return t
+        const nextGrade = hint?.grade && GRADES.includes(hint.grade) ? hint.grade : t.grade
+        return { ...t, route_name: val, grade: hint ? nextGrade : t.grade }
+      })
+    )
+  }
+
+  const handleDeleteSession = async () => {
+    if (deleting) return
+    setDeleting(true)
+    const ok = await deleteClimbingSession(session.id)
+    setDeleting(false)
+    setDelConfirm(false)
+    if (ok) {
+      onClose()
+      onDeleted?.()
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -842,6 +943,23 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
   const visibleRows = rows.filter(r => !r._deleted)
 
   return (
+    <>
+      {delConfirm && (
+        <div style={drawer.centerOverlay()} onClick={() => !deleting && setDelConfirm(false)}>
+          <div style={{ ...drawer.centerCard, background: C.surface, borderRadius: '16px', padding: '24px', border: `1px solid ${C.redBorder}` }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: C.text, marginBottom: '8px' }}>Elimina sessione</div>
+            <div style={{ fontSize: '13px', color: C.muted, marginBottom: '20px', lineHeight: '1.5' }}>
+              Verranno eliminati anche tutti i tiri collegati. Azione irreversibile.
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: deleting ? 'default' : 'pointer', background: C.bg, border: `1px solid ${C.border}`, fontSize: '13px', color: C.muted }} onClick={() => !deleting && setDelConfirm(false)}>Annulla</div>
+              <div style={{ flex: 1, padding: '12px', textAlign: 'center', borderRadius: '10px', cursor: deleting ? 'default' : 'pointer', background: C.redBg, border: `1px solid ${C.redBorder}`, fontSize: '13px', fontWeight: '600', color: C.red, opacity: deleting ? 0.6 : 1 }} onClick={() => !deleting && handleDeleteSession()}>
+                {deleting ? '…' : 'Elimina'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     <div style={drawer.overlay()} onClick={onClose}>
       <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
         <div style={drawer.sheetHeader}>
@@ -878,9 +996,27 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
                     <div style={{ fontSize: '12px', color: C.red, cursor: 'pointer', padding: '2px 8px', opacity: 0.7 }}
                       onClick={() => deleteRow(r.id)}>Elimina</div>
                   </div>
-                  <input style={{ ...ss.inp, marginBottom: '8px', fontSize: '12px' }}
-                    placeholder="Nome via" value={r.route_name || ''}
-                    onChange={e => updateRow(r.id, 'route_name', e.target.value)} />
+                  <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Via su questa falesia</div>
+                  <select
+                    style={{ ...ss.inp, appearance: 'none', marginBottom: '8px', fontSize: '14px' }}
+                    value={routeSelectValue(r.route_name)}
+                    onChange={e => onRouteSelectChangeRow(r.id, e.target.value)}>
+                    <option value="">— Nessuna / da definire —</option>
+                    {routeHints.optionNames.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                    <option value="__new__">Altra via (scrivi sotto)</option>
+                  </select>
+                  {routeSelectValue(r.route_name) === '__new__' && (
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      style={{ ...ss.inp, marginBottom: '8px', fontSize: '14px' }}
+                      placeholder="Nome nuova via (opzionale)"
+                      value={r.route_name || ''}
+                      onChange={e => onCustomRouteNameChangeRow(r.id, e.target.value)}
+                    />
+                  )}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                     <div>
                       <div style={{ fontSize: '9px', color: C.hint, marginBottom: '3px' }}>Grado</div>
@@ -936,9 +1072,27 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
               <div style={{ fontSize: '11px', fontWeight: '600', color: C.violetLight }}>Nuovo tiro</div>
               <div style={{ fontSize: '16px', color: C.muted, cursor: 'pointer' }} onClick={() => removeNew(t._key)}>×</div>
             </div>
-            <input style={{ ...ss.inp, marginBottom: '8px', fontSize: '12px' }}
-              placeholder="Nome via (opzionale)" value={t.route_name}
-              onChange={e => updateNew(t._key, 'route_name', e.target.value)} />
+            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Via su questa falesia</div>
+            <select
+              style={{ ...ss.inp, appearance: 'none', marginBottom: '8px', fontSize: '14px' }}
+              value={routeSelectValue(t.route_name)}
+              onChange={e => onRouteSelectChangeNew(t._key, e.target.value)}>
+              <option value="">— Nessuna / da definire —</option>
+              {routeHints.optionNames.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+              <option value="__new__">Altra via (scrivi sotto)</option>
+            </select>
+            {routeSelectValue(t.route_name) === '__new__' && (
+              <input
+                type="text"
+                autoComplete="off"
+                style={{ ...ss.inp, marginBottom: '8px', fontSize: '14px' }}
+                placeholder="Nome nuova via (opzionale)"
+                value={t.route_name}
+                onChange={e => onCustomRouteNameChangeNew(t._key, e.target.value)}
+              />
+            )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
               <div>
                 <div style={{ fontSize: '9px', color: C.hint, marginBottom: '3px' }}>Grado</div>
@@ -984,17 +1138,22 @@ function EditSessionDrawer({ session, ascents, onClose, onSaved }) {
         </div>
 
         <div style={drawer.sheetFooter}>
+          <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+            <div style={{ fontSize: '11px', color: C.red, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.35 : 0.75, padding: '6px' }}
+              onClick={() => !saving && setDelConfirm(true)}>Elimina sessione…</div>
+          </div>
           <div style={{ ...ss.savBtn, marginTop: 0, opacity: saving ? 0.6 : 1 }} onClick={!saving ? handleSave : undefined}>
             {saving ? 'Salvataggio...' : 'Salva modifiche'}
           </div>
         </div>
       </div>
     </div>
+    </>
   )
 }
 
 // ── CRAG DETAIL ────────────────────────────────────────────────────
-function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession, onDelete, onCragUpdated }) {
+function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession, onDelete, onCragUpdated, onSessionDeleted }) {
   const [confirmDel,   setConfirmDel]   = React.useState(false)
   const [showEdit,     setShowEdit]     = React.useState(false)
   const [editSession,  setEditSession]  = React.useState(null)
@@ -1028,8 +1187,11 @@ function CragDetail({ crag: initialCrag, sessions, ascents, onBack, onAddSession
         <EditSessionDrawer
           session={editSession}
           ascents={ascents.filter(a => a.session_id === editSession.id)}
+          savedSessions={sessions}
+          savedAscents={ascents}
           onClose={() => setEditSession(null)}
           onSaved={() => { setEditSession(null); onCragUpdated() }}
+          onDeleted={() => { onCragUpdated(); onSessionDeleted?.() }}
         />
       )}
 
@@ -1228,7 +1390,7 @@ function AscentCard({ a, sess, crag, onEdit }) {
   )
 }
 
-function TiriTab({ ascents, sessions, crags, onRefresh }) {
+function TiriTab({ ascents, sessions, crags, onRefresh, onSessionDeleted }) {
   const [editSession,     setEditSession]     = React.useState(null)
   const [showRipetizioni, setShowRipetizioni] = React.useState(false)
 
@@ -1257,8 +1419,11 @@ function TiriTab({ ascents, sessions, crags, onRefresh }) {
         <EditSessionDrawer
           session={editSession}
           ascents={ascents.filter(a => a.session_id === editSession.id)}
+          savedSessions={sessions}
+          savedAscents={ascents}
           onClose={() => setEditSession(null)}
           onSaved={() => { setEditSession(null); onRefresh() }}
+          onDeleted={() => { onRefresh(); onSessionDeleted?.() }}
         />
       )}
 
@@ -1743,6 +1908,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
             loadAll()
           }}
           onCragUpdated={loadAll}
+          onSessionDeleted={() => setToast('Sessione eliminata')}
         />
         {showSessForm && (
           <SessionForm
@@ -1963,7 +2129,7 @@ export default function ScalateSection({ initialSub, onSubChange }) {
       ) : (
         <>
           {sub === 'falesie'  && climbMode === 'falesia' && renderFalesie()}
-          {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} onRefresh={loadAll} />}
+          {sub === 'tiri'     && <TiriTab ascents={ascents} sessions={sessions} crags={crags} onRefresh={loadAll} onSessionDeleted={() => setToast('Sessione eliminata')} />}
           {sub === 'progetti' && <ProjectsTab projects={projects} attempts={attempts} crags={crags} onAdded={loadAll} onRefresh={loadAll} />}
           {sub === 'stats'    && <StatsSection sessions={sessions} ascents={ascents} crags={crags} />}
         </>

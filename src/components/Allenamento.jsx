@@ -623,9 +623,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
     const sd = TRAINING_PLAN.sessions[tipo] || TRAINING_PLAN.sessions.STRAPIOMBO
     const wd = sd.weeks?.find(w => w.week === week) || sd.weeks?.[0] || { double_routes: 2 }
 
-    const recentClimbing = [...(climbingSessions || [])]
-      .sort((a, b) => b.session_date.localeCompare(a.session_date))
-      .slice(0, 5)
+    const climbingSorted = [...(climbingSessions || [])].sort((a, b) => b.session_date.localeCompare(a.session_date))
 
     return (
       <div>
@@ -656,40 +654,28 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
           </div>
         </div>
 
-        {recentClimbing.length > 0 && (
+        {climbingSorted.length > 0 && (
           <div style={ss.card}>
             <div style={ss.secLbl}>Collega sessione arrampicata</div>
-            <div style={{ fontSize:'11px', color:C.muted, marginBottom:'10px' }}>Quale sessione hai fatto oggi?</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
-              <div
-                style={{ padding:'10px 14px', borderRadius:'10px', cursor:'pointer', border:`1px solid ${C.border}`, background: !linkedSessionId ? C.surface : C.bg }}
-                onClick={() => setLinkedSessionId('')}>
-                <div style={{ fontSize:'11px', color: !linkedSessionId ? C.muted : C.hint }}>Nessun collegamento</div>
-              </div>
-              {recentClimbing.map(sess => {
+            <div style={{ fontSize:'11px', color:C.muted, marginBottom:'8px' }}>Quale sessione hai fatto oggi?</div>
+            <div style={{ fontSize:'10px', color:C.hint, marginBottom:'5px' }}>Sessione</div>
+            <select
+              style={{ ...ss.inp, appearance:'none', width:'100%', fontSize:'14px', marginBottom:'4px' }}
+              value={linkedSessionId}
+              onChange={e => setLinkedSessionId(e.target.value)}>
+              <option value="">— Nessun collegamento —</option>
+              {climbingSorted.map(sess => {
                 const crag = (crags || []).find(c => c.id === sess.crag_id)
                 const sessAscents = (ascents || []).filter(a => a.session_id === sess.id)
                 const GRADE_ORDER_LOCAL = ['4','4+','5','5+','6a','6a+','6b','6b+','6c','6c+','7a','7a+','7b','7b+','7c','7c+','8a','8a+','8b','8b+','8c','8c+','9a']
                 const completed = sessAscents.filter(a => a.completed)
                 const maxG = completed.length ? completed.reduce((m, a) => (GRADE_ORDER_LOCAL.indexOf(a.grade) > GRADE_ORDER_LOCAL.indexOf(m) ? a.grade : m), completed[0].grade) : null
-                const isSelected = linkedSessionId === String(sess.id)
+                const label = `${crag?.name || 'Falesia'} · ${fmtDateShort(sess.session_date)} · ${sessAscents.length} tiri${maxG ? ` · max ${maxG}` : ''}`
                 return (
-                  <div key={sess.id}
-                    style={{ padding:'10px 14px', borderRadius:'10px', cursor:'pointer', border:`1px solid ${isSelected ? C.greenBorder : C.border}`, background: isSelected ? C.greenBg : C.bg }}
-                    onClick={() => setLinkedSessionId(isSelected ? '' : String(sess.id))}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                      <div>
-                        <div style={{ fontSize:'12px', fontWeight:'600', color: isSelected ? C.greenLight : C.text }}>{crag?.name || 'Falesia'}</div>
-                        <div style={{ fontSize:'10px', color: isSelected ? C.green : C.hint, marginTop:'2px' }}>
-                          {fmtDateShort(sess.session_date)} · {sessAscents.length} tiri{maxG ? ` · max ${maxG}` : ''}
-                        </div>
-                      </div>
-                      {isSelected && <div style={{ fontSize:'14px', color:C.green }}>✓</div>}
-                    </div>
-                  </div>
+                  <option key={sess.id} value={String(sess.id)}>{label}</option>
                 )
               })}
-            </div>
+            </select>
           </div>
         )}
       </div>
@@ -1931,6 +1917,8 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
   const [sub, setSub]                     = React.useState(initialSub || 'oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
   const [pastEntry,     setPastEntry]     = React.useState(null)
+  /** Ripristina scroll del piano dopo chiusura dettaglio sessione. */
+  const pianoScrollRestoreRef = React.useRef(null)
   const [sessionNotes,  setSessionNotes]  = React.useState([])
   const [runningLogs,   setRunningLogs]   = React.useState([])
   const [climbingSessions, setClimbingSessions] = React.useState([])
@@ -1968,10 +1956,24 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
     loadAscents().then(setAscents)
   }, [])
 
+  const restorePianoScroll = React.useCallback(() => {
+    const y = pianoScrollRestoreRef.current
+    if (sub !== 'piano' || y == null) return
+    pianoScrollRestoreRef.current = null
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, y)
+      })
+    })
+  }, [sub])
+
   if (selectedEntry) {
     return <SessionDetail
       entry={selectedEntry}
-      onBack={() => setSelectedEntry(null)}
+      onBack={() => {
+        setSelectedEntry(null)
+        restorePianoScroll()
+      }}
       trainingLogs={trainingLogs}
       onLogsChanged={onLogsChanged}
       videos={videos}
@@ -1988,7 +1990,10 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
       entry={pastEntry}
       trainingLogs={trainingLogs}
       sessionNotes={sessionNotes}
-      onBack={() => setPastEntry(null)}
+      onBack={() => {
+        setPastEntry(null)
+        restorePianoScroll()
+      }}
       onOpenFull={() => { setSelectedEntry(pastEntry); setPastEntry(null) }}
     />
   }
@@ -2113,7 +2118,11 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
               const isChanged = !!changedNote
               return (
                 <div key={i} style={{ display:'flex', alignItems:'center', gap:'10px', padding:'10px 12px', background: isToday ? sc.bg : C.surface, borderRadius:'10px', marginBottom:'5px', border:`1px solid ${isToday ? sc.border : C.border}`, cursor:'pointer', opacity: isPast ? 0.5 : 1 }}
-                  onClick={() => isPast ? setPastEntry(entry) : setSelectedEntry(entry)}>
+                  onClick={() => {
+                    if (sub === 'piano') pianoScrollRestoreRef.current = window.scrollY
+                    if (isPast) setPastEntry(entry)
+                    else setSelectedEntry(entry)
+                  }}>
                   <div style={{ width:'8px', height:'8px', borderRadius:'50%', background: isChanged ? C.amber : sc.text, flexShrink:0, opacity: displayType === 'REST' ? 0.2 : 1 }} />
                   <div style={{ width:'38px', fontSize:'10px', color: isToday ? sc.text : C.muted, fontWeight: isToday ? '700' : '400', flexShrink:0 }}>
                     {fmtDateShort(entry.day_date)}
