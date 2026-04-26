@@ -573,9 +573,9 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
         </div>
         <div style={drawer.sheetScroll}>
-        <div style={{ marginBottom: '10px' }}>
+        <div style={{ marginBottom: '10px', overflow: 'hidden' }}>
           <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Data</div>
-          <input type="date" style={ss.inp} value={date} onChange={e => setDate(e.target.value)} />
+          <input type="date" style={{ ...ss.inp, WebkitAppearance: 'none', appearance: 'none' }} value={date} onChange={e => setDate(e.target.value)} />
         </div>
         <div style={{ marginBottom: '10px' }}>
           <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Falesia</div>
