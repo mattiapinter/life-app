@@ -125,7 +125,7 @@ function GpsButton({ url, onUrlChange }) {
       {showModal && (
         <div style={drawer.overlay()} onClick={() => setShowModal(false)}>
           <div className="drawer-enter" style={drawer.sheet} onClick={e => e.stopPropagation()}>
-            <div style={drawer.sheetScroll}>
+            <div ref={scrollRef} style={drawer.sheetScroll}>
               <div style={{ fontSize: '13px', fontWeight: '600', color: C.text, marginBottom: '4px' }}>Traccia GPS / Avvicinamento</div>
               <div style={{ fontSize: '11px', color: C.muted, marginBottom: '12px' }}>Incolla un link Komoot, Wikiloc, Google Maps ecc.</div>
               {url && <div style={{ fontSize: '10px', color: C.hint, marginBottom: '8px', padding: '6px', background: C.bg, borderRadius: '6px', wordBreak: 'break-all' }}>Attuale: {url}</div>}
@@ -454,11 +454,18 @@ function buildCragRouteHints(cragId, savedSessions, savedAscents) {
 // ── SESSION FORM ───────────────────────────────────────────────────
 function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, onClose, sessionType = 'falesia' }) {
   const [date,    setDate]    = React.useState(todayStr())
-  const [cragId,  setCragId]  = React.useState(crags[0]?.id || '')
+  const [cragId,  setCragId]  = React.useState(() => {
+    const count = {}
+    savedSessions.forEach(s => { count[s.crag_id] = (count[s.crag_id] || 0) + 1 })
+    const sorted = [...crags].sort((a, b) => (count[b.id] || 0) - (count[a.id] || 0))
+    return sorted[0]?.id || ''
+  })
   const [notes,   setNotes]   = React.useState('')
   const [ascents, setAscents] = React.useState([])
   const [saving,    setSaving]    = React.useState(false)
   const [saveError, setSaveError] = React.useState(null)
+  const scrollRef = React.useRef(null)
+  const bottomRef = React.useRef(null)
 
   // Falesie ordinate per numero sessioni (più frequentata prima)
   const sortedCrags = React.useMemo(() => {
@@ -487,7 +494,13 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
     return '__new__'
   }
 
-  const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '', _customMode: false }])
+  const addAscent = () => {
+    setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '', _customMode: false }])
+    // scroll al nuovo tiro dopo il render
+    setTimeout(() => {
+      if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 80)
+  }
   const updateAscent = (i, field, val) => setAscents(p => p.map((a, idx) => idx === i ? { ...a, [field]: val } : a))
 
   const onRouteSelectChange = (i, val) => {
@@ -576,10 +589,8 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
         <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.6', marginBottom: '16px' }}
           rows={2} placeholder="Note sessione..." value={notes} onChange={e => setNotes(e.target.value)} />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div style={{ marginBottom: '10px' }}>
           <div style={{ fontSize: '11px', fontWeight: '600', color: C.muted, textTransform: 'uppercase', letterSpacing: '.06em' }}>Tiri ({ascents.length})</div>
-          <div style={{ fontSize: '11px', fontWeight: '600', color: C.violetLight, cursor: 'pointer', padding: '5px 10px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '8px' }}
-            onClick={addAscent}>+ Aggiungi tiro</div>
         </div>
 
         {ascents.map((a, i) => (
@@ -657,9 +668,12 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
           </div>
         ))}
 
+        <div ref={bottomRef} />
+        <div style={{ fontSize: '13px', fontWeight: '600', color: C.violetLight, cursor: 'pointer', padding: '10px', background: C.violetBg, border: `1px solid ${C.violetBorder}`, borderRadius: '10px', textAlign: 'center', marginBottom: '12px' }}
+          onClick={addAscent}>+ Aggiungi tiro</div>
         {ascents.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '20px', fontSize: '12px', color: C.hint, border: `1px dashed ${C.border}`, borderRadius: '12px', marginBottom: '12px' }}>
-            Nessun tiro ancora · clicca "Aggiungi tiro"
+          <div style={{ textAlign: 'center', padding: '16px', fontSize: '12px', color: C.hint, border: `1px dashed ${C.border}`, borderRadius: '12px', marginBottom: '12px' }}>
+            Nessun tiro ancora
           </div>
         )}
         </div>

@@ -88,6 +88,7 @@ export const ss = {
   secLbl:  { fontSize: '11px', fontWeight: '700', color: C.text, textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: '14px', paddingBottom: '0', borderBottom: 'none' },
   inp:     {
     width: '100%',
+    boxSizing: 'border-box',
     background: '#353534',
     border: `2px solid ${C.border}`,
     borderRadius: '12px',
