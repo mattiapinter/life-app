@@ -473,20 +473,21 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
     return '__new__'
   }
 
-  const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '' }])
+  const addAscent = () => setAscents(p => [...p, { route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '', _customMode: false }])
   const updateAscent = (i, field, val) => setAscents(p => p.map((a, idx) => idx === i ? { ...a, [field]: val } : a))
 
   const onRouteSelectChange = (i, val) => {
     if (val === '') {
-      updateAscent(i, 'route_name', '')
+      setAscents(p => p.map((row, idx) => idx === i ? { ...row, route_name: '', _customMode: false } : row))
       return
     }
     if (val === '__new__') {
+      // Bug fix: impostare _customMode=true per mostrare il campo testo anche quando route_name è vuoto
       setAscents(p =>
         p.map((row, idx) => {
           if (idx !== i) return row
           const listed = row.route_name.trim() && routeHints.byNorm[row.route_name.trim().toLowerCase()]
-          return { ...row, route_name: listed ? '' : row.route_name }
+          return { ...row, route_name: listed ? '' : row.route_name, _customMode: true }
         })
       )
       return
@@ -496,7 +497,7 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
       p.map((row, idx) => {
         if (idx !== i) return row
         const nextGrade = hint?.grade && GRADES.includes(hint.grade) ? hint.grade : row.grade
-        return { ...row, route_name: val, grade: nextGrade }
+        return { ...row, route_name: val, grade: nextGrade, _customMode: false }
       })
     )
   }
@@ -575,15 +576,15 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
             <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Via su questa falesia</div>
             <select
               style={{ ...ss.inp, appearance: 'none', marginBottom: '8px', fontSize: '16px' }}
-              value={routeSelectValue(a.route_name)}
+              value={a._customMode ? '__new__' : routeSelectValue(a.route_name)}
               onChange={e => onRouteSelectChange(i, e.target.value)}>
               <option value="">— Nessuna / da definire —</option>
               {routeHints.optionNames.map(name => (
                 <option key={name} value={name}>{name}</option>
               ))}
-              <option value="__new__">Altra via (scrivi sotto)</option>
+              <option value="__new__">+ Nuova via (scrivi il nome)</option>
             </select>
-            {routeSelectValue(a.route_name) === '__new__' && (
+            {(a._customMode || routeSelectValue(a.route_name) === '__new__') && (
               <input
                 type="text"
                 autoComplete="off"
@@ -834,7 +835,7 @@ function EditSessionDrawer({ session, ascents, savedSessions = [], savedAscents 
   }
 
   const addNew = () =>
-    setNewTiri(p => [...p, { _key: Date.now(), route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '' }])
+    setNewTiri(p => [...p, { _key: Date.now(), route_name: '', grade: '7a', style: 'redpoint', completed: true, attempts: 1, rpe: '', quality_stars: null, notes: '', _customMode: false }])
   const updateNew = (key, field, val) =>
     setNewTiri(p => p.map(t => t._key === key ? { ...t, [field]: val } : t))
   const removeNew = (key) =>
@@ -842,15 +843,16 @@ function EditSessionDrawer({ session, ascents, savedSessions = [], savedAscents 
 
   const onRouteSelectChangeNew = (key, val) => {
     if (val === '') {
-      updateNew(key, 'route_name', '')
+      setNewTiri(p => p.map(t => t._key === key ? { ...t, route_name: '', _customMode: false } : t))
       return
     }
     if (val === '__new__') {
+      // Bug fix: _customMode=true per mostrare il campo testo anche se route_name è vuoto
       setNewTiri(p =>
         p.map(t => {
           if (t._key !== key) return t
           const listed = t.route_name.trim() && routeHints.byNorm[t.route_name.trim().toLowerCase()]
-          return { ...t, route_name: listed ? '' : t.route_name }
+          return { ...t, route_name: listed ? '' : t.route_name, _customMode: true }
         })
       )
       return
@@ -860,7 +862,7 @@ function EditSessionDrawer({ session, ascents, savedSessions = [], savedAscents 
       p.map(t => {
         if (t._key !== key) return t
         const nextGrade = hint?.grade && GRADES.includes(hint.grade) ? hint.grade : t.grade
-        return { ...t, route_name: val, grade: nextGrade }
+        return { ...t, route_name: val, grade: nextGrade, _customMode: false }
       })
     )
   }
@@ -1064,15 +1066,15 @@ function EditSessionDrawer({ session, ascents, savedSessions = [], savedAscents 
             <div style={{ fontSize: '10px', color: C.hint, marginBottom: '4px' }}>Via su questa falesia</div>
             <select
               style={{ ...ss.inp, appearance: 'none', marginBottom: '8px', fontSize: '14px' }}
-              value={routeSelectValue(t.route_name)}
+              value={t._customMode ? '__new__' : routeSelectValue(t.route_name)}
               onChange={e => onRouteSelectChangeNew(t._key, e.target.value)}>
               <option value="">— Nessuna / da definire —</option>
               {routeHints.optionNames.map(name => (
                 <option key={name} value={name}>{name}</option>
               ))}
-              <option value="__new__">Altra via (scrivi sotto)</option>
+              <option value="__new__">+ Nuova via (scrivi il nome)</option>
             </select>
-            {routeSelectValue(t.route_name) === '__new__' && (
+            {(t._customMode || routeSelectValue(t.route_name) === '__new__') && (
               <input
                 type="text"
                 autoComplete="off"
