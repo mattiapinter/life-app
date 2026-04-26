@@ -547,18 +547,28 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
           <div style={{ cursor: 'pointer', color: C.muted, fontSize: '20px', lineHeight: 1 }} onClick={onClose}>×</div>
         </div>
         <div style={drawer.sheetScroll}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-          <div>
-            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Data</div>
-            <input type="date" style={ss.inp} value={date} onChange={e => setDate(e.target.value)} />
-          </div>
-          <div>
-            <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Falesia</div>
-            <select style={{ ...ss.inp, appearance: 'none' }} value={cragId} onChange={e => setCragId(e.target.value)}>
-              {crags.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-        </div>
+        {(() => {
+          const sessCount = {}
+          savedSessions.forEach(s => { sessCount[s.crag_id] = (sessCount[s.crag_id] || 0) + 1 })
+          const sortedCrags = [...crags].sort((a, b) => (sessCount[b.id] || 0) - (sessCount[a.id] || 0))
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Data</div>
+                <input type="date" style={{ ...ss.inp, width: '100%', boxSizing: 'border-box' }} value={date} onChange={e => setDate(e.target.value)} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '10px', color: C.hint, marginBottom: '5px' }}>Falesia</div>
+                <select style={{ ...ss.inp, appearance: 'none', width: '100%', boxSizing: 'border-box' }} value={cragId} onChange={e => setCragId(e.target.value)}>
+                  {sortedCrags.map(c => {
+                    const n = sessCount[c.id] || 0
+                    return <option key={c.id} value={c.id}>{c.name}{n > 0 ? ` (${n})` : ''}</option>
+                  })}
+                </select>
+              </div>
+            </div>
+          )
+        })()}
         <textarea style={{ ...ss.inp, resize: 'vertical', lineHeight: '1.6', marginBottom: '16px' }}
           rows={2} placeholder="Note sessione..." value={notes} onChange={e => setNotes(e.target.value)} />
 
