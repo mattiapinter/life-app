@@ -457,7 +457,8 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
   const [cragId,  setCragId]  = React.useState(crags[0]?.id || '')
   const [notes,   setNotes]   = React.useState('')
   const [ascents, setAscents] = React.useState([])
-  const [saving,  setSaving]  = React.useState(false)
+  const [saving,    setSaving]    = React.useState(false)
+  const [saveError, setSaveError] = React.useState(null)
 
   const routeHints = React.useMemo(
     () => buildCragRouteHints(cragId, savedSessions, savedAscents),
