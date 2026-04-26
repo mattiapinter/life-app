@@ -649,6 +649,11 @@ function SessionForm({ crags, savedSessions = [], savedAscents = [], onSaved, on
         </div>
 
         <div style={drawer.sheetFooter}>
+          {saveError && (
+            <div style={{ fontSize: '11px', color: C.red, marginBottom: '8px', padding: '8px 10px', background: C.redBg, border: `1px solid ${C.redBorder}`, borderRadius: '8px', lineHeight: '1.4' }}>
+              {saveError}
+            </div>
+          )}
           <div style={{ ...ss.savBtn, marginTop: 0, opacity: (!date || !cragId || saving) ? 0.5 : 1 }}
             onClick={!saving && date && cragId ? handleSave : undefined}>
             {saving ? 'Salvataggio...' : `Salva sessione${ascents.length ? ` (${ascents.length} tiri)` : ''}`}
@@ -1400,6 +1405,7 @@ function AscentCard({ a, sess, crag, onEdit }) {
 function TiriTab({ ascents, sessions, crags, onRefresh, onSessionDeleted }) {
   const [editSession,     setEditSession]     = React.useState(null)
   const [showRipetizioni, setShowRipetizioni] = React.useState(false)
+  const [showTentativi,   setShowTentativi]   = React.useState(true)
 
   const sortByDate = (arr) => [...arr].sort((a, b) => {
     const sA = sessions.find(s => s.id === a.session_id)
@@ -1407,8 +1413,12 @@ function TiriTab({ ascents, sessions, crags, onRefresh, onSessionDeleted }) {
     return (sB?.session_date || '').localeCompare(sA?.session_date || '')
   })
 
+  // Prime salite: a_vista/flash/redpoint completati
   const primeSalite  = sortByDate(ascents.filter(a => IS_FIRST_ASCENT.includes(a.style) && a.completed))
-  const ripetizioni  = sortByDate(ascents.filter(a => a.style === 'ripetizione'))
+  // Tentativi: a_vista/flash/redpoint NON completati (erano invisibili — bug fix)
+  const tentativi    = sortByDate(ascents.filter(a => IS_FIRST_ASCENT.includes(a.style) && !a.completed))
+  // Ripetizioni + top rope (top_rope era invisibile — bug fix)
+  const ripetizioni  = sortByDate(ascents.filter(a => a.style === 'ripetizione' || a.style === 'top_rope'))
 
   if (ascents.length === 0) {
     return (
@@ -1452,7 +1462,7 @@ function TiriTab({ ascents, sessions, crags, onRefresh, onSessionDeleted }) {
 
       <div style={{ fontSize: '11px', color: C.hint, marginBottom: '12px' }}>{primeSalite.length} prime salite</div>
 
-      {primeSalite.length === 0 && (
+      {primeSalite.length === 0 && tentativi.length === 0 && (
         <div style={{ textAlign: 'center', padding: '24px', fontSize: '12px', color: C.hint }}>Nessuna prima salita ancora</div>
       )}
 
@@ -1462,13 +1472,36 @@ function TiriTab({ ascents, sessions, crags, onRefresh, onSessionDeleted }) {
         return <AscentCard key={a.id} a={a} sess={sess} crag={crag} onEdit={setEditSession} />
       })}
 
+      {/* Tentativi: non-completed first-ascent style (prima erano invisibili) */}
+      {tentativi.length > 0 && (
+        <div style={{ marginTop: '16px' }}>
+          <div
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '10px 14px', background: C.surface, borderRadius: '10px', border: `1px solid ${C.amberBorder || C.border}` }}
+            onClick={() => setShowTentativi(p => !p)}>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: C.amber, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+              Tentativi · {tentativi.length}
+            </div>
+            <div style={{ fontSize: '14px', color: C.hint }}>{showTentativi ? '▲' : '▼'}</div>
+          </div>
+          {showTentativi && (
+            <div style={{ marginTop: '8px' }}>
+              {tentativi.map(a => {
+                const sess = sessions.find(s => s.id === a.session_id)
+                const crag = crags.find(c => c.id === sess?.crag_id)
+                return <AscentCard key={a.id} a={a} sess={sess} crag={crag} onEdit={setEditSession} />
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {ripetizioni.length > 0 && (
         <div style={{ marginTop: '16px' }}>
           <div
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '10px 14px', background: C.surface, borderRadius: '10px', border: `1px solid ${C.border}` }}
             onClick={() => setShowRipetizioni(p => !p)}>
             <div style={{ fontSize: '11px', fontWeight: '600', color: C.blue, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-              Ripetizioni · {ripetizioni.length}
+              Ripetizioni & Top Rope · {ripetizioni.length}
             </div>
             <div style={{ fontSize: '14px', color: C.hint }}>{showRipetizioni ? '▲' : '▼'}</div>
           </div>
