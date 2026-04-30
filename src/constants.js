@@ -59,6 +59,8 @@ export const SESSION_COLORS = {
   STRAPIOMBO_TRAZIONI_SETT4: { bg: C.greenBg,  border: C.greenBorder,  text: C.green,  label: 'Strapiombo + Trazioni' },
   DAY_PROJECT:               { bg: C.amberBg,  border: C.amberBorder,  text: C.amber,  label: 'Day Project' },
   REST:                      { bg: '#161616',  border: C.border,       text: C.hint,   label: 'Riposo' },
+  BLOCCHI:                   { bg: C.amberBg,  border: C.amberBorder,  text: C.amber,  label: 'Blocchi' },
+  FALESIA:                   { bg: C.greenBg,  border: C.greenBorder,  text: C.greenLight, label: 'Falesia' },
 }
 
 // ── SHARED STYLES ──────────────────────────────────────────────────

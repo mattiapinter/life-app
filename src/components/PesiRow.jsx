@@ -15,8 +15,10 @@ const gifCache = {}
 
 // ── PESI ROW ──────────────────────────────────────────────────────
 export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, activeSet }) {
-  const wd      = ex.weeks.find(w => w.week === week) || ex.weeks[0]
-  const numSets = wd.sets || 2
+  const wd          = ex.weeks.find(w => w.week === week) || ex.weeks[0]
+  const numSets     = wd.sets || 2
+  const isBodyweight = isBodyweight || ex.load === false
+  const fixedKg     = ex.load_fixed_kg
 
   const lastLog = trainingLogs
     .filter(l => l.exercise_name === ex.name && l.session_type === 'PESI' && l.weight_kg)
@@ -27,7 +29,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
     .sort((a, b) => b.log_date?.localeCompare(a.log_date) || 0)[0]
 
   const [sets, setSets] = React.useState(
-    Array.from({ length: numSets }, () => ({ kg: '', reps: '' }))
+    Array.from({ length: numSets }, () => ({ kg: fixedKg !== undefined ? String(fixedKg) : '', reps: '' }))
   )
   const [flashedSets, setFlashedSets] = React.useState(new Set())
 
@@ -72,7 +74,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
   const handleChange = (field, val) => {
     setSets(prev => {
       const next = prev.map((s, i) => i === activeSet ? { ...s, [field]: val } : s)
-      onChange(ex.name, { sets: next, bodyweight: ex.bodyweight, rpe: wd.rpe })
+      onChange(ex.name, { sets: next, bodyweight: isBodyweight, rpe: wd.rpe })
       return next
     })
   }
@@ -90,7 +92,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
         return s
       })
       if (toFlash.length > 0) triggerFlash(toFlash)
-      onChange(ex.name, { sets: next, bodyweight: ex.bodyweight, rpe: wd.rpe })
+      onChange(ex.name, { sets: next, bodyweight: isBodyweight, rpe: wd.rpe })
       return next
     })
   }
@@ -98,7 +100,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
   const current = sets[Math.min(activeSet, numSets - 1)]
 
   const dots = sets.map((s, i) => {
-    const done   = ex.bodyweight ? !!s.reps : (!!s.kg && !!s.reps)
+    const done   = isBodyweight ? !!s.reps : (!!s.kg && !!s.reps)
     const active = activeSet === i
     return (
       <div key={i} style={{
@@ -143,12 +145,12 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '8px', flexShrink: 0 }}>
-          {!ex.bodyweight && lastLog && (
+          {!isBodyweight && lastLog && (
             <div style={{ fontSize: '10px', fontWeight: '700', color: C.violet, background: C.violetBg, padding: '2px 7px', borderRadius: '6px', border: `1px solid ${C.violetBorder}`, whiteSpace: 'nowrap' }}>
               {lastLog.weight_kg}kg
             </div>
           )}
-          {ex.bodyweight && lastBwLog && (
+          {isBodyweight && lastBwLog && (
             <div style={{ fontSize: '10px', fontWeight: '700', color: C.green, background: C.greenBg, padding: '2px 7px', borderRadius: '6px', border: `1px solid ${C.greenBorder}`, whiteSpace: 'nowrap' }}>
               {lastBwLog.reps_done}r
             </div>
@@ -157,7 +159,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
         </div>
       </div>
 
-      {ex.bodyweight ? (
+      {isBodyweight ? (
         <div>
           <div style={{ fontSize: '10px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '6px', textAlign: 'center' }}>Reps</div>
           <input type="number" inputMode="numeric" pattern="[0-9]*"
@@ -170,7 +172,7 @@ export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVi
           <div>
             <div style={{ fontSize: '10px', color: C.hint, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: '6px', textAlign: 'center' }}>Peso kg</div>
             <input type="number" inputMode="decimal" pattern="[0-9]*"
-              style={inputStyle()} placeholder={lastLog ? `${lastLog.weight_kg}` : '—'}
+              style={inputStyle()} placeholder={fixedKg !== undefined ? `${fixedKg}` : (lastLog ? `${lastLog.weight_kg}` : '—')}
               value={current.kg}
               onChange={e => handleChange('kg', e.target.value)}
               onBlur={() => handleBlur('kg')} />

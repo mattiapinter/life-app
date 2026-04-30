@@ -27,6 +27,7 @@ const SUB = {
     { id: 'storico',   l: 'Storico' },
     { id: 'esercizi',  l: 'Esercizi' },
     { id: 'corsa',     l: 'Corsa' },
+    { id: 'mobilita',  l: 'Mobilità' },
   ],
   scalate: [
     { id: 'falesie',   l: 'Falesie' },

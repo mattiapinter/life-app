@@ -5,11 +5,12 @@ import {
   C, ss, SESSION_COLORS, drawer,
   todayStr, fmtDate, fmtDateShort, fmtDayName,
 } from '../constants'
-import { TRAINING_PLAN } from '../data/trainingPlan'
+import { TRAINING_PLAN, SECCO, VIE_PROTOCOL } from '../data/trainingPlan'
 import { saveTrainingLog, loadTrainingLogs, saveSessionNote, loadSessionNotes, deleteSessionLogs, deleteSessionNote, deleteExerciseLogs, deleteAllTrainingData, saveRunningLog, loadRunningLogs, deleteRunningLog, updateRunningLog, updateTrainingLogRpe, loadClimbingSessions, loadAscents, loadCrags } from '../lib/supabase'
 import { IcoInfo, IcoChev, IcoChevL, IcoPlay } from './Icons'
 import { Modal, CoachNoteModal, VideoButton, ChangeSessionDrawer } from './UI'
 import PesiRow from './PesiRow'
+import Mobilita from './Mobilita'
 
 // ── TIMER UTILITIES ────────────────────────────────────────────────
 function parseDuration(str) {
@@ -562,7 +563,55 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
     )
   }
 
-  const renderCORSA = () => {
+  const renderBLOCCHI = () => {
+    const sd = TRAINING_PLAN.sessions.BLOCCHI?.weeks?.find(w => w.week === week) || null
+    if (!sd) {
+      return (
+        <div style={ss.card}>
+          <div style={{ fontSize:'12px', color:C.muted }}>Protocollo blocchi non disponibile per questa settimana.</div>
+        </div>
+      )
+    }
+    const t1 = sd.fixedTime1
+    const t2 = sd.fixedTime2
+    const jw = TRAINING_PLAN.sessions.BLOCCHI?.japan_wall
+    return (
+      <div>
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Tempo fisso 1 · Settimana {week}</div>
+          <div style={{ display:'flex', gap:'8px', marginBottom:'10px' }}>
+            {[{ l:'Tempo', v:t1.fixed }, { l:'Reps/serie', v:`${t1.rep_per_set}` }, { l:'Serie', v:`${t1.sets}` }].map(it => (
+              <div key={it.l} style={{ flex:1, background:C.bg, border:`1px solid ${C.border}`, borderRadius:'10px', padding:'10px', textAlign:'center' }}>
+                <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:'4px' }}>{it.l}</div>
+                <div style={{ fontSize:'18px', fontWeight:'700', color:C.text }}>{it.v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize:'11px', color:C.muted, lineHeight:'1.6' }}>Grado: {t1.grade}</div>
+        </div>
+        <div style={ss.card}>
+          <div style={ss.secLbl}>Tempo fisso 2 · Settimana {week}</div>
+          <div style={{ display:'flex', gap:'8px', marginBottom:'10px' }}>
+            {[{ l:'Tempo', v:t2.fixed }, { l:'Reps/serie', v:`${t2.rep_per_set}` }, { l:'Serie', v:`${t2.sets}` }].map(it => (
+              <div key={it.l} style={{ flex:1, background:C.bg, border:`1px solid ${C.border}`, borderRadius:'10px', padding:'10px', textAlign:'center' }}>
+                <div style={{ fontSize:'9px', color:C.hint, fontWeight:'600', letterSpacing:'.06em', textTransform:'uppercase', marginBottom:'4px' }}>{it.l}</div>
+                <div style={{ fontSize:'18px', fontWeight:'700', color:C.text }}>{it.v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize:'11px', color:C.muted, lineHeight:'1.6' }}>Grado: {t2.grade}</div>
+        </div>
+        {jw && (
+          <div style={ss.card}>
+            <div style={ss.secLbl}>Japan Wall</div>
+            <div style={{ fontSize:'12px', color:C.textSoft, lineHeight:'1.6' }}>{jw}</div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+    const renderCORSA = () => {
     const wd = TRAINING_PLAN.sessions.CORSA.weeks.find(w => w.week === week) || TRAINING_PLAN.sessions.CORSA.weeks[0]
     const inpStyle = { ...ss.inp, fontSize:'18px', fontWeight:'700', textAlign:'center', padding:'12px' }
     return (
@@ -622,6 +671,10 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   const renderROCCIA = (tipo) => {
     const sd = TRAINING_PLAN.sessions[tipo] || TRAINING_PLAN.sessions.STRAPIOMBO
     const wd = sd.weeks?.find(w => w.week === week) || sd.weeks?.[0] || { double_routes: 2 }
+    const isLead = tipo === 'PLACCA_VERTICALE' || tipo === 'STRAPIOMBO' || tipo === 'FALESIA'
+    const vp = isLead ? VIE_PROTOCOL[week] : null
+    const tripleN = vp?.triple ?? wd.double_routes ?? 2
+    const recStr  = vp?.rec ?? '~15 min'
 
     const climbingSorted = [...(climbingSessions || [])].sort((a, b) => b.session_date.localeCompare(a.session_date))
 
@@ -631,7 +684,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
           <div style={ss.secLbl}>Struttura · Settimana {week}</div>
           {[
             { step:'1. Via di scaldo',    detail:'RPE 6-7 · recupero a tornare nuovo' },
-            { step:`2. Vie Doppie (${wd.double_routes})`, detail:'~15 min di recupero tra le vie' },
+            { step:`2. Vie ${isLead ? 'triple' : 'doppie'} (${tripleN})`, detail:`Recupero ${recStr} tra le vie` },
             { step:'3. Via defaticamento', detail:'RPE 5-6' },
           ].map((s, i) => (
             <div key={i} style={{ display:'flex', gap:'12px', alignItems:'flex-start', padding:'10px 0', borderBottom:`1px solid ${C.border}` }}>
@@ -646,11 +699,17 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
           ))}
         </div>
         <div style={ss.card}>
-          <div style={ss.secLbl}>Come eseguire una via doppia</div>
+          <div style={ss.secLbl}>Come eseguire una via {isLead ? 'tripla' : 'doppia'}</div>
           <div style={{ fontSize:'12px', color:C.textSoft, lineHeight:'1.75' }}>
-            Scala da <strong style={{ color:C.text }}>primo</strong> senza fermarti → fatti calare → rifai <strong style={{ color:C.text }}>subito da secondo</strong> senza recupero.
-            <br /><br />
-            Al 2° giro devi <strong style={{ color:C.green }}>cadere nella seconda metà</strong> o chiudere con fatica estrema (RPE 9-10).
+            {isLead ? (
+              <>Una via <strong style={{ color:C.text }}>3 volte da primo</strong>. Obiettivo: cadere al 3° giro.
+                <br /><br />
+                2° giro = gestione strategica. 3° giro = scalare veloce arrivando al limite.</>
+            ) : (
+              <>Scala da <strong style={{ color:C.text }}>primo</strong> senza fermarti → fatti calare → rifai <strong style={{ color:C.text }}>subito da secondo</strong> senza recupero.
+                <br /><br />
+                Al 2° giro devi <strong style={{ color:C.green }}>cadere nella seconda metà</strong> o chiudere con fatica estrema (RPE 9-10).</>
+            )}
           </div>
         </div>
 
@@ -805,10 +864,13 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
             </div>
           )}
         </div>
+          {entry.morning_routine && <SeccoCard morningRoutine={entry.morning_routine} week={week} />}
+          {entry.routes && entry.routes.length > 0 && <RoutesListCard routes={entry.routes} />}
           {sessionType === 'PESI'             && renderPESI()}
           {sessionType === 'PALESTRA'         && renderPALESTRA()}
+          {sessionType === 'BLOCCHI'          && renderBLOCCHI()}
           {sessionType === 'CORSA'            && renderCORSA()}
-          {(sessionType === 'PLACCA_VERTICALE' || sessionType === 'STRAPIOMBO' || sessionType === 'STRAPIOMBO_TRAZIONI_SETT4') && renderROCCIA(sessionType)}
+          {(sessionType === 'PLACCA_VERTICALE' || sessionType === 'STRAPIOMBO' || sessionType === 'STRAPIOMBO_TRAZIONI_SETT4' || sessionType === 'FALESIA') && renderROCCIA(sessionType)}
           {sessionType === 'REST'             && renderREST()}
 
           {entry.also === 'PESI' && sessionType !== 'PESI' && (
@@ -1913,6 +1975,43 @@ function OggiCooldownCard({ videos, onVideosChange }) {
 }
 
 // ── MAIN ALLENAMENTO ───────────────────────────────────────────────
+// ── SECCO CARD (sospensioni mattina) ──────────────────────────────
+function SeccoCard({ morningRoutine, week }) {
+  if (!morningRoutine) return null
+  const data = morningRoutine === 'SECCO_FULL' ? SECCO.full : SECCO.light
+  if (!data) return null
+  return (
+    <div style={{ ...ss.card, borderLeft: `3px solid ${C.amber}`, marginBottom: '16px' }}>
+      <div style={ss.secLbl}>Secco {morningRoutine === 'SECCO_FULL' ? 'completo' : 'light'} (mattina)</div>
+      <div style={{ fontSize:'12px', color:C.textSoft, lineHeight:'1.6', marginBottom:'8px' }}>{data.description}</div>
+      <div style={{ fontSize:'12px', color:C.violet, fontWeight:'600' }}>
+        {morningRoutine === 'SECCO_FULL' ? data.protocol[week] : data.protocol}
+      </div>
+      {data.intensity && (
+        <div style={{ fontSize:'11px', color:C.muted, marginTop:'8px' }}>{data.intensity}</div>
+      )}
+    </div>
+  )
+}
+
+// ── ROUTES LIST (vie del giorno specifiche) ───────────────────────
+function RoutesListCard({ routes }) {
+  if (!routes || !Array.isArray(routes) || routes.length === 0) return null
+  return (
+    <div style={ss.card}>
+      <div style={ss.secLbl}>Vie del giorno (coach)</div>
+      <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', gap:'8px 16px' }}>
+        {routes.map(r => (
+          <React.Fragment key={r.n}>
+            <span style={{ color: C.primary, fontWeight: 700, fontSize: '13px' }}>V{r.n}</span>
+            <span style={{ color: C.text, fontSize: '13px' }}>{r.grade}</span>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function AllenamentoSection({ initialSub, onSubChange, trainingLogs, setTrainingLogs, fitSessions, setFitSessions, videos, onVideosChange, onOpenFitnessTests, activePlan, trainingCalendar = [] }) {
   const [sub, setSub]                     = React.useState(initialSub || 'oggi')
   const [selectedEntry, setSelectedEntry] = React.useState(null)
@@ -2158,6 +2257,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
       {sub === 'storico'  && <StoricoAllenamenti trainingLogs={trainingLogs} sessionNotes={sessionNotes} onDataChanged={onLogsChanged} runningLogs={runningLogs} onRunningLogsChanged={() => loadRunningLogs().then(setRunningLogs)} />}
       {sub === 'esercizi' && <ExercisesTable trainingLogs={trainingLogs} onDataChanged={onLogsChanged} />}
       {sub === 'corsa'    && <CorsaSection runningLogs={runningLogs} onRefresh={() => loadRunningLogs().then(setRunningLogs)} />}
+      {sub === 'mobilita' && <Mobilita />}
     </div>
   )
 }

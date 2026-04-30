@@ -1,8 +1,8 @@
 export const TRAINING_PLAN = {
   meta: {
     athlete: 'Mattia Brigadoi',
-    start_date: '2026-03-25',
-    goal: 'Adattamento anatomico',
+    start_date: '2026-04-28',
+    goal: 'Lead',
     duration_weeks: 4,
   },
 
@@ -16,6 +16,8 @@ export const TRAINING_PLAN = {
       STRAPIOMBO: "Stessa struttura delle vie doppie in placca. I gradi sono ancora più indicativi: hai poca esperienza su strapiombo. Regolati sull'intensità richiesta (cadere nella seconda metà al 2° giro), non sul numero del grado.",
       STRAPIOMBO_TRAZIONI_SETT4: "Settimana 4 speciale: usa la struttura della tabella BLU (blocchi palestra) poi aggiungi l'EMOM trazioni come da tabella settimana 4.",
       DAY_PROJECT: "Solo settimana 2 e 3. Una via che credi di chiudere in giornata, max 3 giri completi con recupero completo. Prima: via di scaldo + via di attivazione RPE 8. Dopo: via di defaticamento. Gradi super indicativi. Solo sett. 2: aggiungi EMOM trazioni a casa.",
+      BLOCCHI: "Giornata blocchi in palestra. Due blocchi a tempo fisso (3' x N e 90\" x N) + Japan Wall (30 prese x 3, recupero 5\"). Il numero di ripetizioni cambia per settimana.",
+      FALESIA: "Uscita falesia libera. 5/6 vie a flash -1, scegli sul posto. Segui il protocollo Resistenza Vie (vie scaldo + triple + defaticamento) ma libero su gradi e linea.",
       REST: "Giorno di riposo. Nessuna attività fisica. Il recupero è parte dell'allenamento.",
     },
   },
@@ -85,20 +87,24 @@ export const TRAINING_PLAN = {
         { name:'Lift of',                                            sets:1, duration:'15s x lato', rest:'1 min' },
       ],
       circuit_2: [
-        { name:'Goblet squat',        tempo:'3-2-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
-        { name:'Panca piana bilanciere', tempo:'3-2-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
-        { name:'Crunch libretto',     tempo:'3-2-2', bodyweight:true,  weeks:[{week:1,sets:2,reps:12},{week:2,sets:3,reps:10},{week:3,sets:3,reps:12},{week:4,sets:2,reps:12}] },
-        { name:'Stacco da terra',     tempo:'3-0-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
-        { name:'Rematore manubri',    tempo:'3-2-2', bodyweight:false, weeks:[{week:1,sets:2,reps:12,rpe:8},{week:2,sets:3,reps:9,rpe:8},{week:3,sets:3,reps:7,rpe:8},{week:4,sets:2,reps:7,rpe:8}] },
-        { name:'Arch body',           tempo:'3-2-2', bodyweight:true,  weeks:[{week:1,sets:2,reps:12},{week:2,sets:3,reps:10},{week:3,sets:3,reps:12},{week:4,sets:2,reps:12}] },
+        { name:'Russian twist',        tempo:'veloce', bodyweight:true, load:false,
+          weeks:[{week:1,sets:2,reps:'10 per lato'},{week:2,sets:3,reps:'8 per lato'},{week:3,sets:3,reps:'10 per lato'},{week:4,sets:2,reps:'10 per lato'}] },
+        { name:'Single leg deadlift',  tempo:'3-1-X', bodyweight:true, load:false,
+          weeks:[{week:1,sets:2,reps:'10 per lato'},{week:2,sets:3,reps:'8 per lato'},{week:3,sets:3,reps:'10 per lato'},{week:4,sets:2,reps:'10 per lato'}] },
+        { name:'Rotational swing',     tempo:'veloce', bodyweight:false, load_fixed_kg:10,
+          weeks:[{week:1,sets:2,reps:'10 per lato'},{week:2,sets:3,reps:'8 per lato'},{week:3,sets:3,reps:'10 per lato'},{week:4,sets:2,reps:'10 per lato'}] },
+        { name:'Alzate laterali',      tempo:'3-1-X', bodyweight:false,
+          weeks:[{week:1,sets:2,reps:10,rpe:7},{week:2,sets:3,reps:8,rpe:7},{week:3,sets:3,reps:10,rpe:7},{week:4,sets:2,reps:10,rpe:7}] },
+        { name:'T raise a terra',      tempo:'3-1-1', bodyweight:false,
+          weeks:[{week:1,sets:2,reps:10,rpe:7},{week:2,sets:3,reps:8,rpe:7},{week:3,sets:3,reps:10,rpe:7},{week:4,sets:2,reps:10,rpe:7}] },
       ],
     },
     CORSA: {
       weeks: [
-        { week:1, duration_min:30, zone:'Z2/Z3' },
-        { week:2, duration_min:20, zone:'Z2' },
-        { week:3, duration_min:30, zone:'Z2' },
-        { week:4, duration_min:40, zone:'Z2' },
+        { week:1, duration_min:45, zone:'Z2' },
+        { week:2, duration_min:55, zone:'Z2' },
+        { week:3, duration_min:65, zone:'Z2' },
+        { week:4, duration_min:60, zone:'Z2' },
       ],
     },
     PLACCA_VERTICALE: {
@@ -116,6 +122,19 @@ export const TRAINING_PLAN = {
         { week:3, double_routes:3 },
         { week:4, double_routes:2 },
       ],
+    },
+    BLOCCHI: {
+      weeks: [
+        { week:1, fixedTime1:{ rep_per_set:6,  sets:4, fixed:'3\'',  grade:'flash' },    fixedTime2:{ rep_per_set:10, sets:4, fixed:'90\"', grade:'flash -1' } },
+        { week:2, fixedTime1:{ rep_per_set:8,  sets:4, fixed:'3\'',  grade:'flash' },    fixedTime2:{ rep_per_set:12, sets:4, fixed:'90\"', grade:'flash -1' } },
+        { week:3, fixedTime1:{ rep_per_set:10, sets:4, fixed:'3\'',  grade:'flash' },    fixedTime2:{ rep_per_set:14, sets:4, fixed:'90\"', grade:'flash -1' } },
+        { week:4, fixedTime1:{ rep_per_set:6,  sets:4, fixed:'3\'',  grade:'flash' },    fixedTime2:{ rep_per_set:10, sets:4, fixed:'90\"', grade:'flash -1' } },
+      ],
+      japan_wall: '30 prese x 3, recupero 5\' (tutte le settimane)',
+    },
+    FALESIA: {
+      freestyle: true,
+      note: '5/6 vie grado flash -1. Uscita libera, scegli le vie sul posto.',
     },
     DAY_PROJECT: { available_weeks:[2,3] },
     STRAPIOMBO_TRAZIONI_SETT4: {},
@@ -192,4 +211,33 @@ export const TRAINING_PLAN = {
 export const getTodayCalEntry = () => {
   const today = new Date().toISOString().split('T')[0]
   return TRAINING_PLAN.calendar.find(e => e.day_date === today) || null
+}
+
+// ── SECCO (sospensioni mattina) ────────────────────────────────────
+export const SECCO = {
+  full: {
+    description: "Tre prensioni: half crimp 20mm + pinza chiusa + pinza svasa. Tacca 20mm + UNA delle pinze (alterna nella settimana).",
+    protocol: {
+      1: '10" sosp x 4 volte, rec 3\' tra serie, rec 5\' tra prensioni',
+      2: '10" sosp x 5 volte, rec 3\' tra serie, rec 5\' tra prensioni',
+      3: '10" sosp x 6 volte, rec 3\' tra serie, rec 5\' tra prensioni',
+      4: '10" sosp x 4 volte, rec 3\' tra serie, rec 5\' tra prensioni (scarico)',
+    },
+    intensity: 'RPE 9/9.5 — carico = cedimento a 12"',
+  },
+  light: {
+    description: "10' di trave del Riscaldamento 1, SENZA gli esercizi nei 50\" di rest (rest puro).",
+    protocol: '10 sospensioni da 10" + 50" rest puro su tacche/bidita come da Riscaldamento 1.',
+  },
+}
+
+// ── VIE PROTOCOL (placca / strapiombo / falesia) ───────────────────
+export const VIE_PROTOCOL = {
+  1: { triple: 2, rec: '15\'' },
+  2: { triple: 2, rec: '15\'' },
+  3: { triple: 3, rec: '15\'' },
+  4: { triple: 2, rec: '15\'' },
+  warmup: '2 vie di scaldo (RPE 6-7, recupero a tornare nuovo)',
+  cooldown: '1 via di defaticamento (RPE 5-6)',
+  notes: 'Una via 3 volte da primo. Obiettivo: cadere al 3° giro. 2° giro = gestione strategica. 3° giro = scalare veloce arrivando al limite.',
 }
