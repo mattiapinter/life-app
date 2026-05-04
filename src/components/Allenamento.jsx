@@ -486,24 +486,33 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
   )
 
   const [pesiActiveSet, setPesiActiveSet] = React.useState(0)
-  const maxSets = Math.max(...TRAINING_PLAN.sessions.PESI.circuit_2.map(ex => {
-    const wd = ex.weeks.find(w => w.week === week) || ex.weeks[0]
-    return wd.sets || 2
-  }))
+  const maxSets = Math.max(
+    ...TRAINING_PLAN.sessions.PESI.circuit_1.map(ex => {
+      const wd = ex.weeks.find(w => w.week === week) || ex.weeks[0]
+      return wd.sets || 2
+    }),
+    ...TRAINING_PLAN.sessions.PESI.circuit_2.map(ex => {
+      const wd = ex.weeks.find(w => w.week === week) || ex.weeks[0]
+      return wd.sets || 2
+    }),
+  )
 
   const renderPESI = () => (
     <div>
       <div style={ss.card}>
-        <div style={ss.secLbl}>Circuito 1 — Mobilità / Attivazione</div>
-        <div style={{ fontSize:'10px', color:C.hint, marginBottom:'10px' }}>Uguale per tutte le settimane</div>
-        {TRAINING_PLAN.sessions.PESI.circuit_1.map((ex, i) => (
-          <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:`1px solid ${C.border}` }}>
-            <div><div style={{ fontSize:'12px', color:C.text, fontWeight:'500' }}>{ex.name}</div></div>
-            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-              <div style={{ fontSize:'11px', color:C.muted }}>{ex.sets && `${ex.sets}×`}{ex.duration || (ex.reps && `${ex.reps} reps`)}</div>
-              <VideoButton exerciseName={ex.name} videos={videos} onVideosChange={onVideosChange} />
-            </div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px', paddingBottom:'10px', borderBottom:`1px solid ${C.border}` }}>
+          <div style={{ fontSize:'10px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em' }}>
+            Circuito 1 · Settimana {week}
           </div>
+          <div
+            style={{ display:'flex', alignItems:'center', gap:'6px', padding:'6px 12px', borderRadius:'999px', cursor:'pointer', background:C.violetBg, border:`1px solid ${C.violetBorder}`, fontSize:'12px', fontWeight:'700', color:C.violetLight, userSelect:'none' }}
+            onClick={() => setPesiActiveSet(s => (s + 1) % maxSets)}>
+            🔄 {pesiActiveSet + 1}/{maxSets}
+          </div>
+        </div>
+        <div style={{ fontSize:'10px', color:C.hint, marginBottom:'12px' }}>Recupero 20s tra esercizi · dopo le trazioni 3 min · 3 min a fine giro</div>
+        {TRAINING_PLAN.sessions.PESI.circuit_1.map((ex) => (
+          <PesiRow key={ex.name} ex={ex} week={week} trainingLogs={trainingLogs} onChange={handleExChange} videos={videos} onVideosChange={onVideosChange} activeSet={pesiActiveSet} />
         ))}
       </div>
       <div style={ss.card}>

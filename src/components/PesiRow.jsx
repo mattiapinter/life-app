@@ -5,6 +5,7 @@ import { VideoButton } from './UI'
 const EXERCISE_TRANSLATIONS = {
   'Goblet squat': 'goblet squat',
   'Panca piana bilanciere': 'bench press',
+  'Trazioni alla sbarra': 'pull up',
   'Stacco da terra': 'deadlift',
   'Rematore manubri': 'dumbbell row',
   'Crunch libretto': 'crunch',

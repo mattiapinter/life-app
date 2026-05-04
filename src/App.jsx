@@ -101,9 +101,9 @@ export default function App() {
   const [dailyScores,     setDailyScores]     = React.useState([])
 
   const [foodOptions, setFoodOptions] = React.useState(() => {
-    if (localStorage.getItem('life_v') !== '2') {
+    if (localStorage.getItem('life_v') !== '3') {
       localStorage.removeItem('life_options'); localStorage.removeItem('life_plan')
-      localStorage.removeItem('life_cart'); localStorage.setItem('life_v', '2')
+      localStorage.removeItem('life_cart'); localStorage.setItem('life_v', '3')
     }
     try { const s = localStorage.getItem('life_options'); if (s) { const p = JSON.parse(s); if (p.normal && p.ski) return p } } catch(e) {}
     return INIT_OPTS

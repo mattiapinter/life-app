@@ -10,7 +10,7 @@ export const TRAINING_PLAN = {
     general: "Fase di adattamento anatomico: prepara il corpo agli stimoli futuri. Il 90% dell'arrampicata sarà sotto il limite per costruire volume e base. Niente sospensione o fingerboard per ora: massimo tempo sulla roccia.",
     sessions: {
       PALESTRA: "Blocchi singoli di riscaldamento (RPE 4→8, recupero completo). Poi blocchi ripetuti: trova un blocco che chiudi flash con media fatica, ripetilo 4 volte: devi cadere alla 4a. Se arrivi facile era troppo facile, se cadi al 2° era troppo difficile. Finisci con EMOM trazioni e via semplice di defaticamento RPE tra 5 e 6.",
-      PESI: "Due circuiti. Circuito 1: mobilità/attivazione, uguale per tutte le settimane. Circuito 2: adattamento anatomico con progressione tra settimane: da 1 a 2 aumentano le reps a parità di carico, da 2 a 3 aumenta il carico. Recupero 20s tra esercizi, 3 min a fine giro. Tempi 3, 2, 2: fase negativa, fermo, fase positiva. La fase negativa è quella in cui allunghi il muscolo (es. discesa nello squat). RPE target: 8.",
+      PESI: "Due circuiti. Circuito 1: cinque esercizi di forza con progressione sulle reps (6 poi 7 poi 8) e sulle serie per settimana. Circuito 2: adattamento anatomico con progressione tra settimane: da 1 a 2 aumentano le reps a parità di carico, da 2 a 3 aumenta il carico. Recupero 20s tra esercizi, 3 min a fine giro. Dopo le trazioni del circuito 1 recupero 3 min prima di chiudere il giro o passare al circuito 2. Tempi 3, 2, 2: fase negativa, fermo, fase positiva. La fase negativa è quella in cui allunghi il muscolo (es. discesa nello squat). RPE circuito 1 intorno a 7 e 8. RPE circuito 2 target: 8.",
       CORSA: "Easy run Z2/Z3 bassa. Test della chiacchiera: devi poter parlare senza affanno durante tutta la corsa. Quando finisci devi sentirti rinvigorito, quasi fresco, non stanco.",
       PLACCA_VERTICALE: "Vie doppie: scala da primo senza fermarti fino in catena, fatti calare, rifai subito da secondo. Al 2° giro devi cadere nella seconda metà o chiudere con fatica estrema (RPE 9 e 10). Recupero ~15 min tra le vie. Per vie nuove: circa 1 o 1.5 gradi sotto il tuo limite a vista. Per vie già conosciute puoi salire fino al limite.",
       STRAPIOMBO: "Stessa struttura delle vie doppie in placca. I gradi sono ancora più indicativi: hai poca esperienza su strapiombo. Regolati sull'intensità richiesta (cadere nella seconda metà al 2° giro), non sul numero del grado.",
@@ -81,10 +81,16 @@ export const TRAINING_PLAN = {
     },
     PESI: {
       circuit_1: [
-        { name:'Palo press MOD con elastico 5kg',                   sets:2, duration:'30s x lato' },
-        { name:'Dorsiflessione caviglie in cavaliere elastico 5kg',  sets:1, duration:'1 min x lato' },
-        { name:'Spine cars',                                         sets:1, reps:6 },
-        { name:'Lift of',                                            sets:1, duration:'15s x lato', rest:'1 min' },
+        { name:'Goblet squat', tempo:'3-1-X', bodyweight:false,
+          weeks:[{ week:1, sets:2, reps:6, rpe:'7-8' }, { week:2, sets:2, reps:7, rpe:'7-8' }, { week:3, sets:2, reps:8, rpe:'7-8' }, { week:4, sets:1, reps:8, rpe:'7-8' }] },
+        { name:'Panca piana bilanciere', tempo:'3-1-X', bodyweight:false,
+          weeks:[{ week:1, sets:2, reps:6, rpe:'7-8' }, { week:2, sets:2, reps:7, rpe:'7-8' }, { week:3, sets:2, reps:8, rpe:'7-8' }, { week:4, sets:1, reps:8, rpe:'7-8' }] },
+        { name:'Crunch libretto', tempo:'3-1-X', bodyweight:false,
+          weeks:[{ week:1, sets:2, reps:6, rpe:'7-8' }, { week:2, sets:2, reps:7, rpe:'7-8' }, { week:3, sets:2, reps:8, rpe:'7-8' }, { week:4, sets:1, reps:8, rpe:'7-8' }] },
+        { name:'Stacco da terra', tempo:'3-1-X', bodyweight:false,
+          weeks:[{ week:1, sets:2, reps:6, rpe:'7-8' }, { week:2, sets:2, reps:7, rpe:'7-8' }, { week:3, sets:2, reps:8, rpe:'7-8' }, { week:4, sets:1, reps:8, rpe:'7-8' }] },
+        { name:'Trazioni alla sbarra', tempo:'3-1-X', bodyweight:false,
+          weeks:[{ week:1, sets:2, reps:6, rpe:'7-8' }, { week:2, sets:2, reps:7, rpe:'7-8' }, { week:3, sets:2, reps:8, rpe:'7-8' }, { week:4, sets:1, reps:8, rpe:'7-8' }] },
       ],
       circuit_2: [
         { name:'Russian twist',        tempo:'veloce', bodyweight:true, load:false,
