@@ -17,7 +17,7 @@ const gifCache = {}
 export default function PesiRow({ ex, week, trainingLogs, onChange, videos, onVideosChange, activeSet }) {
   const wd          = ex.weeks.find(w => w.week === week) || ex.weeks[0]
   const numSets     = wd.sets || 2
-  const isBodyweight = isBodyweight || ex.load === false
+  const isBodyweight = ex.bodyweight || ex.load === false
   const fixedKg     = ex.load_fixed_kg
 
   const lastLog = trainingLogs
