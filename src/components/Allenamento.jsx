@@ -1983,6 +1983,30 @@ function OggiCooldownCard({ videos, onVideosChange }) {
   )
 }
 
+// ── OGGI MOBILITÀ CARD (stesso pattern Riscaldamento / Defaticamento) ─
+function OggiMobilitaCard() {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <div style={ss.card}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        onClick={() => setOpen(x => !x)}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 22, color: C.primary }}>accessibility_new</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: C.text }}>Mobilità</span>
+        </div>
+        <span className="material-symbols-outlined" style={{ fontSize: 18, color: C.hint, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>expand_more</span>
+      </div>
+      {open && (
+        <div style={{ marginTop: 14 }}>
+          <Mobilita embedded />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── MAIN ALLENAMENTO ───────────────────────────────────────────────
 // ── SECCO CARD (sospensioni mattina) ──────────────────────────────
 function SeccoCard({ morningRoutine, week }) {
@@ -2185,6 +2209,7 @@ export default function AllenamentoSection({ initialSub, onSubChange, trainingLo
         {coachNoteOggi && <OggiCoachNoteCard note={coachNoteOggi} />}
 
         <OggiUltimaVoltaCard snapshot={lastSnapOggi} />
+        <OggiMobilitaCard />
         <OggiWarmupCard videos={videos} onVideosChange={onVideosChange} />
         <OggiCooldownCard videos={videos} onVideosChange={onVideosChange} />
       </div>
