@@ -428,7 +428,7 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
       }))
     }
 
-    if (sessionType === 'CORSA' && (runDist || runPace || runHr || runDuration)) {
+    if ((sessionType === 'CORSA' || entry.also === 'CORSA') && (runDist || runPace || runHr || runDuration)) {
       promises.push(saveRunningLog({
         log_date:     entry.day_date,
         distance_km:  runDist     ? parseFloat(runDist)    : null,
@@ -881,6 +881,47 @@ function SessionDetail({ entry, onBack, trainingLogs, onLogsChanged, videos, onV
           {sessionType === 'CORSA'            && renderCORSA()}
           {(sessionType === 'PLACCA_VERTICALE' || sessionType === 'STRAPIOMBO' || sessionType === 'STRAPIOMBO_TRAZIONI_SETT4' || sessionType === 'FALESIA') && renderROCCIA(sessionType)}
           {sessionType === 'REST'             && renderREST()}
+
+          {entry.also === 'CORSA' && sessionType !== 'CORSA' && (
+            <div style={{ marginTop:'4px' }}>
+              <div style={{ fontSize:'11px', fontWeight:'600', color:C.muted, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'12px', paddingTop:'8px', borderTop:`1px solid ${C.border}` }}>
+                + Corsa (sessione abbinata)
+              </div>
+              <div style={ss.card}>
+                <div style={ss.secLbl}>Registra uscita</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'12px' }}>
+                  <div>
+                    <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Distanza km</div>
+                    <input type="number" inputMode="decimal" step="0.1" style={inpStyle} placeholder="—" value={runDist} onChange={e => setRunDist(e.target.value)} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Passo medio</div>
+                    <input type="text" inputMode="text" style={inpStyle} placeholder="5:30" value={runPace} onChange={e => setRunPace(e.target.value)} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>FC media bpm</div>
+                    <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runHr} onChange={e => setRunHr(e.target.value)} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Dislivello m</div>
+                    <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runElev} onChange={e => setRunElev(e.target.value)} />
+                  </div>
+                  <div style={{ gridColumn:'1 / -1' }}>
+                    <div style={{ fontSize:'10px', color:C.hint, textAlign:'center', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'.06em' }}>Durata min</div>
+                    <input type="number" inputMode="numeric" style={inpStyle} placeholder="—" value={runDuration} onChange={e => setRunDuration(e.target.value)} />
+                  </div>
+                </div>
+                {runDist && runDuration && runHr && (() => {
+                  const ef = ((parseFloat(runDist) * 1000 / parseInt(runDuration)) / parseInt(runHr)).toFixed(3)
+                  return (
+                    <div style={{ fontSize:'10px', color:C.green, background:C.greenBg, border:`1px solid ${C.greenBorder}`, borderRadius:'8px', padding:'8px 12px', textAlign:'center' }}>
+                      EF {ef} m·min⁻¹·bpm⁻¹ — Coyle et al. 1988
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+          )}
 
           {entry.also === 'PESI' && sessionType !== 'PESI' && (
             <div style={{ marginTop:'4px' }}>
